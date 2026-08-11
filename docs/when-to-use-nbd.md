@@ -21,7 +21,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
-**Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access**, **Host** the whole disk RO there (even if that box has little free space), and **Pull** to qcow2 on the Unraid that **has the space**. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-source-has-the-nvme-destination-has-the-space).
+**Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access** and **Host** it RO there (that box may lack free space for a multi-terabyte qcow2). **Pull** on the roomy Unraid (big array / pool) so the **qcow2 file is written there** over the network — no need to open the rack or install the NVMe on the big server. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
 
 ---
 

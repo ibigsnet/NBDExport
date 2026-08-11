@@ -122,27 +122,32 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
 
 ---
 
-## Scenario C — Both ends are Unraid (source has the NVMe; destination has the space)
+## Scenario C — Both ends are Unraid (plug the NVMe where it’s easy; store the qcow2 where there’s room)
 
-**Classic lab pattern:** one box is easy to open (hot-swap bay, external NVMe enclosure, mini-PC you can sit next to). Another box has the free space for a multi-terabyte qcow2. You **do not** need the space on the machine that holds the physical disk.
+**Problem this solves**
+
+- You have a **physical disk** (e.g. bare NVMe, laptop drive, external enclosure) you can plug into **one** Unraid easily.  
+- That machine may **not** have multi-terabyte free space on its array/cache for a qcow2 dump.  
+- Your **big Unraid** (rack, main array, lots of free space) is awkward to open, or you don’t want to shut it down just to install a temporary NVMe.
+
+**Pattern:** the easy-access box only **hosts** the physical disk (server). The roomy box **pulls** over the network and **writes the qcow2 file** onto its own storage (array, pool, domains share, etc.). Same NBD Export plugin on both; only the role changes.
 
 ```text
-  Unraid A (source)                         Unraid B (destination)
-  ─────────────────                         ──────────────────────
-  Physical NVMe plugged in                  Large array/cache free
-  Host tab → RO qemu-nbd on private IP ───► Pull tab → nbd://A-ip:port
-  (little free space is fine)                 → /mnt/user/domains/…/disk.qcow2
-  Stop host when B finishes                 Job can run while you close the browser
+  Unraid A (easy physical access)              Unraid B (roomy storage)
+  ──────────────────────────────              ─────────────────────────
+  Plug in the NVMe / disk here                 Array / pool / NAS capacity
+  May be low on free space                     Free space for multi-TB qcow2
+  Host tab → RO qemu-nbd on private IP  ───►  Pull tab → nbd://A-ip:port
+  Publishes raw blocks only                      → /mnt/user/domains/…/disk.qcow2
+  Stop host when B finishes                    Image file lives on B forever
 ```
 
-### Why this works well
+| Machine | Role | What it has | What it does **not** need |
+|---------|------|-------------|---------------------------|
+| **A** | **Host** (server) | Easy NVMe/disk access (hot-swap, desk mini-PC, external dock) | Free space for the full qcow2 — A only serves blocks over NBD |
+| **B** | **Pull** (client) | Free space on array, cache, or user share (e.g. `domains`) | Physical access to the NVMe — B never sees the bare drive |
 
-| Machine | Role | Why |
-|---------|------|-----|
-| **A — easy NVMe access** | **Host** (server) | Plug the disk in, publish blocks, unplug when done. Disk capacity on A does not limit the image size. |
-| **B — has space** | **Pull** (client) | Writes sparse qcow2 under `/mnt/…` (e.g. `/mnt/user/domains/` or a large share). |
-
-Same plugin on both; only the **role** swaps.
+So: **local Unraid holds the physical disk but can be short on free space; remote Unraid (or the one with the big array) receives the qcow2 over the network.**
 
 ### Steps
 
@@ -157,7 +162,7 @@ Same plugin on both; only the **role** swaps.
    - Confirm the top-of-page table shows **Listening** and note `nbd://A-ip:port`.  
 3. **Unraid B — Pull**  
    - NBD URL: `nbd://A-ip:port` (same as A shows).  
-   - Output: e.g. `/mnt/user/domains/nvme-serial-or-name.qcow2` (must be a **file** under `/mnt/…`, never `/dev/…`).  
+   - Output: e.g. `/mnt/user/domains/nvme-serial-or-name.qcow2` (a **file** on B’s array/share under `/mnt/…`, never `/dev/…`).  
    - Format: **qcow2**.  
    - Start pull; watch **Status** for Running → Done.  
 4. **Unraid A — Stop** the host row when B is **Done** (or sooner if you abort).  
@@ -165,9 +170,9 @@ Same plugin on both; only the **role** swaps.
 
 ### Tips
 
-- A only needs enough free space for Unraid itself; the **image lands on B**.  
+- On A, free space only needs to cover normal Unraid operation; the **qcow2 is written entirely on B**.  
 - Multi-terabyte images: use Thunderbolt or 10G+; Wi‑Fi is the wrong medium.  
-- If the NVMe is already an Unraid array member or mounted, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
+- If the NVMe is already an Unraid array member or mounted on A, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
 - Leave Destructive mode **Off** and Read-only **Yes** for cold imaging.
 
 ---
