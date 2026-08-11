@@ -88,7 +88,7 @@ Option 1 — peer CLI:
 
 ```bash
 qemu-nbd --read-only --persistent --shared=2 \
-  --bind=<PEER_TB_OR_LAN_IP> --port=10809 --format=raw \
+  --bind=<PEER_THUNDERBOLT_OR_LAN_IP> --port=10809 --format=raw \
   /dev/nvme0n1
 ```
 
@@ -124,7 +124,7 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
 
 ## Scenario C — Both ends are Unraid (source has the NVMe; destination has the space)
 
-**Classic lab pattern:** one box is easy to open (hot-swap bay, external NVMe enclosure, mini-PC you can sit next to). Another box has the free space for a multi-TB qcow2. You **do not** need the space on the machine that holds the physical disk.
+**Classic lab pattern:** one box is easy to open (hot-swap bay, external NVMe enclosure, mini-PC you can sit next to). Another box has the free space for a multi-terabyte qcow2. You **do not** need the space on the machine that holds the physical disk.
 
 ```text
   Unraid A (source)                         Unraid B (destination)
@@ -146,11 +146,11 @@ Same plugin on both; only the **role** swaps.
 
 ### Steps
 
-1. **Network:** A and B can reach each other on a **private** path (Thunderbolt Net recommended for multi-TB; or a dedicated LAN). Prefer binding NBD to that private IP, not WAN.  
+1. **Network:** A and B can reach each other on a **private** path (Thunderbolt Net recommended for multi-terabyte images; or a dedicated LAN). Prefer binding NBD to that private IP, not WAN.  
 2. **Unraid A — Host**  
    - Destructive mode **Off** when possible (unassigned / not mounted / not array).  
    - Device = the whole physical disk (or the partition you need).  
-   - Bind IP = A’s private/TB address.  
+   - Bind IP = A’s private or Thunderbolt address.  
    - Port = `10809` (or free).  
    - **Read-only = Yes**.  
    - **Host disk/partition on network**.  
@@ -166,20 +166,20 @@ Same plugin on both; only the **role** swaps.
 ### Tips
 
 - A only needs enough free space for Unraid itself; the **image lands on B**.  
-- Multi-TB: use Thunderbolt or 10G+; Wi‑Fi is the wrong medium.  
+- Multi-terabyte images: use Thunderbolt or 10G+; Wi‑Fi is the wrong medium.  
 - If the NVMe is already an Unraid array member or mounted, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
 - Leave Destructive mode **Off** and Read-only **Yes** for cold imaging.
 
 ---
 
-## Scenario D — Thunderbolt bulk imaging
+## Scenario D — Large images over Thunderbolt (not Wi‑Fi)
 
-1. [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) so both sides have TB IPs.  
-2. **Host:** bind to the **Thunderbolt** address.  
-3. **Pull** (or peer) uses that IP.  
-4. Do **not** use Wi‑Fi for multi-TB images.
+1. Install [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) so both sides have **Thunderbolt host-net IPs** (addresses on `thunderboltN` / tbn tabs).  
+2. **Host:** bind NBD to that **Thunderbolt** address (not br0/WAN, not Wi‑Fi).  
+3. **Pull** (or a peer) uses `nbd://<thunderbolt-ip>:port`.  
+4. For **multi-terabyte** images, use Thunderbolt or 10G+ wired — **not** Wi‑Fi.
 
-Thunderbolt “Unraid services / listening” (SMB/NFS/web) is **independent** of NBD.
+Thunderbolt Net “Unraid services / listening” (SMB/NFS/web on the Thunderbolt IP) is **independent** of NBD.
 
 ---
 

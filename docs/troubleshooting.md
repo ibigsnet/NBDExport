@@ -30,9 +30,9 @@ Probe: `qemu-img info nbd://IP:PORT`
 
 ## Slow throughput
 
-- Wi‑Fi is the wrong medium for multi-TB images  
+- Wi‑Fi is the wrong medium for multi-terabyte images  
 - Prefer Thunderbolt host-net or 10G+; raise MTU on **both** ends if appropriate (Thunderbolt Net docs)  
-- Trained TB rate ≠ TCP; expect less than sticker Gb/s  
+- Trained Thunderbolt rate ≠ TCP; expect less than sticker Gb/s  
 
 ## Blank first tab / old “section 3” docs
 

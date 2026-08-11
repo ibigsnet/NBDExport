@@ -20,6 +20,6 @@ Settings → Network Services
 
 ## Thunderbolt Net “Unraid services on this link”
 
-Listening **Yes** in Thunderbolt Net adds the TB interface to `network-extra.cfg` so **SMB / NFS / SSH / web UI** can bind on that IP.
+Listening **Yes** in Thunderbolt Net adds the Thunderbolt interface to `network-extra.cfg` so **SMB / NFS / SSH / web UI** can bind on that IP.
 
-**NBD is separate:** `qemu-nbd --bind=IP` is its own process. Enable listening if you want file/web services on the TB IP; use **Network Services → NBD** to export a disk on the same IP.
+**NBD is separate:** `qemu-nbd --bind=IP` is its own process. Enable listening if you want file/web services on the Thunderbolt IP; use **Network Services → NBD** to export a disk on the same IP.

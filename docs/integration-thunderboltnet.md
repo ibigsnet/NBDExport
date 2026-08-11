@@ -26,13 +26,13 @@ If `thunderbolt*` has an IPv4 address, the Host tab bind dropdown lists it **fir
 | Controlled by `network-extra` include? | **Yes** (Thunderbolt Net “Unraid services”) | **No** |
 | How traffic is served | Unraid service stack on included ifaces | `qemu-nbd --bind=IP` |
 
-Turn listening **Yes** on Thunderbolt / tbn if you want file/web services on the TB IP.  
+Turn listening **Yes** on Thunderbolt / tbn if you want file/web services on the Thunderbolt IP.  
 Use NBD **Host** separately if you need block export on that IP.
 
-## Recommended order for multi-TB imaging
+## Recommended order for multi-terabyte imaging
 
 1. Thunderbolt Net: link up, static IPs, ping both ways.  
 2. Optional: listening Yes if you also need SMB on the same path.  
-3. NBD **Host**: RO host bound to the TB IP.  
+3. NBD **Host**: RO host bound to the Thunderbolt IP.  
 4. NBD **Pull** on the peer Unraid, or peer `qemu-img convert`.  
 5. **Stop** the host when finished.

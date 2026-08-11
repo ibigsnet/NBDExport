@@ -29,7 +29,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Use NBD when** the path is **high bandwidth and trusted** (direct Thunderbolt cable, dedicated VLAN — not the open Internet). Multi-terabyte images are impractical on Wi‑Fi; they become realistic on Thunderbolt host networking or fast wired underlay.
 
-**Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use TB/USB4 host-to-host networking. Trained link rate is not the same as sustained TCP throughput, but private 10G-class paths are the intended habitat for large images.
+**Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use Thunderbolt/USB4 host-to-host networking. Trained link rate is not the same as sustained TCP throughput, but private 10G-class paths are the intended habitat for large images.
 
 ---
 
@@ -48,7 +48,7 @@ High-performance mini-PCs and workstations used for **local LLMs and inference**
 
 **Not the primary tool for:** day-to-day “load weights from a CIFS share into an inference runtime.” SMB/NFS is fine for ordinary file access. NBD is for **disk-shaped** moves and archives next to AI boxes, not a replacement for every share path.
 
-Hardware names above are **example peer classes** (fast host, lots of RAM/GPU, often TB/USB4 or 10G to the NAS) — not required products.
+Hardware names above are **example peer classes** (fast host, lots of RAM/GPU, often Thunderbolt/USB4 or 10G to the NAS) — not required products.
 
 ---
 
@@ -81,7 +81,7 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 
 - Capture a disk before reinstall or hardware RMA  
 - Build Unraid VMs from physical disks without a USB dock sneakernet  
-- Move a disk image between two Linux hosts when multi-TB SMB streams were flaky  
+- Move a disk image between two Linux hosts when multi-terabyte SMB streams were flaky  
 - Keep read-only “golden” images on Unraid cache; re-export only when needed  
 
 ---

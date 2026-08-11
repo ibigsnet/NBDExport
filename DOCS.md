@@ -102,7 +102,7 @@ Also needs **`qemu-nbd` and `qemu-img`** (normally present with Unraid **VM** to
 
 ### Offer a disk from this Unraid (server)
 
-1. Private IP up (Thunderbolt Net recommended for multi-TB jobs).  
+1. Private IP up (Thunderbolt Net recommended for multi-terabyte jobs).  
 2. **Host** tab → device → listen IP → port → **Read-only Yes** → host.  
 3. Peer: `qemu-img info nbd://<bind-ip>:<port>` then convert, **or** **Pull** on another Unraid.  
 4. When finished: **Stop** on the hosted-disks table (top of any tab).
@@ -161,7 +161,7 @@ Image files under `/mnt/` are never part of this export.
 | [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md) | Files vs disks decision table |
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Destructive mode, RO, bind IP |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
-| [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | TB underlay + listening vs NBD |
+| [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
 | [docs/integration-unraidfrr.md](docs/integration-unraidfrr.md) | Fabric Routing / multi-hop (optional) |
 | [docs/settings-reference.md](docs/settings-reference.md) | Every control by tab |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common failures |
