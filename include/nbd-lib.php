@@ -156,7 +156,7 @@ function nbd_list_bind_ips() {
   $rows = [];
   $seen = [];
   $out = [];
-  @exec('ip -4 -o addr show scope global 2>/dev/null', $out);
+  @exec('ip -4 -o addr show 2>/dev/null', $out);
   foreach ($out as $line) {
     // 2: eth0    inet 192.168.1.3/24 ...
     if (!preg_match('/^\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/', $line, $m)) {
@@ -166,26 +166,39 @@ function nbd_list_bind_ips() {
     // strip @if suffixes
     $if = preg_replace('/@.*$/', '', $if);
     $ip = $m[2];
+    // Skip loopback and link-local-only noise
+    if ($if === 'lo' || strpos($ip, '127.') === 0) {
+      continue;
+    }
     if (isset($seen[$ip])) {
       continue;
     }
     $seen[$ip] = true;
     $is_tb = (bool)preg_match('/^thunderbolt\d+$/', $if);
+    $is_virt = (bool)preg_match('/^(docker|br-|veth|virbr|wg|tun|tap|vnet)/', $if)
+      || $if === 'docker0';
     $priv = nbd_is_private_ipv4($ip);
+    // Rank: TB private (0), other non-virt private (1), virt private (2), public (3)
+    $rank = 3;
+    if ($is_tb && $priv) {
+      $rank = 0;
+    } elseif ($priv && !$is_virt) {
+      $rank = 1;
+    } elseif ($priv) {
+      $rank = 2;
+    }
     $rows[] = [
       'ip' => $ip,
       'iface' => $if,
-      'preferred' => $is_tb && $priv,
+      'preferred' => $rank === 0,
       'private' => $priv,
+      'rank' => $rank,
       'label' => $ip . ' (' . $if . ($is_tb ? ', Thunderbolt' : '') . ')',
     ];
   }
   usort($rows, function ($a, $b) {
-    if ($a['preferred'] !== $b['preferred']) {
-      return $a['preferred'] ? -1 : 1;
-    }
-    if ($a['private'] !== $b['private']) {
-      return $a['private'] ? -1 : 1;
+    if ($a['rank'] !== $b['rank']) {
+      return $a['rank'] - $b['rank'];
     }
     return strcmp($a['iface'], $b['iface']);
   });
