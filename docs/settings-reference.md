@@ -35,7 +35,7 @@ Connects to a disk already hosted on the network (other Unraid or any `qemu-nbd`
 | Field | Notes |
 |-------|--------|
 | NBD URL | `nbd://ip:port` of a running host |
-| Output path | File under `/mnt/` or `/tmp/` — never `/dev/…` |
+| Output path | File under `/mnt/` or `/tmp/` — never `/dev/…`. Placeholder: `/mnt/user/domains/disk.qcow2` (Unraid VM share default) |
 | Format | qcow2 (default) or raw |
 | **Pull remote disk to file** | Background `qemu-img convert` |
 
