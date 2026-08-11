@@ -113,7 +113,7 @@ Also needs **`qemu-nbd` and `qemu-img`** (normally present with Unraid **VM** to
 2. **Pull** tab → `nbd://ip:port` → e.g. `/mnt/user/domains/name.qcow2` → start pull.  
 3. Job runs in the background (see **Status**); when **Done**, stop the peer’s host.
 
-Full scenarios: [docs/how-to-use.md](docs/how-to-use.md) · CLI: [docs/imaging-workflow.md](docs/imaging-workflow.md).
+Full scenarios: [docs/how-to-use.md](docs/how-to-use.md) (including **both Unraids**: Host on the box with the NVMe, Pull on the box with free space) · CLI: [docs/imaging-workflow.md](docs/imaging-workflow.md).
 
 ---
 

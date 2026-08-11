@@ -122,13 +122,53 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
 
 ---
 
-## Scenario C — Both ends are Unraid
+## Scenario C — Both ends are Unraid (source has the NVMe; destination has the space)
 
-1. **Source:** Host tab — publish the disk (RO).  
-2. **Destination:** Pull tab — `nbd://source-ip:port` → `/mnt/user/domains/…/disk.qcow2`  
-3. Source: **Stop** when the job finishes  
+**Classic lab pattern:** one box is easy to open (hot-swap bay, external NVMe enclosure, mini-PC you can sit next to). Another box has the free space for a multi-TB qcow2. You **do not** need the space on the machine that holds the physical disk.
 
-Same plugin, swapped roles.
+```text
+  Unraid A (source)                         Unraid B (destination)
+  ─────────────────                         ──────────────────────
+  Physical NVMe plugged in                  Large array/cache free
+  Host tab → RO qemu-nbd on private IP ───► Pull tab → nbd://A-ip:port
+  (little free space is fine)                 → /mnt/user/domains/…/disk.qcow2
+  Stop host when B finishes                 Job can run while you close the browser
+```
+
+### Why this works well
+
+| Machine | Role | Why |
+|---------|------|-----|
+| **A — easy NVMe access** | **Host** (server) | Plug the disk in, publish blocks, unplug when done. Disk capacity on A does not limit the image size. |
+| **B — has space** | **Pull** (client) | Writes sparse qcow2 under `/mnt/…` (e.g. `/mnt/user/domains/` or a large share). |
+
+Same plugin on both; only the **role** swaps.
+
+### Steps
+
+1. **Network:** A and B can reach each other on a **private** path (Thunderbolt Net recommended for multi-TB; or a dedicated LAN). Prefer binding NBD to that private IP, not WAN.  
+2. **Unraid A — Host**  
+   - Destructive mode **Off** when possible (unassigned / not mounted / not array).  
+   - Device = the whole physical disk (or the partition you need).  
+   - Bind IP = A’s private/TB address.  
+   - Port = `10809` (or free).  
+   - **Read-only = Yes**.  
+   - **Host disk/partition on network**.  
+   - Confirm the top-of-page table shows **Listening** and note `nbd://A-ip:port`.  
+3. **Unraid B — Pull**  
+   - NBD URL: `nbd://A-ip:port` (same as A shows).  
+   - Output: e.g. `/mnt/user/domains/nvme-serial-or-name.qcow2` (must be a **file** under `/mnt/…`, never `/dev/…`).  
+   - Format: **qcow2**.  
+   - Start pull; watch **Status** for Running → Done.  
+4. **Unraid A — Stop** the host row when B is **Done** (or sooner if you abort).  
+5. Optional: on B, `qemu-img check /mnt/user/domains/….qcow2`, then attach as a VM disk or archive.
+
+### Tips
+
+- A only needs enough free space for Unraid itself; the **image lands on B**.  
+- Multi-TB: use Thunderbolt or 10G+; Wi‑Fi is the wrong medium.  
+- If the NVMe is already an Unraid array member or mounted, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
+- Leave Destructive mode **Off** and Read-only **Yes** for cold imaging.
 
 ---
 

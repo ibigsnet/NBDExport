@@ -21,6 +21,8 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
+**Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access**, **Host** the whole disk RO there (even if that box has little free space), and **Pull** to qcow2 on the Unraid that **has the space**. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-source-has-the-nvme-destination-has-the-space).
+
 ---
 
 ## 2. Fast private links (Thunderbolt / USB4 host-net, or 10G+)
