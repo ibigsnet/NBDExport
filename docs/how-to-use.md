@@ -7,7 +7,7 @@ Settings path: **Settings → Network Services → NBD**
 ## Contents
 
 - [Mental model](#mental-model)
-- [If you click this… (read each line left → right)](#if-you-click-this-read-each-line-left-right)
+- [What each control does](#what-each-control-does)
 - [Tabs (what each screen is for)](#tabs-what-each-screen-is-for)
 - [Common mix-ups](#common-mix-ups)
 - [Safe defaults checklist](#safe-defaults-checklist)
@@ -41,12 +41,12 @@ Hosting alone does **not** create a file. Pulling alone needs someone already ho
 
 ---
 
-## If you click this… (read each line left → right)
+## What each control does
 
-Each **line** in the table is one control. Read **left to right**.
+Main actions in the NBD UI (and what they run). Columns: **control → process → effect**.
 
-| If you click… | What runs under the hood | What that means for you |
-|---------------|--------------------------|-------------------------|
+| Control | Process | Effect |
+|---------|---------|--------|
 | **Host** tab → **Host disk/partition on network** | `qemu-nbd` listens on the bind IP:port | This Unraid is the **server**. One local `/dev/…` (whole disk or partition, including the partition table) is offered as raw blocks visible over the network. Nothing is copied until a client connects. |
 | **Stop** (on a hosted disk in the live list) | That `qemu-nbd` process exits | Server off for that disk; the port closes. |
 | **Pull** tab → **Pull remote disk → file** | Background `qemu-img convert` from `nbd://…` | This Unraid is the **client**. A remote hosted disk is written to a **file** under `/mnt/…` (never to `/dev/…`). |
