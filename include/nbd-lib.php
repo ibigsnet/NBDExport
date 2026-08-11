@@ -84,6 +84,145 @@ function nbd_ensure_runtime_dirs() {
   }
 }
 
+/**
+ * Flash memory: last-used host/pull fields + named presets (no secrets).
+ * Path: /boot/config/plugins/NbdExport/memory.json
+ */
+function nbd_memory_path() {
+  return NBDEXPORT_CFG_DIR . '/memory.json';
+}
+
+function nbd_memory_load() {
+  nbd_ensure_runtime_dirs();
+  $path = nbd_memory_path();
+  $empty = [
+    'last_host' => [],
+    'last_pull' => [],
+    'presets' => [],
+  ];
+  if (!is_readable($path)) {
+    return $empty;
+  }
+  $j = @json_decode((string)@file_get_contents($path), true);
+  if (!is_array($j)) {
+    return $empty;
+  }
+  return array_merge($empty, $j);
+}
+
+function nbd_memory_save(array $mem) {
+  nbd_ensure_runtime_dirs();
+  if (!isset($mem['presets']) || !is_array($mem['presets'])) {
+    $mem['presets'] = [];
+  }
+  // Cap presets
+  if (count($mem['presets']) > 40) {
+    $mem['presets'] = array_slice($mem['presets'], -40, null, true);
+  }
+  return @file_put_contents(
+    nbd_memory_path(),
+    json_encode($mem, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
+  ) !== false;
+}
+
+function nbd_memory_remember_host($device, $bind, $port, $read_only, $label) {
+  $mem = nbd_memory_load();
+  $mem['last_host'] = [
+    'device' => (string)$device,
+    'bind' => (string)$bind,
+    'port' => (int)$port,
+    'read_only' => $read_only ? 'yes' : 'no',
+    'label' => (string)$label,
+    'saved_at' => date('c'),
+  ];
+  nbd_memory_save($mem);
+}
+
+function nbd_memory_remember_pull($url, $output, $format) {
+  $mem = nbd_memory_load();
+  $mem['last_pull'] = [
+    'nbd_url' => (string)$url,
+    'output' => (string)$output,
+    'format' => (string)$format,
+    'saved_at' => date('c'),
+  ];
+  nbd_memory_save($mem);
+}
+
+/**
+ * Save a named preset.
+ * @param string $name
+ * @param string $type host|pull
+ * @param array $fields
+ */
+function nbd_memory_save_preset($name, $type, array $fields) {
+  $name = trim(preg_replace('/[^A-Za-z0-9._ -]/', '', $name));
+  $name = trim($name);
+  if ($name === '' || strlen($name) > 48) {
+    return ['ok' => false, 'error' => 'Preset name must be 1–48 safe characters.'];
+  }
+  if (!in_array($type, ['host', 'pull'], true)) {
+    return ['ok' => false, 'error' => 'Invalid preset type.'];
+  }
+  $mem = nbd_memory_load();
+  $mem['presets'][$name] = [
+    'type' => $type,
+    'fields' => $fields,
+    'saved_at' => date('c'),
+  ];
+  nbd_memory_save($mem);
+  return ['ok' => true, 'name' => $name];
+}
+
+function nbd_memory_delete_preset($name) {
+  $mem = nbd_memory_load();
+  if (!isset($mem['presets'][$name])) {
+    return ['ok' => false, 'error' => 'Preset not found.'];
+  }
+  unset($mem['presets'][$name]);
+  nbd_memory_save($mem);
+  return ['ok' => true];
+}
+
+/**
+ * Normalize host export status for UI badges.
+ * listening | process_up | stale | down
+ */
+function nbd_export_ui_status(array $e) {
+  $alive = !empty($e['alive']);
+  $listen = !empty($e['listening']);
+  $stale = !empty($e['stale']);
+  if ($alive && $listen) {
+    return ['key' => 'listening', 'label' => 'Listening', 'class' => 'nbd-badge-ok', 'hint' => 'qemu-nbd running and port open'];
+  }
+  if ($alive && !$listen) {
+    return ['key' => 'process_up', 'label' => 'Starting…', 'class' => 'nbd-badge-info', 'hint' => 'Process up; port not confirmed yet'];
+  }
+  if ($stale || (!$alive && !$listen)) {
+    return ['key' => 'stale', 'label' => 'Stopped / stale', 'class' => 'nbd-badge-stale', 'hint' => 'State file left behind — safe to Stop/clear'];
+  }
+  return ['key' => 'down', 'label' => 'Down', 'class' => 'nbd-badge-bad', 'hint' => 'Not running'];
+}
+
+/**
+ * Job status for UI: running | done | failed | idle
+ */
+function nbd_job_ui_status(array $j) {
+  $alive = !empty($j['alive']);
+  $fin = !empty($j['finished']);
+  $ok = !empty($j['ok']);
+  if ($alive) {
+    return ['key' => 'running', 'label' => 'Running', 'class' => 'nbd-badge-ok', 'hint' => 'qemu-img convert in progress'];
+  }
+  if ($fin && $ok) {
+    return ['key' => 'done', 'label' => 'Done', 'class' => 'nbd-badge-ok', 'hint' => 'Finished successfully'];
+  }
+  if ($fin && !$ok) {
+    return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'See log tail'];
+  }
+  return ['key' => 'idle', 'label' => 'Idle', 'class' => 'nbd-badge-stale', 'hint' => 'Not running'];
+}
+
 function nbd_plugin_version() {
   $plg = NBDEXPORT_ROOT . '/nbdexport.plg';
   if (is_file($plg)) {

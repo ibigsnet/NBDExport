@@ -31,25 +31,46 @@ $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['unraidfrr']);
-// Disk risk map for JS confirm (path => summary)
-$disk_risk_js = [];
-foreach ($disks as $d) {
-  $disk_risk_js[$d['path']] = [
-    'warn' => !empty($d['warn']),
-    'flags' => $d['flags'] ?? [],
-    'label' => $d['label'] ?? $d['path'],
-  ];
+$mem = nbd_memory_load();
+$last_host = is_array($mem['last_host'] ?? null) ? $mem['last_host'] : [];
+$last_pull = is_array($mem['last_pull'] ?? null) ? $mem['last_pull'] : [];
+$presets = is_array($mem['presets'] ?? null) ? $mem['presets'] : [];
+$host_presets = [];
+$pull_presets = [];
+foreach ($presets as $pn => $pv) {
+  if (!is_array($pv)) {
+    continue;
+  }
+  if (($pv['type'] ?? '') === 'host') {
+    $host_presets[$pn] = $pv;
+  } elseif (($pv['type'] ?? '') === 'pull') {
+    $pull_presets[$pn] = $pv;
+  }
 }
-$default_bind = '';
-foreach ($binds as $b) {
-  if (!empty($b['preferred'])) {
-    $default_bind = $b['ip'];
-    break;
+// Prefill host form: last used → defaults
+$pref_device = $last_host['device'] ?? '';
+$pref_bind = $last_host['bind'] ?? '';
+$pref_port = htmlspecialchars((string)($last_host['port'] ?? $cfg['default_port'] ?? '10809'));
+$pref_ro = (($last_host['read_only'] ?? $def_ro) === 'yes') ? 'yes' : 'no';
+$pref_label = htmlspecialchars($last_host['label'] ?? '');
+$pref_url = htmlspecialchars($last_pull['nbd_url'] ?? '');
+$pref_out = htmlspecialchars($last_pull['output'] ?? '');
+$pref_fmt = ($last_pull['format'] ?? 'qcow2') === 'raw' ? 'raw' : 'qcow2';
+
+$default_bind = $pref_bind;
+if ($default_bind === '') {
+  foreach ($binds as $b) {
+    if (!empty($b['preferred'])) {
+      $default_bind = $b['ip'];
+      break;
+    }
   }
 }
 if ($default_bind === '' && $binds) {
   $default_bind = $binds[0]['ip'];
 }
+// Presets JSON for JS restore
+$presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
 ?>
 <style>
 /* Match FRR/TBN density; lean on Unraid theme for forms */
@@ -62,18 +83,48 @@ if ($default_bind === '' && $binds) {
   font-size: 0.92em;
   line-height: 1.4;
 }
+.nbd-wrap .nbd-tip {
+  margin: 0.5em 0 0.85em;
+  padding: 0.55em 0.75em;
+  border-left: 3px solid #4a90d9;
+  background: rgba(74, 144, 217, 0.12);
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+.nbd-wrap .nbd-empty {
+  margin: 0.75em 0;
+  padding: 1em 1.1em;
+  border-radius: 8px;
+  border: 1px dashed rgba(74, 144, 217, 0.55);
+  background: rgba(74, 144, 217, 0.08);
+  line-height: 1.45;
+}
+.nbd-wrap .nbd-empty strong { color: #4a90d9; }
+.nbd-wrap .nbd-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45em 0.85em;
+  margin: 0.5em 0 0.85em;
+  font-size: 0.88em;
+  opacity: 0.9;
+}
 .nbd-wrap .nbd-muted { opacity: 0.78; font-size: 0.92em; }
 .nbd-wrap .nbd-ok { color: #2a7; font-weight: 600; }
 .nbd-wrap .nbd-warn { color: #c80; }
 .nbd-wrap .nbd-bad { color: #c33; font-weight: 600; }
 .nbd-wrap .nbd-badge {
   display: inline-block;
-  padding: 0.1em 0.45em;
-  border-radius: 3px;
+  padding: 0.15em 0.55em;
+  border-radius: 4px;
   font-size: 0.85em;
-  background: rgba(128, 128, 128, 0.25);
+  font-weight: 600;
+  background: rgba(128, 128, 128, 0.28);
 }
-.nbd-wrap .nbd-badge-ok { background: rgba(80, 160, 80, 0.35); }
+.nbd-wrap .nbd-badge-ok { background: rgba(46, 160, 90, 0.4); color: inherit; }
+.nbd-wrap .nbd-badge-info { background: rgba(74, 144, 217, 0.4); color: inherit; }
+.nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); color: inherit; }
+.nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); color: inherit; }
+.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); }
 
 /* Full-width section cards + dividers so buttons stay in their section */
 .nbd-wrap .nbd-section {
@@ -317,36 +368,51 @@ if ($default_bind === '' && $binds) {
   <div class="nbd-section">
     <h3>2 · Disks currently hosted on the network</h3>
     <p class="nbd-section-lead">
-      Unraid block devices this server is <strong>publishing right now</strong> via NBD (live <code>qemu-nbd</code>).
-      Clients connect with <code>nbd://IP:port</code> (section 4, or tools on another host).
-      Status only — to host another disk, use section 3.
+      Live status of disks this Unraid is <strong>publishing</strong> via NBD right now
+      (not the disk picker list in section 3 — that is only for starting something new).
     </p>
+    <div class="nbd-status-legend">
+      <span><span class="nbd-badge nbd-badge-ok">Listening</span> process + port open</span>
+      <span><span class="nbd-badge nbd-badge-info">Starting…</span> process up, port not ready</span>
+      <span><span class="nbd-badge nbd-badge-stale">Stopped / stale</span> leftover state file</span>
+      <span><span class="nbd-badge nbd-badge-bad">Down</span> not running</span>
+      <span><span class="nbd-badge nbd-badge-rw">Writable</span> peer can write (risky)</span>
+    </div>
 <?php if (!$exports): ?>
-    <p class="nbd-muted">Nothing hosted yet — use <strong>section 3</strong> to publish a local disk or partition.</p>
+    <div class="nbd-empty">
+      <strong>No disks hosted right now.</strong><br>
+      This is normal when you are not sharing anything.<br>
+      To publish a local Unraid disk or partition for others to image, go to
+      <strong>section 3</strong> and choose a device → <em>Host this disk on the network</em>.
+    </div>
 <?php else: ?>
     <table class="nbd-data tablesorter">
       <thead>
         <tr>
           <th>Status</th>
           <th>Disk</th>
-          <th>Listening on</th>
-          <th>RO</th>
+          <th>Clients use</th>
+          <th>Mode</th>
           <th>Label</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
 <?php foreach ($exports as $e):
-  $alive = !empty($e['alive']) || !empty($e['listening']);
+  $ust = nbd_export_ui_status($e);
+  $ro = !empty($e['read_only']);
 ?>
         <tr>
-          <td><?= $alive ? '<span class="nbd-badge nbd-badge-ok">Listening</span>' : '<span class="nbd-badge">Down</span>' ?></td>
+          <td>
+            <span class="nbd-badge <?= htmlspecialchars($ust['class']) ?>" title="<?= htmlspecialchars($ust['hint']) ?>"><?= htmlspecialchars($ust['label']) ?></span>
+          </td>
           <td><code><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
           <td>
-            <code><?= htmlspecialchars(($e['bind'] ?? '') . ':' . ($e['port'] ?? '')) ?></code><br>
-            <span class="nbd-muted"><?= htmlspecialchars($e['url'] ?? '') ?></span>
+            <code><?= htmlspecialchars($e['url'] ?? (($e['bind'] ?? '') . ':' . ($e['port'] ?? ''))) ?></code>
           </td>
-          <td><?= !empty($e['read_only']) ? 'Yes' : '<span class="nbd-warn">No</span>' ?></td>
+          <td><?= $ro
+            ? '<span class="nbd-badge nbd-badge-ok">Read-only</span>'
+            : '<span class="nbd-badge nbd-badge-rw">Writable</span>' ?></td>
           <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
           <td>
             <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
@@ -354,7 +420,7 @@ if ($default_bind === '' && $binds) {
               <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="export_stop">
               <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
-              <input type="submit" name="#apply" value="Stop listener">
+              <input type="submit" name="#apply" value="Stop">
             </form>
           </td>
         </tr>
@@ -366,7 +432,7 @@ if ($default_bind === '' && $binds) {
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="export_stop_all">
-      <input type="submit" name="#apply" value="Stop all listeners">
+      <input type="submit" name="#apply" value="Stop all hosted disks">
     </form>
     </div>
 <?php endif; ?>
@@ -380,6 +446,22 @@ if ($default_bind === '' && $binds) {
       Starts <code>qemu-nbd</code> listening on the bind IP:port. Does <em>not</em> copy data by itself —
       a peer or <strong>section 4</strong> must connect and pull. When imaging is done, <strong>Stop</strong> in section 2.
     </p>
+    <div class="nbd-tip">
+      <strong>Remembered settings:</strong> last host/pull fields are restored automatically after use
+      (stored on flash under this plugin — admin WebGUI only; IPs and device paths, no passwords).
+      You can also <strong>save named presets</strong> below (like reusing an SMB share layout).
+    </div>
+<?php if ($host_presets): ?>
+    <p class="nbd-muted">
+      Restore host preset:
+      <select id="nbd_host_preset_pick" onchange="nbdApplyHostPreset(this.value)">
+        <option value="">— choose —</option>
+<?php foreach ($host_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+    </p>
+<?php endif; ?>
     <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
@@ -394,10 +476,11 @@ if ($default_bind === '' && $binds) {
 <?php foreach ($disks as $d):
   $warn = !empty($d['warn']) ? ' ⚠' : '';
   $flags = !empty($d['flags']) ? implode(',', $d['flags']) : '';
+  $sel = ($pref_device !== '' && $pref_device === $d['path']) ? ' selected' : '';
 ?>
             <option value="<?= htmlspecialchars($d['path']) ?>"
               data-warn="<?= !empty($d['warn']) ? '1' : '0' ?>"
-              data-flags="<?= htmlspecialchars($flags) ?>"><?= htmlspecialchars($d['label'] . $warn) ?></option>
+              data-flags="<?= htmlspecialchars($flags) ?>"<?= $sel ?>><?= htmlspecialchars($d['label'] . $warn) ?></option>
 <?php endforeach; ?>
           </select>
         </dd>
@@ -411,7 +494,7 @@ if ($default_bind === '' && $binds) {
       <dl>
         <dt>Listen on (bind IP):</dt>
         <dd>
-          <select name="bind">
+          <select name="bind" id="nbd_bind">
 <?php if (!$binds): ?>
             <option value="">No addresses found</option>
 <?php else: foreach ($binds as $b): ?>
@@ -431,7 +514,7 @@ if ($default_bind === '' && $binds) {
       <dl>
         <dt>Listen port:</dt>
         <dd>
-          <input type="number" name="port" class="narrow" value="<?= $def_port ?>" min="1024" max="65535">
+          <input type="number" name="port" id="nbd_port" class="narrow" value="<?= $pref_port ?>" min="1024" max="65535">
         </dd>
       </dl>
       <blockquote class="inline_help">
@@ -442,8 +525,8 @@ if ($default_bind === '' && $binds) {
         <dt>Read-only:</dt>
         <dd>
           <select name="read_only" id="nbd_read_only">
-            <?= mk_option($def_ro, 'yes', 'Yes (recommended)') ?>
-            <?= mk_option($def_ro, 'no', 'No — writable (requires Destructive mode)') ?>
+            <?= mk_option($pref_ro, 'yes', 'Yes (recommended)') ?>
+            <?= mk_option($pref_ro, 'no', 'No — writable (requires Destructive mode)') ?>
           </select>
         </dd>
       </dl>
@@ -455,7 +538,7 @@ if ($default_bind === '' && $binds) {
       <dl>
         <dt>Label:</dt>
         <dd>
-          <input type="text" name="label" value="" maxlength="80" placeholder="optional note">
+          <input type="text" name="label" id="nbd_label" value="<?= $pref_label ?>" maxlength="80" placeholder="optional note">
         </dd>
       </dl>
 
@@ -463,7 +546,7 @@ if ($default_bind === '' && $binds) {
 <?php if ($destructive !== 'yes'): ?>
         Destructive mode is <strong>Off</strong> — only safe RO listeners on non-array disks.
 <?php else: ?>
-        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only before starting the listener.</span>
+        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only before hosting.</span>
 <?php endif; ?>
       </p>
 
@@ -473,6 +556,32 @@ if ($default_bind === '' && $binds) {
         <span class="nbd-muted" style="margin-left:0.75em">← section 3 only (publish local /dev)</span>
       </div>
     </form>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillHostPreset(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_save_host">
+      <input type="hidden" name="device" id="nbd_ps_device" value="">
+      <input type="hidden" name="bind" id="nbd_ps_bind" value="">
+      <input type="hidden" name="port" id="nbd_ps_port" value="">
+      <input type="hidden" name="read_only" id="nbd_ps_ro" value="">
+      <input type="hidden" name="label" id="nbd_ps_label" value="">
+      <span class="nbd-muted">Save host preset as</span>
+      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. lab-nvme-ro" style="width:12em">
+      <input type="submit" name="#apply" value="Save host preset">
+    </form>
+<?php if ($host_presets): ?>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_delete">
+      <select name="preset_name">
+<?php foreach ($host_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+      <input type="submit" name="#apply" value="Delete host preset">
+    </form>
+<?php endif; ?>
   </div>
 
   <div class="nbd-section">
@@ -623,6 +732,50 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
 <script>
 (function () {
   var destructiveOn = <?= $destructive === 'yes' ? 'true' : 'false' ?>;
+  var NBD_PRESETS = <?= json_encode($presets, JSON_UNESCAPED_SLASHES) ?> || {};
+
+  window.nbdApplyHostPreset = function (name) {
+    if (!name || !NBD_PRESETS[name] || NBD_PRESETS[name].type !== 'host') return;
+    var f = NBD_PRESETS[name].fields || {};
+    var dev = document.getElementById('nbd_device');
+    var bind = document.getElementById('nbd_bind');
+    var port = document.getElementById('nbd_port');
+    var ro = document.getElementById('nbd_read_only');
+    var lab = document.getElementById('nbd_label');
+    if (dev && f.device) dev.value = f.device;
+    if (bind && f.bind) bind.value = f.bind;
+    if (port && f.port) port.value = f.port;
+    if (ro && f.read_only) ro.value = f.read_only;
+    if (lab && f.label != null) lab.value = f.label;
+  };
+  window.nbdApplyPullPreset = function (name) {
+    if (!name || !NBD_PRESETS[name] || NBD_PRESETS[name].type !== 'pull') return;
+    var f = NBD_PRESETS[name].fields || {};
+    var u = document.getElementById('nbd_url');
+    var o = document.getElementById('nbd_image_out');
+    var fmt = document.getElementById('nbd_format');
+    if (u && f.nbd_url) u.value = f.nbd_url;
+    if (o && f.output) o.value = f.output;
+    if (fmt && f.format) fmt.value = f.format;
+  };
+  window.nbdFillHostPreset = function (form) {
+    var src = document.getElementById('nbd_export_form');
+    if (!src) return true;
+    document.getElementById('nbd_ps_device').value = (src.querySelector('[name=device]') || {}).value || '';
+    document.getElementById('nbd_ps_bind').value = (src.querySelector('[name=bind]') || {}).value || '';
+    document.getElementById('nbd_ps_port').value = (src.querySelector('[name=port]') || {}).value || '';
+    document.getElementById('nbd_ps_ro').value = (src.querySelector('[name=read_only]') || {}).value || 'yes';
+    document.getElementById('nbd_ps_label').value = (src.querySelector('[name=label]') || {}).value || '';
+    return true;
+  };
+  window.nbdFillPullPreset = function (form) {
+    var src = document.getElementById('nbd_pull_form');
+    if (!src) return true;
+    document.getElementById('nbd_ps_url').value = (src.querySelector('[name=nbd_url]') || {}).value || '';
+    document.getElementById('nbd_ps_out').value = (src.querySelector('[name=output]') || {}).value || '';
+    document.getElementById('nbd_ps_fmt').value = (src.querySelector('[name=format]') || {}).value || 'qcow2';
+    return true;
+  };
 
   window.nbdConfirmDestructiveSave = function (form) {
     if (!form) return true;

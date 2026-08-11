@@ -51,7 +51,8 @@ try {
       if (empty($r['ok'])) {
         nbd_flash('NBD Export: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
-        nbd_flash('NBD Export: started ' . ($r['url'] ?? $r['id']) . ($ro ? ' (read-only)' : ' (WRITABLE)'));
+        nbd_memory_remember_host($dev, $bind, $port, $ro, $label);
+        nbd_flash('NBD Export: hosted ' . ($r['url'] ?? $r['id']) . ($ro ? ' (read-only)' : ' (WRITABLE)'));
       }
       break;
 
@@ -74,6 +75,7 @@ try {
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
+        nbd_memory_remember_pull($url, $out, $fmt);
         nbd_flash('NBD Image: job started ' . ($r['id'] ?? ''));
       }
       break;
@@ -82,6 +84,36 @@ try {
       $id = trim((string)($_POST['job_id'] ?? ''));
       $r = nbd_image_stop($id);
       nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'stop failed')) : ('Stopped job ' . $id));
+      break;
+
+    case 'preset_save_host':
+      $name = trim((string)($_POST['preset_name'] ?? ''));
+      $fields = [
+        'device' => trim((string)($_POST['device'] ?? '')),
+        'bind' => trim((string)($_POST['bind'] ?? '')),
+        'port' => (int)($_POST['port'] ?? 10809),
+        'read_only' => (($_POST['read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no',
+        'label' => trim((string)($_POST['label'] ?? '')),
+      ];
+      $r = nbd_memory_save_preset($name, 'host', $fields);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'save failed')) : ('Saved host preset: ' . ($r['name'] ?? $name)));
+      break;
+
+    case 'preset_save_pull':
+      $name = trim((string)($_POST['preset_name'] ?? ''));
+      $fields = [
+        'nbd_url' => trim((string)($_POST['nbd_url'] ?? '')),
+        'output' => trim((string)($_POST['output'] ?? '')),
+        'format' => trim((string)($_POST['format'] ?? 'qcow2')),
+      ];
+      $r = nbd_memory_save_preset($name, 'pull', $fields);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'save failed')) : ('Saved pull preset: ' . ($r['name'] ?? $name)));
+      break;
+
+    case 'preset_delete':
+      $name = trim((string)($_POST['preset_name'] ?? ''));
+      $r = nbd_memory_delete_preset($name);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'delete failed')) : ('Deleted preset: ' . $name));
       break;
 
     default:

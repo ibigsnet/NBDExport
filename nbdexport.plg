@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ag">
+<!ENTITY version "2026.08.11ah">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- Section 2 colored empty state + status legend; remember last host/pull fields; named presets save/restore on flash.
+
+###2026.08.11ag
 - Wording: section 3 host local Unraid disk/partition on network; section 4 pull remote hosted disk into a file under /mnt.
 
 ###2026.08.11af
@@ -242,6 +245,7 @@ rm -rf /usr/local/emhttp/plugins/nbdexport
 rm -rf /usr/local/emhttp/plugins/Nbdexport
 
 # 4) Flash plugin state (cfg, companion). Unraid also removes nbdexport.plg from /boot/config/plugins/
+# Flash: cfg + memory/presets (admin-only paths/IPs — wiped on uninstall like plugin state)
 rm -rf /boot/config/plugins/NbdExport
 rm -rf /boot/config/plugins/nbdexport
 rm -f /boot/config/plugins/nbdexport.plg 2>/dev/null || true
