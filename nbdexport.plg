@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11bg">
+<!ENTITY version "2026.08.11bh">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Docs: destructive-mode.md rewrite — prose + lists, drop awkward tables.
 - Docs: NBD is not qcow2-only — raw/.img and other qemu-img targets; formats table.
 - Docs: one NVMe slot scenario — prepare image on Unraid, write new drive in a dock, swap once.
 - Docs: restore how-to-use.md (full scenarios A–F; prior empty file on main).

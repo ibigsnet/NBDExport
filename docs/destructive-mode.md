@@ -1,89 +1,79 @@
 # When to enable Destructive mode
 
-**Path:** Settings → Network Services → NBD → **Settings** tab → **Destructive mode**
+**Path:** Settings → Network Services → NBD → **Settings** → **Destructive mode**
 
-Default is **No**. Leave it there for normal imaging of an unassigned, unmounted disk.
+Default is **No**. Leave it there for normal imaging.
 
-Destructive mode is **only** for the **Host** tab (publishing a local disk). **Pull** never needs it and never writes to `/dev/…`.
+Destructive mode only affects the **Host** tab (publishing a local disk). **Pull** never needs it and never writes to `/dev/…`.
+
+While it is **On**, every NBD tab shows an **orange banner**. Turn it back to **No** when the special job is finished.
 
 ---
 
 ## Contents
 
-- [You need Destructive mode = Yes when…](#you-need-destructive-mode-yes-when)
-- [You do **not** need Destructive mode when…](#you-do-not-need-destructive-mode-when)
+- [Safe default (leave it Off)](#safe-default-leave-it-off)
+- [Turn it On only for these Host cases](#turn-it-on-only-for-these-host-cases)
 - [After a special job](#after-a-special-job)
 - [Related](#related)
 
-## You need Destructive mode = Yes when…
+---
 
-Enable it only if **at least one** of the following is true for the disk you want to **Host**:
+## Safe default (leave it Off)
 
-### 1. You want a **writable** host
+You do **not** need Destructive mode when all of these are true:
 
-| | |
-|--|--|
-| **Setting** | Host tab → **Read-only = No** |
-| **What happens** | The peer can **write** to that Unraid disk over NBD (not only image it). |
-| **When you might** | Rare lab recovery where a peer tool must modify the disk in place. |
-| **Risk** | A mistake can destroy data on that disk. Prefer read-only + Pull to a file instead. |
+- Host **Read-only = Yes**
+- Disk is **not** an Unraid array or parity member
+- Disk is **not** mounted (no filesystem from it under `/mnt/…`)
+- Disk is **not** the Unraid flash (`/boot`)
 
-Without Destructive mode, **Read-only = No** is blocked.
-
-### 2. The disk is an **Unraid array or parity** member
-
-| | |
-|--|--|
-| **Examples** | Array data disk, parity, `md*` devices listed as array members |
-| **What happens** | Even a **read-only** host is blocked until Destructive mode is On. |
-| **When you might** | Emergency capture of an array disk you cannot unassign first. |
-| **Risk** | Hosting a live array disk is dangerous for consistency and load; prefer an unassigned disk when you can. |
-
-### 3. The disk (or a partition on it) is **mounted**
-
-| | |
-|--|--|
-| **Examples** | Filesystem mounted under `/mnt/…`, or any child partition with a mount |
-| **What happens** | Host is blocked until Destructive mode is On (read-only or writable). |
-| **When you might** | You must image a disk that is still mounted and cannot unmount it first. |
-| **Risk** | Live mounts mean the image may not be consistent; unmount first when possible. |
-
-### 4. The disk is the **Unraid flash** (USB boot drive)
-
-| | |
-|--|--|
-| **Examples** | The device behind `/boot` |
-| **What happens** | Host is blocked until Destructive mode is On. |
-| **When you might** | Almost never for routine work. |
-| **Risk** | Critical system disk; writable host of flash is especially dangerous. |
+**Example:** an unassigned NVMe you plugged in only to image ([Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room)) — Destructive mode stays **No**.
 
 ---
 
-## You do **not** need Destructive mode when…
+## Turn it On only for these Host cases
 
-All of these are true (the common case):
+Enable Destructive mode only if **at least one** of the following applies to the disk you want to **Host**. Prefer fixing the situation first (unmount, unassign, keep read-only) when you can.
 
-- **Read-only = Yes** on Host  
-- The disk is **not** an array/parity member  
-- The disk is **not** mounted (no filesystem mounted from it)  
-- The disk is **not** the Unraid flash  
+### Writable host (Read-only = No)
 
-Example: an **unassigned** NVMe you plugged in only to image (Scenario C) — Destructive mode stays **No**.
+Without Destructive mode, the UI blocks a writable host.
+
+The peer can **write** through NBD to that Unraid disk — not only image it. That is almost never needed for cold imaging. Prefer **read-only Host + Pull to a file**, then work on the copy.
+
+Use a writable host only for rare lab recovery where a peer tool must modify the disk **in place**. A mistake can destroy data on that disk.
+
+### Array or parity member
+
+Even a **read-only** host of an array data disk, parity, or related `md*` member is blocked until Destructive mode is On.
+
+Hosting a **live** array disk risks consistency and load. Prefer an **unassigned** disk. Use this only for an emergency capture you cannot unassign first.
+
+### Mounted disk (or a mounted partition on it)
+
+If any filesystem from that device is mounted, Host is blocked until Destructive mode is On (read-only or writable).
+
+A live mount often means an **inconsistent** image. Unmount first when possible; enable Destructive mode only if you truly cannot.
+
+### Unraid flash (USB boot drive)
+
+The device behind `/boot` is blocked until Destructive mode is On.
+
+Almost never needed for routine work. Critical system disk — a **writable** host of the flash is especially dangerous.
 
 ---
 
 ## After a special job
 
-1. Finish Host / Pull.  
-2. **Stop** any host.  
-3. Set **Destructive mode = No** and **Apply**.  
-
-While it is On, every NBD tab shows an **orange banner**.
+1. Finish Host and/or Pull.  
+2. **Stop** any host still listening.  
+3. Set **Destructive mode = No** and **Apply**.
 
 ---
 
 ## Related
 
-- [security-and-bind.md](security-and-bind.md) — bind IP, isolation  
+- [security-and-bind.md](security-and-bind.md) — bind IP, isolation, read-only vs writable  
 - [how-to-use.md](how-to-use.md) — Host / Pull walkthroughs  
 - [settings-reference.md](settings-reference.md) — Settings tab controls  
