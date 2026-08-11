@@ -65,6 +65,12 @@ code.nbd-path { font-size: 0.9em; }
     <code>nbd://</code> target into qcow2/raw on Unraid.
     File shares stay under <strong>SMB</strong> / <strong>NFS</strong>; this page is for <em>block</em> access.
   </p>
+<?php if (nbd_thunderboltnet_present()): ?>
+  <p class="nbd-muted">
+    Thunderbolt Net is installed — prefer binding exports to a Thunderbolt IP when present
+    (underlay: <a href="/Settings/ThunderboltNet">Network Settings → Thunderbolt</a> / tbn tabs).
+  </p>
+<?php endif; ?>
 
   <div class="nbd-help">
     <strong>When to use NBD</strong>
