@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ac">
+<!ENTITY version "2026.08.11ad">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- UX/docs: “Start NBD listener” vs image job (server/client); how-to-use guide with scenarios; clearer helpers and status wording.
+
+###2026.08.11ac
 - Safety: Destructive mode (default Off) like Unassigned Devices — blocks writable and array/mounted/flash exports; UI confirms; image jobs refuse /dev output.
 
 ###2026.08.11ab
@@ -111,6 +114,10 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/DOCS.md">
 <URL>&raw;/DOCS.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/how-to-use.md">
+<URL>&raw;/docs/how-to-use.md?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/when-to-use-nbd.md">

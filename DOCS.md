@@ -95,21 +95,24 @@ Also needs **`qemu-nbd` and `qemu-img`** on the running system (normally present
 
 ## Quick start
 
-### Export a disk (this Unraid)
+**“Start NBD listener”** = run `qemu-nbd` (server) on an IP:port for one disk.  
+**“Start image job”** = run `qemu-img convert` (client) from `nbd://…` into a file.  
+**Apply** only saves settings — it does not start a listener.
 
-1. Ensure a **private** IP is up (Thunderbolt Net recommended for multi-TB jobs).  
-2. **Network Services → NBD** → pick device → bind IP → port → **Start export** (read-only).  
-3. Peer runs: `qemu-img info nbd://<bind-ip>:<port>`  
-4. When finished: **Stop** on this page.
+### Offer a disk from this Unraid (listener / server)
 
-### Image a remote NBD into qcow2
+1. Private IP up (Thunderbolt Net recommended for multi-TB jobs).  
+2. **Network Services → NBD** → device → listen IP → port → **Read-only Yes** → **Start NBD listener**.  
+3. Peer: `qemu-img info nbd://<bind-ip>:<port>` then convert, **or** use Image job on another Unraid.  
+4. When finished: **Stop listener**.
 
-1. Peer exports RO with `qemu-nbd` (or this plugin on another Unraid).  
-2. On this Unraid: **Image job** → `nbd://ip:port` → e.g. `/mnt/cache/images/name.qcow2` → Start.  
-3. Job runs in the background; refresh the page for status / log tail.  
-4. Stop the **export** on the peer when convert finishes.
+### Pull a remote disk into a qcow2 on this Unraid (client)
 
-Step-by-step: [docs/imaging-workflow.md](docs/imaging-workflow.md).
+1. Peer starts RO `qemu-nbd` (or **Start NBD listener** on another Unraid).  
+2. Here: **Image job** → `nbd://ip:port` → `/mnt/cache/…/name.qcow2` → **Start image job (pull to file)**.  
+3. Job runs in the background; when **Done**, stop the peer’s listener.
+
+Full scenarios: [docs/how-to-use.md](docs/how-to-use.md) · CLI: [docs/imaging-workflow.md](docs/imaging-workflow.md).
 
 ---
 

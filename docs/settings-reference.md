@@ -12,23 +12,30 @@
 | Destructive mode | No | UD-style: allow writable and/or array/mounted/flash exports; UI confirm still required |
 | Rehydrate on start | No | Reserved; v1 does not auto-export disks |
 
-## New export
+## Start NBD listener (server)
+
+Starts `qemu-nbd` so this host **listens** and offers one disk. Does not copy data until a client connects.
 
 | Field | Notes |
 |-------|--------|
-| Device | From `lsblk`; array/mounted flagged |
-| Bind IP | Thunderbolt IPs listed first |
-| Port | TCP listen port |
+| Device | From `lsblk`; array/mounted need Destructive mode |
+| Listen on (bind IP) | Thunderbolt IPs listed first |
+| Listen port | TCP port for the server |
 | Read-only | Strongly recommended Yes |
 | Label | Optional note |
+| **Start NBD listener** | Start server process |
+| **Stop listener** | Kill that process |
 
-## Image job
+## Image job (client)
+
+Pulls from an existing `nbd://` listener into a **file**. Does not start a listener.
 
 | Field | Notes |
 |-------|--------|
-| NBD URL | `nbd://ip:port` |
-| Output path | Must start with `/mnt/` or `/tmp/` |
+| NBD URL | `nbd://ip:port` of a running listener |
+| Output path | File under `/mnt/` or `/tmp/` — never `/dev/…` |
 | Format | qcow2 (default) or raw |
+| **Start image job** | Background `qemu-img convert` |
 
 ## Runtime paths
 

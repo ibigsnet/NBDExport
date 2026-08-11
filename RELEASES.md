@@ -11,6 +11,10 @@ https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg
 
 ## History
 
+### 2026.08.11ad
+
+- Clearer UX: Start NBD listener (server) vs image job (client); how-to-use.md with scenarios.
+
 ### 2026.08.11ac
 
 - Destructive mode (default Off): server + UI guards against accidental writable/array exports; image jobs cannot target block devices.

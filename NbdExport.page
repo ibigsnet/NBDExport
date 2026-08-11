@@ -105,15 +105,34 @@ if ($default_bind === '' && $binds) {
 <div class="nbd-wrap">
   <h3>NBD Export</h3>
   <p>
-    <strong>Network Block Device</strong> — export a disk or partition over TCP, or pull a remote
-    <code>nbd://</code> target into qcow2/raw on Unraid.
-    File shares stay under <strong>SMB</strong> / <strong>NFS</strong>; this page is for <em>block</em> access.
+    <strong>Network Block Device</strong> — temporarily share a whole disk (or partition) over TCP so another
+    machine can image it (e.g. to qcow2). This is <em>not</em> SMB/NFS (files/folders).
   </p>
+
+  <dl>
+    <dt>How this page works:</dt>
+    <dd class="nbd-muted">Listener (server) · Image job (client) · Apply only saves settings</dd>
+  </dl>
+  <blockquote class="inline_help">
+    <strong>Two separate actions:</strong><br><br>
+    <strong>1. Start NBD listener</strong> — runs <code>qemu-nbd</code> on this Unraid: it
+    <em>listens</em> on a chosen IP:port and offers one <code>/dev/…</code> disk as a network block device.
+    Nothing is copied until a client connects. This is a process you start and later <strong>Stop</strong> —
+    not a permanent Unraid “share service” like SMB.<br><br>
+    <strong>2. Start image job</strong> — runs <code>qemu-img convert</code> on this Unraid as a
+    <em>client</em>: it connects to <code>nbd://IP:port</code> (here or on a peer) and writes a
+    <strong>file</strong> under <code>/mnt/…</code> (qcow2/raw). Survives closing the browser.<br><br>
+    Typical lab flow: peer starts a listener on its disk → this Unraid runs an image job → stop the listener.
+    Full walkthrough:
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">How to use ↗</a>
+    ·
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/when-to-use-nbd.md" target="_blank" rel="noopener">when / scenarios ↗</a>
+  </blockquote>
 
   <div class="nbd-companion">
     <strong>Companions</strong> —
 <?php if ($tbn): ?>
-    Thunderbolt Net is installed — prefer binding to a TB IP
+    Thunderbolt Net is installed — prefer binding the listener to a TB IP
     (<a href="/Settings/ThunderboltNet">Network Settings → Thunderbolt</a> / tbn tabs).
 <?php else: ?>
     Optional: <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
@@ -121,7 +140,7 @@ if ($default_bind === '' && $binds) {
 <?php endif; ?>
     FRR: <?= $frr ? 'installed (optional for multi-hop only)' : 'not installed (OK)' ?>.
     <br>
-    <span class="nbd-muted">NBD is not controlled by “Unraid services / listening” on TB — it binds its own IP:port.</span>
+    <span class="nbd-muted">NBD is not controlled by Thunderbolt “Unraid services / listening” — the listener binds its own IP:port.</span>
   </div>
 
   <table class="tablesorter shift" style="width:100%">
@@ -143,8 +162,8 @@ if ($default_bind === '' && $binds) {
         : '<span class="nbd-bad">Missing</span> <span class="nbd-muted">— same as qemu-nbd (VM tools)</span>' ?></td>
     </tr>
     <tr>
-      <td>Active exports</td>
-      <td><?= count($exports) ?> · Image jobs: <?= count($jobs) ?></td>
+      <td>Active listeners</td>
+      <td><?= count($exports) ?> running · Image jobs: <?= count($jobs) ?></td>
     </tr>
     <tr>
       <td>Destructive mode</td>
@@ -159,15 +178,16 @@ if ($default_bind === '' && $binds) {
     <dd class="nbd-muted">Whole-disk imaging · cold backups · block recovery · not everyday file shares</dd>
   </dl>
   <blockquote class="inline_help">
-    <strong>Use NBD</strong> for whole-disk or partition imaging to qcow2/raw (seekable, sparse-friendly),
-    restorable cold copies before reinstall/migration, and block-level tools over a <em>private fast</em> link
-    (Thunderbolt / 10G). Staging disk images next to high-performance peers is a good fit.<br><br>
-    <strong>Use SMB or NFS</strong> when you only need files and folders.
-    Prefer <strong>read-only</strong> and a private bind IP — never the public Internet.
-    Docs:
+    <strong>Use NBD</strong> when you need the <em>whole disk</em> (GPT + partitions), a sparse qcow2 archive,
+    or block tools over a private fast link (Thunderbolt / 10G) — not when you only need folders of files.<br><br>
+    <strong>Use SMB or NFS</strong> for movies, documents, app data, and day-to-day shares.<br><br>
+    Prefer <strong>read-only</strong> listeners and a private bind IP — never the open Internet.
+    Scenarios:
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+    ·
     <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/when-to-use-nbd.md" target="_blank" rel="noopener">when to use ↗</a>
     ·
-    <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">full guide ↗</a>
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
   </blockquote>
 
   <div class="nbd-section">
@@ -241,9 +261,9 @@ if ($default_bind === '' && $binds) {
         expose array disks or open a <em>writable</em> raw disk over the network.<br><br>
         <strong>No</strong> (default): only <strong>read-only</strong> exports of disks that are not Unraid array/parity
         members and not mounted (and not the flash device).<br><br>
-        <strong>Yes</strong>: allows writable exports and/or array/mounted/flash devices. The Start export button
-        still requires a browser confirmation. Leave <strong>No</strong> for normal imaging of unassigned disks.
-        Turn back to No when finished.
+        <strong>Yes</strong>: allows writable listeners and/or array/mounted/flash devices.
+        <strong>Start NBD listener</strong> still requires a browser confirmation.
+        Leave <strong>No</strong> for normal imaging of unassigned disks. Turn back to No when finished.
       </blockquote>
 
       <p class="nbd-actions">
@@ -254,16 +274,20 @@ if ($default_bind === '' && $binds) {
   </div>
 
   <div class="nbd-section">
-    <h3>Active exports</h3>
+    <h3>Active NBD listeners</h3>
+    <p class="nbd-muted">
+      Running <code>qemu-nbd</code> servers on this host. Clients connect with
+      <code>nbd://bind:port</code> (image job below, or <code>qemu-img</code> on a peer).
+    </p>
 <?php if (!$exports): ?>
-    <p class="nbd-muted">No active exports.</p>
+    <p class="nbd-muted">No listeners running — use <strong>Start NBD listener</strong> below to offer a disk.</p>
 <?php else: ?>
     <table class="nbd-data tablesorter">
       <thead>
         <tr>
           <th>Status</th>
-          <th>Device</th>
-          <th>Bind / URL</th>
+          <th>Disk</th>
+          <th>Listening on</th>
           <th>RO</th>
           <th>Label</th>
           <th></th>
@@ -274,7 +298,7 @@ if ($default_bind === '' && $binds) {
   $alive = !empty($e['alive']) || !empty($e['listening']);
 ?>
         <tr>
-          <td><?= $alive ? '<span class="nbd-badge nbd-badge-ok">Up</span>' : '<span class="nbd-badge">Down</span>' ?></td>
+          <td><?= $alive ? '<span class="nbd-badge nbd-badge-ok">Listening</span>' : '<span class="nbd-badge">Down</span>' ?></td>
           <td><code><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
           <td>
             <code><?= htmlspecialchars(($e['bind'] ?? '') . ':' . ($e['port'] ?? '')) ?></code><br>
@@ -288,7 +312,7 @@ if ($default_bind === '' && $binds) {
               <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="export_stop">
               <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
-              <input type="submit" name="#apply" value="Stop">
+              <input type="submit" name="#apply" value="Stop listener">
             </form>
           </td>
         </tr>
@@ -299,13 +323,17 @@ if ($default_bind === '' && $binds) {
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="export_stop_all">
-      <input type="submit" name="#apply" value="Stop all exports">
+      <input type="submit" name="#apply" value="Stop all listeners">
     </form>
 <?php endif; ?>
   </div>
 
   <div class="nbd-section">
-    <h3>New export</h3>
+    <h3>Start NBD listener (offer a disk)</h3>
+    <p class="nbd-muted">
+      Starts a <strong>server</strong> process: this Unraid listens on IP:port and presents the chosen disk
+      to the network. It does <em>not</em> copy data by itself — a peer (or the image job below) must connect.
+    </p>
     <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
@@ -329,13 +357,13 @@ if ($default_bind === '' && $binds) {
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Whole disks and partitions from <code>lsblk</code>. Entries marked ⚠ may be array members or mounted —
-        they require <strong>Destructive mode = Yes</strong> even for read-only.
-        Prefer unassigned / offline disks for imaging.
+        The block device <code>qemu-nbd</code> will advertise. Whole disks and partitions from <code>lsblk</code>.
+        Entries marked ⚠ may be array members or mounted — they require <strong>Destructive mode = Yes</strong>
+        even for read-only. Prefer unassigned / unmounted disks for imaging.
       </blockquote>
 
       <dl>
-        <dt>Bind IP:</dt>
+        <dt>Listen on (bind IP):</dt>
         <dd>
           <select name="bind">
 <?php if (!$binds): ?>
@@ -349,16 +377,20 @@ if ($default_bind === '' && $binds) {
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Listen only on this address. Thunderbolt and other private IPs are listed first.
-        Avoid public / WAN addresses.
+        Address the NBD <em>server</em> binds to (only this IP accepts connections).
+        Thunderbolt and other private IPs are listed first. Avoid public / WAN addresses.
+        Clients will use <code>nbd://this-ip:port</code>.
       </blockquote>
 
       <dl>
-        <dt>Port:</dt>
+        <dt>Listen port:</dt>
         <dd>
           <input type="number" name="port" class="narrow" value="<?= $def_port ?>" min="1024" max="65535">
         </dd>
       </dl>
+      <blockquote class="inline_help">
+        TCP port for the listener (default <strong>10809</strong>). Must be free on this host.
+      </blockquote>
 
       <dl>
         <dt>Read-only:</dt>
@@ -370,8 +402,8 @@ if ($default_bind === '' && $binds) {
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>Yes</strong> uses <code>qemu-nbd --read-only</code> (peer cannot wipe the disk).
-        <strong>No</strong> is blocked unless Destructive mode is On — a writable NBD is raw disk over TCP.
+        <strong>Yes</strong> — <code>qemu-nbd --read-only</code>: peer can read/image the disk but not write it.
+        <strong>No</strong> — peer can modify the disk (dangerous); requires Destructive mode.
       </blockquote>
 
       <dl>
@@ -383,21 +415,25 @@ if ($default_bind === '' && $binds) {
 
       <p class="nbd-muted" id="nbd_export_hint">
 <?php if ($destructive !== 'yes'): ?>
-        Destructive mode is <strong>Off</strong> — only safe RO exports of non-array disks.
+        Destructive mode is <strong>Off</strong> — only safe RO listeners on non-array disks.
 <?php else: ?>
-        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only before Start.</span>
+        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only before starting the listener.</span>
 <?php endif; ?>
       </p>
 
       <p class="nbd-actions">
-        <input type="submit" name="#apply" value="Start export"
+        <input type="submit" name="#apply" value="Start NBD listener"
           <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
       </p>
     </form>
   </div>
 
   <div class="nbd-section">
-    <h3>Image job (nbd:// → file)</h3>
+    <h3>Image job (pull remote disk → file on Unraid)</h3>
+    <p class="nbd-muted">
+      <strong>Client</strong> role: connect to an existing <code>nbd://</code> listener (this host or a peer)
+      and write a qcow2/raw <em>file</em>. Does not start a listener. Job keeps running if you close the browser.
+    </p>
     <form method="POST" action="/update.php" target="progressFrame" onsubmit="return nbdConfirmImage(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
@@ -410,7 +446,8 @@ if ($default_bind === '' && $binds) {
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Source export, e.g. <code>nbd://&lt;bind-ip&gt;:10809</code>. Peer (or this host) must already be exporting.
+        URL of a running NBD listener, e.g. <code>nbd://10.255.0.1:10809</code>.
+        Someone must already have clicked <strong>Start NBD listener</strong> (or run <code>qemu-nbd</code>) on that address.
       </blockquote>
 
       <dl>
@@ -440,7 +477,7 @@ if ($default_bind === '' && $binds) {
       </blockquote>
 
       <p class="nbd-actions">
-        <input type="submit" name="#apply" value="Start image job"
+        <input type="submit" name="#apply" value="Start image job (pull to file)"
           <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
       </p>
     </form>
@@ -579,11 +616,13 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
     }
 
     if (needConfirm) {
-      var msg = 'Start NBD export of:\n  ' + devSel.value + '\n\n';
+      var msg = 'Start NBD listener (qemu-nbd server) for:\n  ' + devSel.value + '\n\n';
+      msg += 'This shares the disk over the network on the bind IP:port.\n';
+      msg += 'It does NOT copy data by itself — a client must connect (image job or qemu-img).\n\n';
       if (!ro) {
-        msg += 'WARNING: WRITABLE export — the peer can modify or wipe this disk.\n\n';
+        msg += 'WARNING: WRITABLE — the peer can modify or wipe this disk.\n\n';
       } else {
-        msg += 'Read-only export.\n\n';
+        msg += 'Read-only listener (peer cannot write).\n\n';
       }
       if (warn) {
         msg += 'Device flags: ' + (flags || 'risky') + '\n\n';
@@ -595,8 +634,8 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
       // Second confirm for writable
       if (!ro) {
         if (!window.confirm(
-          'FINAL CONFIRMATION\n\nWritable NBD of ' + devSel.value + '.\n' +
-          'A mistake can destroy data. Type OK thinking: are you sure?\n\nClick OK only if intentional.'
+          'FINAL CONFIRMATION\n\nWritable NBD listener for ' + devSel.value + '.\n' +
+          'A mistake can destroy data.\n\nClick OK only if intentional.'
         )) {
           return false;
         }
@@ -604,7 +643,10 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
       if (conf) conf.value = 'yes';
     } else {
       // Safe RO path — light confirm still helps fat-finger Start
-      if (!window.confirm('Start read-only NBD export of ' + devSel.value + '?')) {
+      if (!window.confirm(
+        'Start read-only NBD listener for ' + devSel.value + '?\n\n' +
+        'This runs qemu-nbd (server). Clients use nbd://IP:port to image the disk.'
+      )) {
         return false;
       }
       // Safe path does not need server-side confirm flag
@@ -625,8 +667,9 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
       return false;
     }
     return window.confirm(
-      'Start image job to:\n  ' + path + '\n\n' +
-      'This writes a new file (does not wipe a disk). Continue?'
+      'Start image job (client):\n  write → ' + path + '\n\n' +
+      'Pulls from the NBD URL into a file via qemu-img convert.\n' +
+      'Does not wipe a local disk. Does not start a listener. Continue?'
     );
   };
 })();
