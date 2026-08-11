@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11aa">
+<!ENTITY version "2026.08.11ab">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- UI: layout unified with UnraidFRR/Thunderbolt Net (dl/dt/dd, inline_help, companion strip, status table, Apply/Done).
+
+###2026.08.11aa
 - Docs/UI: Unraid product min 6.12 vs qemu tools (not kernel); clearer Status missing-tool text.
 
 ###2026.08.11
