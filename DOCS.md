@@ -88,7 +88,8 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
    `https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg`  
 3. Hard-refresh → **Network Services → NBD**.
 
-Requires Unraid **6.12+**. Needs `qemu-nbd` and `qemu-img` (normally present with the VM stack).
+Requires **Unraid product 6.12+** (plugin `min=` / CA MinVer — not a Linux kernel version).  
+Also needs **`qemu-nbd` and `qemu-img`** on the running system (normally present when the Unraid **VM** features/tools are available). Check the Status table on the NBD page; missing tools are a package/VM-stack issue, not “upgrade Unraid for kernel 7.x.”
 
 ---
 

@@ -96,13 +96,13 @@ code.nbd-path { font-size: 0.9em; }
       <td>qemu-nbd</td>
       <td><?= $tools['qemu_nbd'] !== ''
         ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_nbd']) . '</code>'
-        : '<span class="nbd-bad">Missing</span> — install/enable Unraid VM tools' ?></td>
+        : '<span class="nbd-bad">Missing</span> — userspace tool (usually Unraid VM stack), not a kernel version' ?></td>
     </tr>
     <tr>
       <td>qemu-img</td>
       <td><?= $tools['qemu_img'] !== ''
         ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_img']) . '</code>'
-        : '<span class="nbd-bad">Missing</span>' ?></td>
+        : '<span class="nbd-bad">Missing</span> — same as qemu-nbd (VM tools)' ?></td>
     </tr>
     <tr>
       <td>Companions</td>

@@ -2,7 +2,8 @@
 
 ## qemu-nbd / qemu-img missing
 
-Enable Unraid’s VM-related packages so `qemu-nbd` and `qemu-img` appear under `/usr/bin`. The Status table on the NBD page shows detected paths.
+These are **userspace tools** (usually with Unraid’s VM stack), not a Linux kernel version gate and not “Unraid 7.2+.”  
+Enable/install VM-related components so `qemu-nbd` and `qemu-img` appear under `/usr/bin`. The Status table on the NBD page shows detected paths.
 
 ## Export fails immediately
 
