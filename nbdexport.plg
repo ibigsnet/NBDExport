@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11bc">
+<!ENTITY version "2026.08.11bd">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Docs: when-to-use — common scenarios (laptop→VM, gaming PC→array, recovery, reverse to physical).
 - Docs: when-to-use opener — local physical disk feel, over the network.
 - Docs: rename “If you click this…” to “What each control does”.
 - Docs: Contents/TOC on large pages (how-to-use, DOCS, destructive-mode, …).

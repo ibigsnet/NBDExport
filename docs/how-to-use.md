@@ -264,7 +264,7 @@ NBD does not create snapshots for you — after each good Pull, snapshot on the 
 
 | Doc | Topic |
 |-----|--------|
-| [when-to-use-nbd.md](when-to-use-nbd.md) | Why NBD vs SMB/NFS |
+| [when-to-use-nbd.md](when-to-use-nbd.md) | Why NBD vs SMB/NFS · common scenarios (laptop→VM, recovery, gaming PC→array) |
 | [imaging-workflow.md](imaging-workflow.md) | CLI golden path + restore |
 | [security-and-bind.md](security-and-bind.md) | Destructive mode, bind IP |
 | [nbd-vs-nfs-smb.md](nbd-vs-nfs-smb.md) | Files vs disks decision |
