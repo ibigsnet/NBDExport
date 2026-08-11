@@ -4,12 +4,3 @@ Tabs="true"
 Title="NBD"
 Icon="database"
 Tag="database"
-Markdown="false"
----
-<?php
-/**
- * Parent: Settings → Network Services → NBD
- * Tabs: Status · Host · Pull · Settings (Unraid xmenu strip, like SMB/Tailscale).
- * Do not put Menu="NetworkServices:N" on children — that would create extra top-level tiles.
- */
-?>

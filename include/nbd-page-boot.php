@@ -95,7 +95,17 @@ function nbd_page_styles() {
   $done = true;
   echo <<<'CSS'
 <style>
-.nbd-wrap { max-width: 54em; }
+/* Center the Unraid tab strip (Network Settings style: balanced row of tabs) */
+.tabs {
+  justify-content: center !important;
+}
+.tabs .tabs-container {
+  justify-content: center !important;
+  width: auto !important;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.nbd-wrap { max-width: 54em; margin-left: auto; margin-right: auto; }
 .nbd-wrap .nbd-companion {
   margin: 0.5em 0 1em;
   padding: 0.55em 0.75em;
