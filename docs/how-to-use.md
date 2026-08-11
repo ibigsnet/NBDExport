@@ -152,7 +152,7 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 ### Steps
 
 1. **Network:** A and B must reach each other on a **private** path — not the open Internet / WAN. Prefer [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) for multi-terabyte pulls; a dedicated LAN or 10G+ also works. Bind NBD to that private (or Thunderbolt) IP.  
-   *Why Thunderbolt for big images?* A Thunderbolt 4–class host-net path is often marketed as **40 Gbit/s**, but under Linux you commonly see about **20 Gbit/s each way** (simplex lanes / full-duplex style use). That is still roughly **twice a 10 Gbit/s NIC** in one direction — and far beyond Wi‑Fi for dumping a whole NVMe. Trained rate ≠ full TCP, but the gap vs 10G is still why a TB cable next to the desk is worth it for NBD.  
+   Thunderbolt 4 host-net is often stickered **40 Gbit/s** and commonly trains about **20 Gbit/s each way** under Linux — still roughly **twice a 10 Gbit/s NIC** one-way for bulk copy (TCP will be lower than trained rate; still far above Wi‑Fi).  
 2. **Unraid A — Host**  
    - Destructive mode **Off** when possible (unassigned / not mounted / not array).  
    - Device = the whole physical disk (or the partition you need).  
@@ -185,57 +185,41 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 3. **Pull** (or a peer) uses `nbd://<thunderbolt-ip>:port`.  
 4. For **multi-terabyte** images, stay on that path — **not** Wi‑Fi.
 
-**Speed gut-check (why bother with Thunderbolt Net):** Thunderbolt 4 ports are often stickered **40 Gbit/s**. On Linux host-net you frequently train about **20 Gbit/s each direction** (not 40 each way). That is still in the same ballpark as **~2× a 10 Gbit/s Ethernet NIC** for one-way bulk copy — before you even compare cable chaos (one TB cable between peers vs switch, DAC, etc.). Real TCP will be lower than the trained line rate; it is still the comfortable home for NBD dumps of whole disks.
+Thunderbolt 4 is often stickered **40 Gbit/s** and under Linux host-net commonly trains about **20 Gbit/s each direction** — still about **2× a 10 Gbit/s NIC** one-way for bulk copy (TCP below line rate). One Thunderbolt cable between peers is a good default for whole-disk NBD pulls.
 
 Thunderbolt Net “Unraid services / listening” (SMB/NFS/web on the Thunderbolt IP) is **independent** of NBD.
 
 ---
 
-## Scenario E — Cold physical-disk archive on Unraid (qcow2 + optional BTRFS versions)
+## Scenario E — Cold physical-disk archive on Unraid (qcow2 + BTRFS snapshots)
 
-**Goal:** Keep a **backup image of a whole physical disk** on Unraid (for restore later, or attach as a VM disk), and optionally keep **several point-in-time versions** without storing N full independent multi-terabyte copies if the filesystem can help.
+**Goal:** Keep a whole physical disk as a **qcow2 file** on Unraid (restore later or attach as a VM disk), and keep **named restore points** over time without always storing a full second multi-terabyte copy.
 
-This is **not** gibberish — it is a real pattern — with one important accuracy note about **how** space savings work.
+NBD Export only creates the image. **BTRFS snapshots** on the storage side hold the history.
 
-### What NBD is for here
+### First archive
 
-1. **Host** the physical disk RO (this Unraid or another — often Scenario C).  
-2. **Pull** to a qcow2 on Unraid storage, e.g. `/mnt/user/domains/workstation-nvme.qcow2` or a dedicated share on a large pool/array.  
-3. **Stop** the host when the job finishes.  
-4. Verify: `qemu-img check …`.
+1. **Host** the physical disk read-only (this Unraid or another — often Scenario C).  
+2. Prefer a **BTRFS pool** (or BTRFS subvolume) for the archive share if you plan snapshots.  
+3. **Pull** to a **stable path**, e.g. `/mnt/user/disk-archives/workstation.qcow2` (example — pick a share on the roomy pool).  
+4. Destructive mode **Off** when the source is unassigned / not mounted.  
+5. **Stop** the host when the job finishes.  
+6. Check: `qemu-img check /path/to/workstation.qcow2`.
 
-You now have a **file-shaped** copy of the disk on Unraid. Day-to-day files still belong on SMB/NFS; this is for **disk-shaped** cold archive.
+You now have a disk-shaped cold archive. Ordinary files still belong on SMB/NFS.
 
-### Versioning / “little overhead of differences” — what actually works
+### Later versions (same disk, point-in-time history)
 
-| Approach | Space-efficient for successive versions? | Notes |
-|----------|------------------------------------------|--------|
-| **BTRFS snapshot of the subvolume/share** that holds the qcow2 (after each good pull) | **Yes, often** | Classic COW: snapshot freezes the *previous* qcow2 extents; later overwrites only pay for **changed** filesystem blocks. Best when you **update the same file path** (or manage one active image + snapshots), not when every pull creates a brand-new unrelated filename with a full rewrite. |
-| **Two separate full Pulls** to `disk-2026-01.qcow2` and `disk-2026-02.qcow2` | **Usually no** | Two independent full converts ≈ two full sizes unless you run **dedupe** later or use special tools. BTRFS does not magically share extents between two freshly written large files. |
-| **qcow2 internal / external snapshots** (base + overlay) | **Yes, for VM-style deltas** | QEMU’s model (backing file + overlay). Fits “boot this image in a VM and track changes”; less natural for “re-image a bare NVMe from scratch every month” unless you design the chain carefully. |
-| **Expect Unraid “array parity” to version qcow2s** | **No** | Array parity is not a per-file COW history of your images. |
+Keep **one live image path** and snapshot the **subvolume** (or share’s BTRFS dataset) after each good pull:
 
-**Practical recipe many labs use**
+1. After step 6 above, take a **BTRFS snapshot** of that subvolume (Unraid UI, `btrfs subvolume snapshot`, or your backup tool). Name it by date if you like.  
+2. Next time you re-image the same physical disk: **Pull again to the same live path** (`workstation.qcow2`).  
+3. Snapshot again after a successful check.  
+4. **Prune** old snapshots on a schedule so free space returns.
 
-1. Prefer a **BTRFS pool** (or BTRFS subvolume) for the archive share if you want filesystem snapshots.  
-2. First time: Pull → e.g. `/mnt/cache_btrfs/disk-archives/workstation.qcow2` (path is an example).  
-3. After a good check: take a **BTRFS snapshot** of that subvolume/share (Unraid UI / `btrfs subvolume snapshot` / your backup tool).  
-4. Next month: Pull **again** (overwrite the live `workstation.qcow2`, or write then replace carefully). The **snapshot** keeps the old point-in-time; COW means unchanged parts of the old image are not fully duplicated for the snapshot’s view.  
-5. Prune old snapshots on a schedule so free space returns.
+Unchanged parts of the previous image stay shared via copy-on-write; you mainly pay storage for what changed (and for any full rewrite of large regions). Sparse qcow2 from `qemu-img convert` also keeps empty disk regions small on the first and later pulls.
 
-**Honest limits**
-
-- A **full** re-image that rewrites almost every block of the qcow2 still costs a lot of new space until old snapshots are deleted.  
-- NBD Export does **not** implement incremental NBD or automatic BTRFS snapshots — it only delivers the **image file**. Snapshots/versioning are **storage-layer** (or qcow2-layer) follow-ups.  
-- Sparse qcow2 from `qemu-img convert` already helps **empty** disk regions; that is separate from BTRFS snapshot savings between versions.
-
-### Minimal steps (single archive, no snapshot yet)
-
-1. RO **Host** of the physical disk.  
-2. **Pull** to `/mnt/user/domains/…` or a large BTRFS share.  
-3. Destructive mode **Off** unless you knowingly need array/mounted source devices.  
-4. **Stop** host; `qemu-img check`.  
-5. Optional: BTRFS snapshot of the archive subvolume for a named restore point.
+NBD does not create snapshots for you — after each good Pull, snapshot on the BTRFS side.
 
 ---
 
@@ -248,7 +232,6 @@ You now have a **file-shaped** copy of the disk on Unraid. Day-to-day files stil
 | Pull output path `/dev/sda` | Always a **file** under `/mnt/` |
 | Bind `0.0.0.0` with WAN exposure | Specific private IP only |
 | Expect hosting in Windows Explorer as a share | Use SMB for files; NBD is for block tools / qemu-img |
-| Expect two full Pulls to two qcow2 names to auto-share space on BTRFS | Use **snapshots** of one image path, or qcow2 backing chains, or dedupe tools |
 
 ---
 

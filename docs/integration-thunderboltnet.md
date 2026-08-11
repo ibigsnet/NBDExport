@@ -31,7 +31,7 @@ Use NBD **Host** separately if you need block export on that IP.
 
 ## Why pair them for big images
 
-NBD will run on any private IPv4. Thunderbolt host-net is worth using when the image is large: a **Thunderbolt 4–class** path (sticker **40 Gbit/s**, often ~**20 Gbit/s each way** under Linux) is still about **2× a 10 Gbit/s NIC** one-way for bulk block copy — and one cable between peers beats waiting on Wi‑Fi. See Thunderbolt Net docs for trained rate vs sticker honesty.
+NBD runs on any private IPv4. For multi-terabyte pulls, Thunderbolt host-net is a strong default: Thunderbolt 4 is often stickered **40 Gbit/s** and commonly trains about **20 Gbit/s each way** under Linux — still about **2× a 10 Gbit/s NIC** one-way (TCP below line rate). Details: Thunderbolt Net docs on trained rate vs sticker.
 
 ## Recommended order for multi-terabyte imaging
 

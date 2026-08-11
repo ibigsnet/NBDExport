@@ -21,7 +21,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
-**Versioned cold archives on Unraid:** NBD gets you a **qcow2 of the whole disk** on array/pool storage. For several restore points with less-than-full copies each time, use **BTRFS snapshots** of the share/subvolume (or qcow2 snapshot chains) — not “pull a second full file and hope BTRFS merges them.” See [how-to-use.md — Scenario E](how-to-use.md#scenario-e--cold-physical-disk-archive-on-unraid-qcow2--optional-btrfs-versions).
+**Versioned cold archives on Unraid:** Pull a whole disk to one stable qcow2 path, then take **BTRFS snapshots** of that subvolume for restore points. See [how-to-use.md — Scenario E](how-to-use.md#scenario-e--cold-physical-disk-archive-on-unraid-qcow2--btrfs-snapshots).
 
 **Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access** and **Host** it RO there (that box may lack free space for a multi-terabyte qcow2). **Pull** on the roomy Unraid (big array / pool) so the **qcow2 file is written there** over the network — no need to open the rack or install the NVMe on the big server. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
 
@@ -33,7 +33,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use Thunderbolt/USB4 host-to-host networking.
 
-**Quirky but useful comparison:** a Thunderbolt 4–class path is often sold as **40 Gbit/s**. Under Linux host-net you commonly see about **20 Gbit/s each way** (simplex lanes — not PCIe-style 40 full duplex both ways). That is still roughly **twice a 10 Gbit/s NIC** in one direction — so for “dump this NVMe into a qcow2 on the other Unraid,” a TB cable is not a toy next to your 10G card. Trained rate still is not full TCP; expect less than the line number, and still far above Wi‑Fi.
+Thunderbolt 4 host-net is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way for bulk imaging (TCP below line rate; still far above Wi‑Fi).
 
 ---
 
