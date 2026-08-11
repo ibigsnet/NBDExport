@@ -8,10 +8,13 @@ require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
+<?php nbd_page_header(); ?>
+  <div class="nbd-tab-body">
   <div class="nbd-section" style="margin-top:0">
     <h3>Plugin settings</h3>
     <p class="nbd-section-lead">
       Master switches only. <strong>Apply</strong> saves config — it does <em>not</em> start a listener or image job.
+      Destructive mode shows in orange at the top of every tab when ON.
     </p>
     <form method="POST" action="/update.php" target="progressFrame">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
@@ -116,5 +119,7 @@ nbd_page_styles();
       </details>
     </div>
   </div>
+  </div>
+<?php nbd_page_footer(false); ?>
 </div>
 <?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>

@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11am">
+<!ENTITY version "2026.08.11an">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Shared chrome: hosted disks + orange Destructive banner on every tab; NBD blurb footer; CLI dropdown on Status.
 - Tabs: header-only parent (no blank first tab, like Network Settings/SMB); center tab strip; text tabs.
 - UI tabs (Unraid xmenu): Status · Host · Pull · Settings — like Network Settings / SMB strip.
 - Multi-disk hosting documented (already supported; free port prefill); CLI under Status as collapsible.

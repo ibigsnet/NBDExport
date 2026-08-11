@@ -8,21 +8,17 @@ require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
+<?php nbd_page_header(); ?>
+  <div class="nbd-tab-body">
   <div class="nbd-section" style="margin-top:0">
-    <h3>Host a local Unraid disk/partition on the network</h3>
+    <h3>Host a local Unraid disk/partition</h3>
     <p class="nbd-section-lead">
-      <strong>Server — publish raw blocks from this Unraid.</strong>
-      Starts <code>qemu-nbd</code> on bind IP:port. Does <em>not</em> copy data — a peer or the
-      <strong>Pull</strong> tab must connect. Stop from the <strong>Status</strong> tab when finished.
+      <strong>Server</strong> — start <code>qemu-nbd</code> on bind IP:port. Does not copy data; a peer or
+      <strong>Pull</strong> must connect. Live list is always above.
     </p>
     <div class="nbd-tip">
-      <strong>Multi-disk:</strong> host several disks at once. Each listener needs a <strong>different port</strong>
-      (and usually the same private bind IP). Status lists them all.
-      Suggested free port prefilled when others are already listening.
-    </div>
-    <div class="nbd-tip">
-      <strong>Remembered settings:</strong> last fields restore automatically; named presets below.
-      Backup under <strong>Settings</strong> → Export config.
+      <strong>Multi-disk:</strong> different <strong>port</strong> per listener (free port prefilled when busy).
+      Presets + export under <strong>Settings</strong>.
     </div>
 <?php if ($host_presets): ?>
     <p class="nbd-muted">
@@ -153,5 +149,7 @@ nbd_page_styles();
     </form>
 <?php endif; ?>
   </div>
+  </div>
+<?php nbd_page_footer(false); ?>
 </div>
 <?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>

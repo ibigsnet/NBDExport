@@ -177,6 +177,200 @@ function nbd_page_styles() {
 }
 .nbd-wrap details.nbd-cli-box { margin-top: 1.25em; font-size: 0.95em; }
 .nbd-wrap details.nbd-cli-box summary { cursor: pointer; font-weight: 600; }
+/* Always-on chrome (all tabs) */
+.nbd-wrap .nbd-chrome-top {
+  margin: 0 0 1em;
+  padding-bottom: 0.85em;
+  border-bottom: 2px solid rgba(128, 128, 128, 0.35);
+}
+.nbd-wrap .nbd-destructive-banner {
+  margin: 0 0 0.75em;
+  padding: 0.55em 0.75em;
+  border-radius: 6px;
+  border: 1px solid rgba(230, 138, 46, 0.65);
+  border-left-width: 4px;
+  background: rgba(230, 138, 46, 0.18);
+  color: var(--orange-bold, #e68a2e);
+  font-weight: 600;
+  font-size: 0.92em;
+  line-height: 1.35;
+}
+.nbd-wrap .nbd-destructive-banner a { color: inherit; font-weight: 700; }
+.nbd-wrap .nbd-chrome-hosted h3 {
+  margin: 0 0 0.35em;
+  font-size: 1.05em;
+  font-weight: 700;
+}
+.nbd-wrap .nbd-chrome-hosted .nbd-section-lead { margin-bottom: 0.5em; }
+.nbd-wrap .nbd-chrome-footer {
+  margin: 1.5em 0 0.5em;
+  padding: 0.75em 0 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+  font-size: 0.9em;
+  line-height: 1.4;
+  opacity: 0.92;
+}
+.nbd-wrap .nbd-chrome-footer .nbd-companion {
+  margin: 0.55em 0 0;
+}
+.nbd-wrap .nbd-tab-body {
+  margin-top: 0.35em;
+}
 </style>
 CSS;
+}
+
+/**
+ * Shared top chrome on every NBD tab: Destructive banner + disks currently hosted.
+ * Unraid tab strip stays above this (native); this is the always-visible page header.
+ */
+function nbd_page_header() {
+  global $exports, $destructive, $enabled, $tools, $jobs;
+  if (!isset($exports)) {
+    return;
+  }
+  $n = is_array($exports) ? count($exports) : 0;
+  $nj = is_array($jobs) ? count($jobs) : 0;
+  ?>
+<div class="nbd-chrome-top">
+<?php if ($destructive === 'yes'): ?>
+  <div class="nbd-destructive-banner" role="status">
+    Destructive mode is <strong>ON</strong> — writable and/or array/mounted/flash exports allowed.
+    Prefer read-only. Turn off under
+    <a href="/Settings/NbdSettings">Settings</a>
+    when finished.
+  </div>
+<?php endif; ?>
+<?php if ($enabled !== 'yes'): ?>
+  <div class="nbd-destructive-banner" role="status" style="border-color:rgba(200,60,60,0.5);background:rgba(200,60,60,0.12);color:#c33">
+    NBD Export is <strong>disabled</strong> — enable under <a href="/Settings/NbdSettings">Settings</a>.
+  </div>
+<?php endif; ?>
+
+  <div class="nbd-chrome-hosted">
+    <h3>Disks currently hosted on the network
+      <span class="nbd-muted" style="font-weight:500;font-size:0.88em">
+        · <?= (int)$n ?> live<?= $nj ? ' · ' . (int)$nj . ' pull job(s)' : '' ?>
+      </span>
+    </h3>
+    <p class="nbd-section-lead">
+      Always visible. Multi-disk: different ports. Add from <strong>Host</strong> · stop here or on Status.
+    </p>
+<?php if (!$exports): ?>
+    <div class="nbd-empty" style="margin:0.4em 0 0;padding:0.65em 0.85em">
+      <strong>None hosted right now.</strong>
+      Use the <strong>Host</strong> tab to publish a local disk/partition.
+    </div>
+<?php else: ?>
+    <div class="nbd-status-legend" style="margin:0.35em 0 0.45em">
+      <span><span class="nbd-badge nbd-badge-ok">Listening</span></span>
+      <span><span class="nbd-badge nbd-badge-info">Starting…</span></span>
+      <span><span class="nbd-badge nbd-badge-stale">Stopped</span></span>
+      <span><span class="nbd-badge nbd-badge-rw">Writable</span></span>
+    </div>
+    <table class="nbd-data tablesorter">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Disk</th>
+          <th>Clients use</th>
+          <th>Mode</th>
+          <th>Label</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+<?php foreach ($exports as $e):
+  $ust = nbd_export_ui_status($e);
+  $ro = !empty($e['read_only']);
+?>
+        <tr>
+          <td>
+            <span class="nbd-badge <?= htmlspecialchars($ust['class']) ?>" title="<?= htmlspecialchars($ust['hint']) ?>"><?= htmlspecialchars($ust['label']) ?></span>
+          </td>
+          <td><code><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
+          <td><code><?= htmlspecialchars($e['url'] ?? (($e['bind'] ?? '') . ':' . ($e['port'] ?? ''))) ?></code></td>
+          <td><?= $ro
+            ? '<span class="nbd-badge nbd-badge-ok">Read-only</span>'
+            : '<span class="nbd-badge nbd-badge-rw">Writable</span>' ?></td>
+          <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
+          <td>
+            <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+              <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+              <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+              <input type="hidden" name="nbd_action" value="export_stop">
+              <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
+              <input type="submit" name="#apply" value="Stop">
+            </form>
+          </td>
+        </tr>
+<?php endforeach; ?>
+      </tbody>
+    </table>
+<?php if ($n > 1): ?>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="export_stop_all">
+      <input type="submit" name="#apply" value="Stop all hosted disks">
+    </form>
+<?php endif; ?>
+<?php endif; ?>
+  </div>
+</div>
+  <?php
+}
+
+/**
+ * Shared footer on every tab: what NBD is + companions + docs (not a wall at the top).
+ */
+function nbd_page_footer($show_cli = false) {
+  global $tbn, $frr;
+  ?>
+<div class="nbd-chrome-footer">
+  <strong>Network Block Device</strong> —
+  temporarily share a whole disk/partition over TCP for imaging (not SMB/NFS folders).
+  Tabs: <strong>Host</strong> publish · <strong>Pull</strong> save to file · <strong>Settings</strong> options.
+  <div class="nbd-companion">
+    <strong>Companions</strong> —
+<?php if (!empty($tbn)): ?>
+    Thunderbolt Net — prefer a TB bind IP
+    (<a href="/Settings/ThunderboltNet">Network Settings → Thunderbolt</a>).
+<?php else: ?>
+    Optional <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
+    for a private underlay.
+<?php endif; ?>
+    Fabric Routing (FRR): <?= !empty($frr) ? 'installed (optional multi-hop only)' : 'not needed for NBD' ?>.
+    <span class="nbd-muted"> NBD binds its own IP:port.</span>
+  </div>
+<?php if ($show_cli): ?>
+  <details class="nbd-cli-box">
+    <summary>CLI reference (same path the UI wraps)</summary>
+    <pre class="nbd-cli"># Host (read-only, private bind) — multi-disk: change --port per disk
+qemu-nbd --read-only --persistent --shared=2 \
+  --bind=10.255.0.1 --port=10809 --format=raw /dev/nvme0n1
+
+# Pull on Unraid
+qemu-img info nbd://10.255.0.1:10809
+qemu-img convert -p -f raw -O qcow2 -t writeback -W \
+  nbd://10.255.0.1:10809 /mnt/user/domains/example.qcow2</pre>
+    <p class="nbd-muted" style="margin:0.4em 0 0">
+      Docs:
+      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+      ·
+      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging ↗</a>
+      ·
+      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
+    </p>
+  </details>
+<?php else: ?>
+  <p class="nbd-muted" style="margin:0.45em 0 0">
+    Docs:
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+    ·
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
+  </p>
+<?php endif; ?>
+</div>
+  <?php
 }

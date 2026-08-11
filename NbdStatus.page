@@ -8,205 +8,98 @@ require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
-  <p>
-    <strong>Network Block Device</strong> — share whole disks over TCP for imaging (not SMB/NFS folders).
-    Use the tabs: <strong>Host</strong> publish · <strong>Pull</strong> image · <strong>Settings</strong> options/backup.
-  </p>
+<?php nbd_page_header(); ?>
 
-  <div class="nbd-companion">
-    <strong>Companions</strong> —
-<?php if ($tbn): ?>
-    Thunderbolt Net installed — prefer a TB bind IP
-    (<a href="/Settings/ThunderboltNet">Network Settings → Thunderbolt</a>).
-<?php else: ?>
-    Optional: <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
-    for a private underlay.
-<?php endif; ?>
-    FRR: <?= $frr ? 'installed (optional multi-hop only)' : 'not installed (OK)' ?>.
-    <br>
-    <span class="nbd-muted">NBD binds its own IP:port — separate from Thunderbolt “listening” for SMB/NFS.</span>
-  </div>
-
-  <table class="tablesorter shift" style="width:100%">
-    <tr>
-      <td style="width:16em">Plugin version</td>
-      <td><code><?= $ver ?></code>
-        <span class="nbd-muted"> — Plugins tab updates</span></td>
-    </tr>
-    <tr>
-      <td>qemu-nbd</td>
-      <td><?= $tools['qemu_nbd'] !== ''
-        ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_nbd']) . '</code>'
-        : '<span class="nbd-bad">Missing</span> <span class="nbd-muted">— VM stack / qemu tools</span>' ?></td>
-    </tr>
-    <tr>
-      <td>qemu-img</td>
-      <td><?= $tools['qemu_img'] !== ''
-        ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_img']) . '</code>'
-        : '<span class="nbd-bad">Missing</span> <span class="nbd-muted">— same as qemu-nbd</span>' ?></td>
-    </tr>
-    <tr>
-      <td>Active listeners</td>
-      <td><strong><?= count($exports) ?></strong> hosted
-        · Image jobs: <strong><?= count($jobs) ?></strong>
-        · Multi-disk: start more on the <strong>Host</strong> tab (different port each)</td>
-    </tr>
-    <tr>
-      <td>Destructive mode</td>
-      <td><?= $destructive === 'yes'
-        ? '<span class="nbd-warn"><strong>ON</strong> — writable / array exports allowed (change under Settings)</span>'
-        : '<span class="nbd-ok">Off</span> <span class="nbd-muted">— RO non-array only (safe default)</span>' ?></td>
-    </tr>
-  </table>
-
-  <div class="nbd-section">
-    <h3>Disks currently hosted on the network</h3>
-    <p class="nbd-section-lead">
-      Live NBD <strong>servers</strong> on this Unraid. You can host <strong>more than one disk</strong> at once
-      (each needs its own bind:port). Add another from the <strong>Host</strong> tab.
-    </p>
-    <div class="nbd-status-legend">
-      <span><span class="nbd-badge nbd-badge-ok">Listening</span> process + port open</span>
-      <span><span class="nbd-badge nbd-badge-info">Starting…</span> process up, port not ready</span>
-      <span><span class="nbd-badge nbd-badge-stale">Stopped / stale</span> leftover state</span>
-      <span><span class="nbd-badge nbd-badge-bad">Down</span> not running</span>
-      <span><span class="nbd-badge nbd-badge-rw">Writable</span> peer can write</span>
-    </div>
-<?php if (!$exports): ?>
-    <div class="nbd-empty">
-      <strong>No disks hosted right now.</strong><br>
-      Open the <strong>Host</strong> tab to publish a local disk or partition for peers to image.
-    </div>
-<?php else: ?>
-    <table class="nbd-data tablesorter">
-      <thead>
+  <div class="nbd-tab-body">
+    <div class="nbd-section" style="margin-top:0">
+      <h3>Tools &amp; overview</h3>
+      <table class="tablesorter shift" style="width:100%">
         <tr>
-          <th>Status</th>
-          <th>Disk</th>
-          <th>Clients use</th>
-          <th>Mode</th>
-          <th>Label</th>
-          <th></th>
+          <td style="width:14em">Plugin</td>
+          <td><code><?= $ver ?></code>
+            <span class="nbd-muted"> — Plugins tab updates</span></td>
         </tr>
-      </thead>
-      <tbody>
-<?php foreach ($exports as $e):
-  $ust = nbd_export_ui_status($e);
-  $ro = !empty($e['read_only']);
-?>
         <tr>
-          <td>
-            <span class="nbd-badge <?= htmlspecialchars($ust['class']) ?>" title="<?= htmlspecialchars($ust['hint']) ?>"><?= htmlspecialchars($ust['label']) ?></span>
-          </td>
-          <td><code><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
-          <td>
-            <code><?= htmlspecialchars($e['url'] ?? (($e['bind'] ?? '') . ':' . ($e['port'] ?? ''))) ?></code>
-          </td>
-          <td><?= $ro
-            ? '<span class="nbd-badge nbd-badge-ok">Read-only</span>'
-            : '<span class="nbd-badge nbd-badge-rw">Writable</span>' ?></td>
-          <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
-          <td>
-            <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
-              <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-              <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
-              <input type="hidden" name="nbd_action" value="export_stop">
-              <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
-              <input type="submit" name="#apply" value="Stop">
-            </form>
-          </td>
+          <td>qemu-nbd</td>
+          <td><?= $tools['qemu_nbd'] !== ''
+            ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_nbd']) . '</code>'
+            : '<span class="nbd-bad">Missing</span> <span class="nbd-muted">— VM stack / qemu tools</span>' ?></td>
         </tr>
-<?php endforeach; ?>
-      </tbody>
-    </table>
-    <div class="nbd-actions">
-      <form method="POST" action="/update.php" target="progressFrame">
-        <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-        <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
-        <input type="hidden" name="nbd_action" value="export_stop_all">
-        <input type="submit" name="#apply" value="Stop all hosted disks">
-      </form>
+        <tr>
+          <td>qemu-img</td>
+          <td><?= $tools['qemu_img'] !== ''
+            ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_img']) . '</code>'
+            : '<span class="nbd-bad">Missing</span> <span class="nbd-muted">— same as qemu-nbd</span>' ?></td>
+        </tr>
+        <tr>
+          <td>Destructive mode</td>
+          <td><?= $destructive === 'yes'
+            ? '<span class="nbd-badge nbd-badge-rw">ON</span> <span class="nbd-warn">— change under Settings</span>'
+            : '<span class="nbd-ok">Off</span> <span class="nbd-muted">— RO non-array only</span>' ?></td>
+        </tr>
+      </table>
     </div>
-<?php endif; ?>
-  </div>
 
-  <div class="nbd-section">
-    <h3>Recent pull jobs</h3>
-    <p class="nbd-section-lead">
-      Image jobs started on the <strong>Pull</strong> tab (client → file under <code>/mnt/…</code>).
-    </p>
+    <div class="nbd-section">
+      <h3>Recent pull jobs</h3>
+      <p class="nbd-section-lead">
+        Image jobs from the <strong>Pull</strong> tab (client → file under <code>/mnt/…</code>).
+      </p>
 <?php if (!$jobs): ?>
-    <p class="nbd-muted">No recent pull jobs. Use the <strong>Pull</strong> tab to image a remote <code>nbd://…</code>.</p>
+      <p class="nbd-muted">No recent pull jobs.</p>
 <?php else: ?>
-    <div class="nbd-status-legend">
-      <span><span class="nbd-badge nbd-badge-ok">Running</span> convert in progress</span>
-      <span><span class="nbd-badge nbd-badge-ok">Done</span> finished OK</span>
-      <span><span class="nbd-badge nbd-badge-bad">Failed</span> see log</span>
-      <span><span class="nbd-badge nbd-badge-stale">Idle</span> not active</span>
-    </div>
-    <table class="nbd-data tablesorter">
-      <thead>
-        <tr>
-          <th>Status</th>
-          <th>Source</th>
-          <th>Output</th>
-          <th>Size</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
+      <div class="nbd-status-legend">
+        <span><span class="nbd-badge nbd-badge-ok">Running</span></span>
+        <span><span class="nbd-badge nbd-badge-ok">Done</span></span>
+        <span><span class="nbd-badge nbd-badge-bad">Failed</span></span>
+        <span><span class="nbd-badge nbd-badge-stale">Idle</span></span>
+      </div>
+      <table class="nbd-data tablesorter">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Source</th>
+            <th>Output</th>
+            <th>Size</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
 <?php foreach ($jobs as $j):
   $jst = nbd_job_ui_status($j);
   $alive = !empty($j['alive']);
 ?>
-        <tr>
-          <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?>" title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
-          <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
-          <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
-          <td><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
-          <td>
+          <tr>
+            <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?>" title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
+            <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
+            <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
+            <td><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
+            <td>
 <?php if ($alive): ?>
-            <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
-              <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-              <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
-              <input type="hidden" name="nbd_action" value="image_stop">
-              <input type="hidden" name="job_id" value="<?= htmlspecialchars($j['id'] ?? '') ?>">
-              <input type="submit" name="#apply" value="Stop">
-            </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+                <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_stop">
+                <input type="hidden" name="job_id" value="<?= htmlspecialchars($j['id'] ?? '') ?>">
+                <input type="submit" name="#apply" value="Stop">
+              </form>
 <?php endif; ?>
-          </td>
-        </tr>
+            </td>
+          </tr>
 <?php if (!empty($j['log'])):
   $tail = nbd_log_tail($j['log'], 6);
   if ($tail !== ''):
 ?>
-        <tr>
-          <td colspan="5"><pre class="nbd-log"><?= htmlspecialchars($tail) ?></pre></td>
-        </tr>
+          <tr>
+            <td colspan="5"><pre class="nbd-log"><?= htmlspecialchars($tail) ?></pre></td>
+          </tr>
 <?php endif; endif; ?>
 <?php endforeach; ?>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
 <?php endif; ?>
+    </div>
   </div>
 
-  <details class="nbd-cli-box">
-    <summary>CLI reference (same path the UI wraps)</summary>
-    <pre class="nbd-cli"># Host (read-only, private bind) — multi-disk: change --port per disk
-qemu-nbd --read-only --persistent --shared=2 \
-  --bind=10.255.0.1 --port=10809 --format=raw /dev/nvme0n1
-
-# Pull on Unraid
-qemu-img info nbd://10.255.0.1:10809
-qemu-img convert -p -f raw -O qcow2 -t writeback -W \
-  nbd://10.255.0.1:10809 /mnt/user/domains/example.qcow2</pre>
-    <p class="nbd-muted">
-      Docs:
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
-      ·
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging ↗</a>
-      ·
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
-    </p>
-  </details>
+<?php nbd_page_footer(true); ?>
 </div>

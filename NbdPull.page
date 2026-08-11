@@ -8,14 +8,13 @@ require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
+<?php nbd_page_header(); ?>
+  <div class="nbd-tab-body">
   <div class="nbd-section" style="margin-top:0">
-    <h3>Pull a remotely hosted disk into a file on this Unraid</h3>
+    <h3>Pull a remote disk into a file</h3>
     <p class="nbd-section-lead">
-      <strong>Client — save someone else’s NBD disk here as a file.</strong>
-      Connect to <code>nbd://…</code> (another Unraid’s Host tab, or any <code>qemu-nbd</code> host)
-      and write qcow2/raw under <code>/mnt/…</code>
-      (default share hint: <code>/mnt/user/domains/</code>). Does <em>not</em> host a local disk.
-      Job keeps running if you close the browser. Watch jobs on <strong>Status</strong>.
+      <strong>Client</strong> — connect to <code>nbd://…</code> and write qcow2/raw under <code>/mnt/…</code>
+      (hint: <code>/mnt/user/domains/</code>). Jobs stay running if you close the browser; see <strong>Status</strong>.
     </p>
 <?php if ($pull_presets): ?>
     <p class="nbd-muted">
@@ -98,5 +97,7 @@ nbd_page_styles();
     </form>
 <?php endif; ?>
   </div>
+  </div>
+<?php nbd_page_footer(false); ?>
 </div>
 <?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>
