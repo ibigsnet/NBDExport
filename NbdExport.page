@@ -594,7 +594,18 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
       Does <em>not</em> publish a local disk. Does <em>not</em> write to <code>/dev/…</code>.
       Job keeps running if you close the browser.
     </p>
-    <form method="POST" action="/update.php" target="progressFrame" onsubmit="return nbdConfirmImage(this)">
+<?php if ($pull_presets): ?>
+    <p class="nbd-muted">
+      Restore pull preset:
+      <select id="nbd_pull_preset_pick" onchange="nbdApplyPullPreset(this.value)">
+        <option value="">— choose —</option>
+<?php foreach ($pull_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+    </p>
+<?php endif; ?>
+    <form method="POST" action="/update.php" target="progressFrame" id="nbd_pull_form" onsubmit="return nbdConfirmImage(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="image_start">
@@ -602,38 +613,34 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
       <dl>
         <dt>NBD URL:</dt>
         <dd>
-          <input type="text" name="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="">
+          <input type="text" name="nbd_url" id="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        URL of a running NBD listener, e.g. <code>nbd://10.255.0.1:10809</code>.
-        Must already be hosted: another Unraid (section 3 there) or any host with <code>qemu-nbd</code> listening on that address.
+        Must already be hosted: another Unraid (section 3 there) or any host with <code>qemu-nbd</code> listening.
       </blockquote>
 
       <dl>
         <dt>Output path:</dt>
         <dd>
-          <input type="text" name="output" id="nbd_image_out" style="width:28em" placeholder="/mnt/cache/images/disk.qcow2" value="">
+          <input type="text" name="output" id="nbd_image_out" style="width:28em" placeholder="/mnt/cache/images/disk.qcow2" value="<?= $pref_out ?>">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Must be a <strong>file</strong> under <code>/mnt/</code> (cache, array, or share) or <code>/tmp/</code>.
-        <strong>Not</strong> a block device (<code>/dev/…</code>) — the plugin refuses paths that would wipe a disk.
-        Ensure free space ≥ expected image size.
+        File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
       </blockquote>
 
       <dl>
         <dt>Format:</dt>
         <dd>
-          <select name="format">
-            <option value="qcow2" selected>qcow2 (recommended)</option>
-            <option value="raw">raw</option>
+          <select name="format" id="nbd_format">
+            <option value="qcow2" <?= $pref_fmt === 'qcow2' ? 'selected' : '' ?>>qcow2 (recommended)</option>
+            <option value="raw" <?= $pref_fmt === 'raw' ? 'selected' : '' ?>>raw</option>
           </select>
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>qcow2</strong> is sparse-friendly and Unraid/VM friendly.
-        Job runs in the background (survives closing this browser tab).
+        <strong>qcow2</strong> is sparse-friendly. Job survives closing the browser.
       </blockquote>
 
       <div class="nbd-actions">
@@ -642,10 +649,40 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
         <span class="nbd-muted" style="margin-left:0.75em">← section 4 only (save under /mnt)</span>
       </div>
     </form>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillPullPreset(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_save_pull">
+      <input type="hidden" name="nbd_url" id="nbd_ps_url" value="">
+      <input type="hidden" name="output" id="nbd_ps_out" value="">
+      <input type="hidden" name="format" id="nbd_ps_fmt" value="">
+      <span class="nbd-muted">Save pull preset as</span>
+      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. peer-holo-qcow" style="width:12em">
+      <input type="submit" name="#apply" value="Save pull preset">
+    </form>
+<?php if ($pull_presets): ?>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_delete">
+      <select name="preset_name">
+<?php foreach ($pull_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+      <input type="submit" name="#apply" value="Delete pull preset">
+    </form>
+<?php endif; ?>
 
 <?php if ($jobs): ?>
     <hr class="nbd-rule" style="margin-top:1.25em;border-top-width:1px" />
-    <h4>Recent jobs</h4>
+    <h4>Recent pull jobs</h4>
+    <div class="nbd-status-legend">
+      <span><span class="nbd-badge nbd-badge-ok">Running</span> convert in progress</span>
+      <span><span class="nbd-badge nbd-badge-ok">Done</span> finished OK</span>
+      <span><span class="nbd-badge nbd-badge-bad">Failed</span> see log</span>
+      <span><span class="nbd-badge nbd-badge-stale">Idle</span> not active</span>
+    </div>
     <table class="nbd-data tablesorter">
       <thead>
         <tr>
@@ -658,21 +695,11 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
       </thead>
       <tbody>
 <?php foreach ($jobs as $j):
+  $jst = nbd_job_ui_status($j);
   $alive = !empty($j['alive']);
-  $fin = !empty($j['finished']);
-  $ok = !empty($j['ok']);
-  if ($alive) {
-    $badge = '<span class="nbd-badge nbd-badge-ok">Running</span>';
-  } elseif ($fin && $ok) {
-    $badge = '<span class="nbd-badge nbd-badge-ok">Done</span>';
-  } elseif ($fin) {
-    $badge = '<span class="nbd-badge">Failed</span>';
-  } else {
-    $badge = '<span class="nbd-badge">Idle</span>';
-  }
 ?>
         <tr>
-          <td><?= $badge ?></td>
+          <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?>" title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
           <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
           <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
           <td><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
