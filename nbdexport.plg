@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ai">
+<!ENTITY version "2026.08.11aj">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,10 @@
 
 <CHANGES>
 ###&version;
+- Export config: download JSON or save under /boot/config/ (outside plugin dir); short note that uninstall wipes plugin flash state; optional import from path.
+- Keeps auto last-used + named presets on flash as before.
+
+###2026.08.11ai
 - Section titles: host local disk/partition on network vs pull remote NBD into a file under /mnt.
 
 ###2026.08.11ah
@@ -105,6 +109,10 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-update.php">
 <URL>&raw;/include/nbd-update.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-download-config.php">
+<URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start">

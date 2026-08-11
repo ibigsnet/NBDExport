@@ -129,11 +129,23 @@ Details: [docs/security-and-bind.md](docs/security-and-bind.md).
 
 ---
 
+## Config backup (export)
+
+Settings, last-used host/pull fields, and named presets live on flash under the plugin. **Uninstall deletes that tree.**
+
+- **Settings → NBD → section 1 → Export config**
+  - **Download JSON…** — browser save anywhere
+  - **Save to flash (`/boot/config/`)** — file outside the plugin dir (survives remove)
+- **Import** (collapsed under Export) restores from a path under `/boot/config/` or `/mnt/`
+
+Image files under `/mnt/` are never part of this export.
+
 ## Uninstall (clean removal)
 
-1. **Plugins** → NBD Export → **Remove**.  
-2. The remove script **stops exports**, clears run state, and deletes emhttp + flash config.  
-3. Does **not** touch `network.cfg`, Thunderbolt Net, UnraidFRR, or your qcow2 files under `/mnt/`.
+1. Optional: **Export config** if you want settings/presets later.  
+2. **Plugins** → NBD Export → **Remove**.  
+3. The remove script **stops exports**, clears run state, and deletes emhttp + flash config.  
+4. Does **not** touch `network.cfg`, Thunderbolt Net, UnraidFRR, qcow2 under `/mnt/`, or export JSON you saved under `/boot/config/nbdexport-config-*.json`.
 
 ---
 

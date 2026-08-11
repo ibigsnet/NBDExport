@@ -185,6 +185,173 @@ function nbd_memory_delete_preset($name) {
 }
 
 /**
+ * Portable backup: settings + last-used + presets (no secrets, no live pids).
+ * Safe to keep outside /boot/config/plugins/NbdExport (uninstall wipes that tree).
+ */
+function nbd_config_export_bundle() {
+  $mem = nbd_memory_load();
+  return [
+    'format' => 'nbdexport-config',
+    'format_version' => 1,
+    'plugin' => 'NbdExport',
+    'exported_at' => date('c'),
+    'plugin_version' => nbd_plugin_version(),
+    'settings' => nbd_load_cfg(),
+    'memory' => [
+      'last_host' => is_array($mem['last_host'] ?? null) ? $mem['last_host'] : [],
+      'last_pull' => is_array($mem['last_pull'] ?? null) ? $mem['last_pull'] : [],
+      'presets' => is_array($mem['presets'] ?? null) ? $mem['presets'] : [],
+    ],
+  ];
+}
+
+/**
+ * Write export JSON under /boot/config/ (outside plugin dir so uninstall keeps it).
+ * @return array{ok:bool,path?:string,error?:string}
+ */
+function nbd_config_export_to_flash($basename = '') {
+  $bundle = nbd_config_export_bundle();
+  $json = json_encode($bundle, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+  if ($json === false) {
+    return ['ok' => false, 'error' => 'JSON encode failed'];
+  }
+  $base = trim((string)$basename);
+  if ($base === '') {
+    $base = 'nbdexport-config-' . date('Ymd-His') . '.json';
+  }
+  $base = basename($base);
+  if (!preg_match('/\.json$/i', $base)) {
+    $base .= '.json';
+  }
+  if (!preg_match('/^[A-Za-z0-9._-]+$/', $base) || strlen($base) > 80) {
+    return ['ok' => false, 'error' => 'Invalid filename (use simple name.json)'];
+  }
+  $dir = '/boot/config';
+  if (!is_dir($dir)) {
+    return ['ok' => false, 'error' => '/boot/config not available'];
+  }
+  $path = $dir . '/' . $base;
+  if (@file_put_contents($path, $json . "\n") === false) {
+    return ['ok' => false, 'error' => 'Could not write ' . $path];
+  }
+  return ['ok' => true, 'path' => $path];
+}
+
+/**
+ * Restore settings and/or memory from export bundle.
+ * @param array $bundle
+ * @param bool $settings
+ * @param bool $memory
+ * @return array{ok:bool,error?:string,msg?:string}
+ */
+function nbd_config_import_bundle(array $bundle, $settings = true, $memory = true) {
+  $fmt = $bundle['format'] ?? '';
+  if ($fmt !== 'nbdexport-config' && $fmt !== '') {
+    // Allow slightly loose imports if memory/settings keys present
+    if (!isset($bundle['settings']) && !isset($bundle['memory'])) {
+      return ['ok' => false, 'error' => 'Not an NBD Export config file (missing format/settings).'];
+    }
+  }
+  $ver = (int)($bundle['format_version'] ?? 1);
+  if ($ver > 1) {
+    return ['ok' => false, 'error' => 'Config format version ' . $ver . ' is newer than this plugin supports.'];
+  }
+
+  $parts = [];
+  if ($settings && isset($bundle['settings']) && is_array($bundle['settings'])) {
+    $cfg = nbd_load_cfg();
+    foreach (['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+      if (array_key_exists($k, $bundle['settings'])) {
+        $cfg[$k] = (string)$bundle['settings'][$k];
+      }
+    }
+    foreach (['enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+      $cfg[$k] = (($cfg[$k] ?? 'no') === 'yes') ? 'yes' : 'no';
+    }
+    if (!nbd_write_cfg($cfg)) {
+      return ['ok' => false, 'error' => 'Failed writing settings'];
+    }
+    $parts[] = 'settings';
+  }
+
+  if ($memory && isset($bundle['memory']) && is_array($bundle['memory'])) {
+    $mem = nbd_memory_load();
+    if (isset($bundle['memory']['last_host']) && is_array($bundle['memory']['last_host'])) {
+      $mem['last_host'] = $bundle['memory']['last_host'];
+    }
+    if (isset($bundle['memory']['last_pull']) && is_array($bundle['memory']['last_pull'])) {
+      $mem['last_pull'] = $bundle['memory']['last_pull'];
+    }
+    if (isset($bundle['memory']['presets']) && is_array($bundle['memory']['presets'])) {
+      $presets = [];
+      foreach ($bundle['memory']['presets'] as $name => $pv) {
+        if (!is_array($pv)) {
+          continue;
+        }
+        $safe = trim(preg_replace('/[^A-Za-z0-9._ -]/', '', (string)$name));
+        if ($safe === '' || strlen($safe) > 48) {
+          continue;
+        }
+        $type = ($pv['type'] ?? '') === 'pull' ? 'pull' : 'host';
+        $presets[$safe] = [
+          'type' => $type,
+          'fields' => is_array($pv['fields'] ?? null) ? $pv['fields'] : [],
+          'saved_at' => (string)($pv['saved_at'] ?? date('c')),
+        ];
+      }
+      $mem['presets'] = $presets;
+    }
+    if (!nbd_memory_save($mem)) {
+      return ['ok' => false, 'error' => 'Failed writing memory/presets'];
+    }
+    $parts[] = 'last-used + presets';
+  }
+
+  if (!$parts) {
+    return ['ok' => false, 'error' => 'Nothing to import in this file'];
+  }
+  return ['ok' => true, 'msg' => 'Imported ' . implode(' · ', $parts)];
+}
+
+/**
+ * Import from a JSON file path. Only /boot/config/** and /mnt/** (not plugin live paths required).
+ */
+function nbd_config_import_from_path($path) {
+  $path = trim((string)$path);
+  if ($path === '' || strpos($path, "\0") !== false) {
+    return ['ok' => false, 'error' => 'Path required'];
+  }
+  // Resolve and restrict
+  $real = realpath($path);
+  if ($real === false || !is_readable($real) || !is_file($real)) {
+    // allow non-realpath if under /boot/config still exists
+    if (!is_readable($path) || !is_file($path)) {
+      return ['ok' => false, 'error' => 'File not found or not readable'];
+    }
+    $real = $path;
+  }
+  $ok_prefix = false;
+  foreach (['/boot/config/', '/mnt/'] as $p) {
+    if (strpos($real, $p) === 0) {
+      $ok_prefix = true;
+      break;
+    }
+  }
+  if (!$ok_prefix) {
+    return ['ok' => false, 'error' => 'Path must be under /boot/config/ or /mnt/'];
+  }
+  $raw = @file_get_contents($real);
+  if (!is_string($raw) || $raw === '') {
+    return ['ok' => false, 'error' => 'Empty or unreadable file'];
+  }
+  $j = json_decode($raw, true);
+  if (!is_array($j)) {
+    return ['ok' => false, 'error' => 'Invalid JSON'];
+  }
+  return nbd_config_import_bundle($j, true, true);
+}
+
+/**
  * Normalize host export status for UI badges.
  * listening | process_up | stale | down
  */

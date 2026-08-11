@@ -116,6 +116,23 @@ try {
       nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'delete failed')) : ('Deleted preset: ' . $name));
       break;
 
+    case 'config_export_flash':
+      $r = nbd_config_export_to_flash('');
+      if (empty($r['ok'])) {
+        nbd_flash('ERROR — ' . ($r['error'] ?? 'export failed'));
+      } else {
+        nbd_flash('NBD Export: config written to ' . ($r['path'] ?? '') . ' (outside plugin dir — safe across uninstall)');
+      }
+      break;
+
+    case 'config_import':
+      $path = trim((string)($_POST['import_path'] ?? ''));
+      $r = nbd_config_import_from_path($path);
+      nbd_flash(empty($r['ok'])
+        ? ('ERROR — ' . ($r['error'] ?? 'import failed'))
+        : ('NBD Export: ' . ($r['msg'] ?? 'imported') . '. Refresh this page.'));
+      break;
+
     default:
       nbd_flash('NBD Export: unknown action');
   }

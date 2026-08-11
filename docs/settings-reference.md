@@ -11,6 +11,8 @@
 | Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth |
 | Destructive mode | No | UD-style: allow writable and/or array/mounted/flash exports; UI confirm still required |
 | Rehydrate on start | No | Reserved; v1 does not auto-export disks |
+| Export config | — | Download JSON or write `/boot/config/nbdexport-config-*.json` (outside plugin dir). Uninstall wipes plugin flash state — export first if you care. |
+| Import config | — | Path under `/boot/config/` or `/mnt/` only |
 
 ## Section 3 — Host a local Unraid disk (NBD server)
 
