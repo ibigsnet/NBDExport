@@ -57,7 +57,7 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | Read-only | **Yes** | Imaging must not scribble on source disks |
 | Default port | **10809** | Common qemu-nbd default |
 | Allow bind 0.0.0.0 | **No** | Basic NBD has no auth |
-| Destructive mode | **No** | See [security-and-bind.md](docs/security-and-bind.md) |
+| Destructive mode | **No** | Only for writable host or array/mounted/flash — [destructive-mode.md](docs/destructive-mode.md) |
 
 ### What it does *not* do
 
@@ -126,7 +126,7 @@ NBD is effectively **raw disk over TCP**.
 - Do not host array/parity disks without understanding the risk  
 - Isolation is the access control model for basic qemu-nbd  
 
-Details: [docs/security-and-bind.md](docs/security-and-bind.md).
+When Destructive is required: [docs/destructive-mode.md](docs/destructive-mode.md) · Isolation: [docs/security-and-bind.md](docs/security-and-bind.md).
 
 ---
 
@@ -159,7 +159,8 @@ Image files under `/mnt/` are never part of this export.
 | [docs/how-to-use.md](docs/how-to-use.md) | **Start here** — if you click…, tabs, walkthroughs |
 | [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) | Why NBD vs SMB/NFS |
 | [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md) | Files vs disks decision table |
-| [docs/security-and-bind.md](docs/security-and-bind.md) | Destructive mode, read-only, bind IP |
+| [docs/destructive-mode.md](docs/destructive-mode.md) | **When** to enable Destructive mode |
+| [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, read-only |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
 | [docs/integration-unraidfrr.md](docs/integration-unraidfrr.md) | Fabric Routing / multi-hop (optional) |

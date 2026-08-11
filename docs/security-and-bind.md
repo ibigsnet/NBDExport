@@ -4,10 +4,14 @@ NBD is effectively **raw disk over TCP**. Treat it like temporarily plugging a d
 
 ## Destructive mode (like Unassigned Devices)
 
+**Full list of when to turn it on:** [destructive-mode.md](destructive-mode.md)
+
 | Destructive mode | What Host may do |
 |------------------|------------------|
 | **No** (default) | **Read-only** host of disks that are **not** Unraid array/parity, **not** mounted, **not** the flash device |
-| **Yes** | Unlocks (Host tab still confirms the device): **(1)** writable host — peer can write the Unraid disk you select; **(2)** host of in-use/critical disks — array/parity, mounted filesystems, or Unraid flash |
+| **Yes** | Only if you need **writable** host, or to host an **array/parity**, **mounted**, or **flash** disk (Host tab still confirms the device) |
+
+You need Destructive mode **only** for those Host cases. Everyday imaging of an unassigned, unmounted disk does **not** need it.
 
 Server-side enforcement refuses blocked combinations even if the UI is bypassed.  
 Pull jobs **never** write to `/dev/…` block devices (file under `/mnt/` only).

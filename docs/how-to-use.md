@@ -70,7 +70,7 @@ Until a client connects, the host just **waits** on the port (minimal disk serve
 
 ## Safe defaults checklist
 
-1. **Destructive mode = No** (default)  
+1. **Destructive mode = No** (default) — only turn **Yes** for the cases in [destructive-mode.md](destructive-mode.md) (writable host, or array / mounted / flash source)  
 2. **Read-only = Yes** when hosting  
 3. **Bind IP** = Thunderbolt or private LAN (not `0.0.0.0`)  
 4. Prefer an **unassigned / not array / not mounted** disk  

@@ -80,12 +80,13 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Like Unassigned Devices’ Destructive Mode.<br><br>
-        <strong>No</strong> (default): Host may only publish <strong>read-only</strong> disks that are
-        <em>not</em> Unraid array/parity, <em>not</em> mounted, and <em>not</em> the flash drive.<br><br>
-        <strong>Yes</strong> unlocks two riskier Host options (Host tab still asks you to confirm the device):
-        (1) <strong>writable</strong> — peer can write to the Unraid disk you select;
-        (2) host disks that are <strong>already in use or critical</strong> (array/parity, mounted filesystem, or Unraid flash).
+        Like Unassigned Devices’ Destructive Mode. Leave <strong>No</strong> for normal imaging of an
+        unassigned, unmounted disk (read-only Host).<br><br>
+        Turn <strong>Yes</strong> only if you need one of these on the <strong>Host</strong> tab:
+        <strong>writable</strong> host (peer can write the disk you select), or host an
+        <strong>array/parity</strong>, <strong>mounted</strong>, or <strong>flash</strong> disk.
+        Pull never needs this. Full list:
+        <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">when to enable Destructive mode ↗</a>.
         Turn back to No when finished.
       </blockquote>
 
