@@ -1,0 +1,20 @@
+#!/bin/bash
+# Wrapper for CLI / event hooks — prefer WebGUI.
+# Usage: nbd-export-start <device> <bind> <port> [ro|rw] [label]
+set -euo pipefail
+DEV="${1:-}"
+BIND="${2:-}"
+PORT="${3:-10809}"
+MODE="${4:-ro}"
+LABEL="${5:-}"
+RO=yes
+[ "$MODE" = "rw" ] && RO=no
+php -r '
+require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+$r = nbd_export_start(
+  $argv[1], $argv[2], (int)$argv[3],
+  $argv[4] === "yes", $argv[5]
+);
+fwrite(STDOUT, json_encode($r, JSON_PRETTY_PRINT) . "\n");
+exit(empty($r["ok"]) ? 1 : 0);
+' "$DEV" "$BIND" "$PORT" "$RO" "$LABEL"

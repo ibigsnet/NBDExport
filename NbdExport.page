@@ -1,0 +1,355 @@
+Menu="NetworkServices:4"
+Title="NBD"
+Icon="database"
+Tag="database"
+Markdown="false"
+---
+<?php
+/**
+ * Settings → Network Services → NBD
+ * Style inspired by NFS/SMB: enable + operational sections.
+ */
+require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php';
+
+$plugin = 'NbdExport';
+$cfg = function_exists('parse_plugin_cfg') ? parse_plugin_cfg($plugin) : [];
+if (!is_array($cfg)) {
+  $cfg = [];
+}
+$cfg = array_merge(nbd_load_cfg(), $cfg);
+$st = nbd_status();
+$tools = $st['tools'];
+$exports = $st['exports'];
+$jobs = $st['jobs'];
+$binds = $st['bind_ips'];
+$disks = nbd_list_disks();
+$ver = htmlspecialchars($st['plugin_version']);
+$enabled = (($cfg['enabled'] ?? 'yes') === 'yes') ? 'yes' : 'no';
+$def_ro = (($cfg['default_read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no';
+$def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
+$allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$default_bind = '';
+foreach ($binds as $b) {
+  if (!empty($b['preferred'])) {
+    $default_bind = $b['ip'];
+    break;
+  }
+}
+if ($default_bind === '' && $binds) {
+  $default_bind = $binds[0]['ip'];
+}
+?>
+<style>
+.nbd-wrap { max-width: 56em; }
+.nbd-wrap h3 { margin-top: 1.4em; }
+.nbd-table { width: 100%; border-collapse: collapse; margin: 0.5em 0 1em; }
+.nbd-table th, .nbd-table td { text-align: left; padding: 0.35em 0.5em; border-bottom: 1px solid #ccc3; vertical-align: top; }
+.nbd-muted { opacity: 0.75; font-size: 0.92em; }
+.nbd-ok { color: #2a7; font-weight: 600; }
+.nbd-warn { color: #c80; }
+.nbd-bad { color: #c33; }
+.nbd-badge { display: inline-block; padding: 0.1em 0.45em; border-radius: 3px; font-size: 0.85em; background: #8882; }
+.nbd-badge-ok { background: #2a74; }
+.nbd-help { margin: 0.8em 0; padding: 0.75em 1em; border-left: 3px solid #48a; background: #48a1; }
+.nbd-help ul { margin: 0.3em 0 0 1.2em; }
+.nbd-form-row { margin: 0.5em 0; }
+.nbd-form-row label { display: inline-block; min-width: 10em; }
+.nbd-actions { margin: 0.6em 0; }
+code.nbd-path { font-size: 0.9em; }
+</style>
+
+<div class="nbd-wrap">
+  <h3>NBD Export <span class="nbd-muted"><?= $ver ?></span></h3>
+  <p>
+    <strong>Network Block Device</strong> — export a disk or partition over TCP, or pull a remote
+    <code>nbd://</code> target into qcow2/raw on Unraid.
+    File shares stay under <strong>SMB</strong> / <strong>NFS</strong>; this page is for <em>block</em> access.
+  </p>
+
+  <div class="nbd-help">
+    <strong>When to use NBD</strong>
+    <ul>
+      <li>Whole-disk or partition imaging to qcow2/raw (seekable, sparse-friendly)</li>
+      <li>Restorable cold copies of boot drives before reinstall or migration</li>
+      <li>Block-level access for recovery/inspect tools over a <em>private fast</em> link</li>
+      <li>Staging disk images next to high-performance peers (e.g. local AI boxes on Thunderbolt / 10G)</li>
+    </ul>
+    <p class="nbd-muted" style="margin:0.5em 0 0">
+      Use <strong>SMB or NFS</strong> when you only need files and folders.
+      Prefer <strong>read-only</strong> bind on a Thunderbolt or private IP — never the public Internet.
+      Docs:
+      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/when-to-use-nbd.md" target="_blank" rel="noopener">when to use ↗</a>
+      ·
+      <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">full guide ↗</a>
+    </p>
+  </div>
+
+  <h3>Status</h3>
+  <table class="nbd-table">
+    <tr>
+      <td>qemu-nbd</td>
+      <td><?= $tools['qemu_nbd'] !== ''
+        ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_nbd']) . '</code>'
+        : '<span class="nbd-bad">Missing</span> — install/enable Unraid VM tools' ?></td>
+    </tr>
+    <tr>
+      <td>qemu-img</td>
+      <td><?= $tools['qemu_img'] !== ''
+        ? '<span class="nbd-ok">Found</span> <code class="nbd-muted">' . htmlspecialchars($tools['qemu_img']) . '</code>'
+        : '<span class="nbd-bad">Missing</span>' ?></td>
+    </tr>
+    <tr>
+      <td>Companions</td>
+      <td class="nbd-muted">
+        Thunderbolt Net: <?= !empty($st['thunderboltnet']) ? 'installed' : 'not installed' ?>
+        · FRR: <?= !empty($st['unraidfrr']) ? 'installed' : 'not installed' ?>
+        (optional)
+      </td>
+    </tr>
+  </table>
+
+  <h3>Enable</h3>
+  <form method="POST" action="/update.php" target="progressFrame">
+    <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+    <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+    <input type="hidden" name="nbd_action" value="save_cfg">
+    <div class="nbd-form-row">
+      <label>Enable NBD Export</label>
+      <select name="enabled">
+        <?= mk_option($enabled, 'yes', 'Yes') ?>
+        <?= mk_option($enabled, 'no', 'No') ?>
+      </select>
+    </div>
+    <div class="nbd-form-row">
+      <label>Default read-only</label>
+      <select name="default_read_only">
+        <?= mk_option($def_ro, 'yes', 'Yes (recommended)') ?>
+        <?= mk_option($def_ro, 'no', 'No') ?>
+      </select>
+    </div>
+    <div class="nbd-form-row">
+      <label>Default port</label>
+      <input type="number" name="default_port" value="<?= $def_port ?>" min="1024" max="65535">
+    </div>
+    <div class="nbd-form-row">
+      <label>Allow bind 0.0.0.0</label>
+      <select name="allow_bind_all">
+        <?= mk_option($allow_all, 'no', 'No (recommended)') ?>
+        <?= mk_option($allow_all, 'yes', 'Yes (dangerous)') ?>
+      </select>
+    </div>
+    <div class="nbd-actions">
+      <input type="submit" name="#apply" value="Apply">
+    </div>
+  </form>
+  <p class="nbd-muted">Setting Enable to <strong>No</strong> stops all active exports.</p>
+
+  <h3>Active exports</h3>
+<?php if (!$exports): ?>
+  <p class="nbd-muted">No active exports.</p>
+<?php else: ?>
+  <table class="nbd-table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Device</th>
+        <th>Bind / URL</th>
+        <th>RO</th>
+        <th>Label</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+<?php foreach ($exports as $e):
+  $alive = !empty($e['alive']) || !empty($e['listening']);
+?>
+      <tr>
+        <td><?= $alive ? '<span class="nbd-badge nbd-badge-ok">Up</span>' : '<span class="nbd-badge">Down</span>' ?></td>
+        <td><code class="nbd-path"><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
+        <td>
+          <code><?= htmlspecialchars(($e['bind'] ?? '') . ':' . ($e['port'] ?? '')) ?></code><br>
+          <span class="nbd-muted"><?= htmlspecialchars($e['url'] ?? '') ?></span>
+        </td>
+        <td><?= !empty($e['read_only']) ? 'Yes' : '<span class="nbd-warn">No</span>' ?></td>
+        <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
+        <td>
+          <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+            <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+            <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+            <input type="hidden" name="nbd_action" value="export_stop">
+            <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
+            <input type="submit" name="#apply" value="Stop">
+          </form>
+        </td>
+      </tr>
+<?php endforeach; ?>
+    </tbody>
+  </table>
+  <form method="POST" action="/update.php" target="progressFrame">
+    <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+    <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+    <input type="hidden" name="nbd_action" value="export_stop_all">
+    <input type="submit" name="#apply" value="Stop all exports">
+  </form>
+<?php endif; ?>
+
+  <h3>New export</h3>
+  <p class="nbd-muted">
+    Prefer a <strong>Thunderbolt</strong> or other private IP. Read-only is strongly recommended.
+    Array / mounted disks are flagged — export only if you understand the risk.
+  </p>
+  <form method="POST" action="/update.php" target="progressFrame">
+    <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+    <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+    <input type="hidden" name="nbd_action" value="export_start">
+    <div class="nbd-form-row">
+      <label>Device</label>
+      <select name="device" style="max-width:36em">
+        <option value="">— select —</option>
+<?php foreach ($disks as $d):
+  $warn = !empty($d['warn']) ? ' ⚠' : '';
+?>
+        <option value="<?= htmlspecialchars($d['path']) ?>"><?= htmlspecialchars($d['label'] . $warn) ?></option>
+<?php endforeach; ?>
+      </select>
+    </div>
+    <div class="nbd-form-row">
+      <label>Bind IP</label>
+      <select name="bind">
+<?php if (!$binds): ?>
+        <option value="">No addresses found</option>
+<?php else: foreach ($binds as $b): ?>
+        <option value="<?= htmlspecialchars($b['ip']) ?>" <?= $b['ip'] === $default_bind ? 'selected' : '' ?>>
+          <?= htmlspecialchars($b['label']) ?>
+        </option>
+<?php endforeach; endif; ?>
+      </select>
+    </div>
+    <div class="nbd-form-row">
+      <label>Port</label>
+      <input type="number" name="port" value="<?= $def_port ?>" min="1024" max="65535">
+    </div>
+    <div class="nbd-form-row">
+      <label>Read-only</label>
+      <select name="read_only">
+        <?= mk_option($def_ro, 'yes', 'Yes (recommended)') ?>
+        <?= mk_option($def_ro, 'no', 'No — writable (dangerous)') ?>
+      </select>
+    </div>
+    <div class="nbd-form-row">
+      <label>Label</label>
+      <input type="text" name="label" value="" maxlength="80" placeholder="optional">
+    </div>
+    <div class="nbd-actions">
+      <input type="submit" name="#apply" value="Start export"
+        <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
+    </div>
+  </form>
+
+  <h3>Image job (pull nbd:// → file)</h3>
+  <p class="nbd-muted">
+    Runs <code>qemu-img convert</code> in the background (survives closing this browser tab).
+    Destination must be under <code>/mnt/</code> (cache, array, or share).
+  </p>
+  <form method="POST" action="/update.php" target="progressFrame">
+    <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+    <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+    <input type="hidden" name="nbd_action" value="image_start">
+    <div class="nbd-form-row">
+      <label>NBD URL</label>
+      <input type="text" name="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="">
+    </div>
+    <div class="nbd-form-row">
+      <label>Output path</label>
+      <input type="text" name="output" style="width:28em" placeholder="/mnt/cache/images/disk.qcow2" value="">
+    </div>
+    <div class="nbd-form-row">
+      <label>Format</label>
+      <select name="format">
+        <option value="qcow2" selected>qcow2 (recommended)</option>
+        <option value="raw">raw</option>
+      </select>
+    </div>
+    <div class="nbd-actions">
+      <input type="submit" name="#apply" value="Start image job"
+        <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
+    </div>
+  </form>
+
+<?php if ($jobs): ?>
+  <h4>Recent jobs</h4>
+  <table class="nbd-table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Source</th>
+        <th>Output</th>
+        <th>Size</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+<?php foreach ($jobs as $j):
+  $alive = !empty($j['alive']);
+  $fin = !empty($j['finished']);
+  $ok = !empty($j['ok']);
+  if ($alive) {
+    $badge = '<span class="nbd-badge nbd-badge-ok">Running</span>';
+  } elseif ($fin && $ok) {
+    $badge = '<span class="nbd-badge nbd-badge-ok">Done</span>';
+  } elseif ($fin) {
+    $badge = '<span class="nbd-badge">Failed</span>';
+  } else {
+    $badge = '<span class="nbd-badge">Idle</span>';
+  }
+?>
+      <tr>
+        <td><?= $badge ?></td>
+        <td><code class="nbd-path"><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
+        <td><code class="nbd-path"><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
+        <td><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
+        <td>
+<?php if ($alive): ?>
+          <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+            <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+            <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+            <input type="hidden" name="nbd_action" value="image_stop">
+            <input type="hidden" name="job_id" value="<?= htmlspecialchars($j['id'] ?? '') ?>">
+            <input type="submit" name="#apply" value="Stop">
+          </form>
+<?php endif; ?>
+        </td>
+      </tr>
+<?php if (!empty($j['log'])):
+  $tail = nbd_log_tail($j['log'], 8);
+  if ($tail !== ''):
+?>
+      <tr>
+        <td colspan="5"><pre class="nbd-muted" style="white-space:pre-wrap;margin:0;font-size:0.85em"><?= htmlspecialchars($tail) ?></pre></td>
+      </tr>
+<?php endif; endif; ?>
+<?php endforeach; ?>
+    </tbody>
+  </table>
+<?php endif; ?>
+
+  <h3>Quick CLI reference</h3>
+  <pre class="nbd-muted" style="white-space:pre-wrap"># Peer (or this host) export — read-only, private bind
+qemu-nbd --read-only --persistent --shared=2 \
+  --bind=10.255.0.1 --port=10809 --format=raw /dev/nvme0n1
+
+# This Unraid — inspect + convert
+qemu-img info nbd://10.255.0.1:10809
+qemu-img convert -p -f raw -O qcow2 -t writeback -W \
+  nbd://10.255.0.1:10809 /mnt/cache/images/example.qcow2
+</pre>
+
+  <p class="nbd-muted">
+    Full documentation:
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS.md ↗</a>
+    ·
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
+    ·
+    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging workflow ↗</a>
+  </p>
+</div>
