@@ -1,6 +1,6 @@
 # When to use NBD Export
 
-**NFS and SMB share files and folders. NBD shares a disk (or partition) as a block device** — the peer can seek, image, mount, or convert it as if a drive were plugged in over the network.
+**NFS and SMB share files and folders. NBD shares a disk (or partition) as a block device** — the peer can seek, image, mount, or convert it as if a drive were plugged in locally (physically), but it reaches the disk over the network.
 
 Use this page to decide whether **Network Block Device** is the right tool.  
 For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)** (Host vs Pull tabs).
