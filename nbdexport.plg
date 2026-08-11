@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11au">
+<!ENTITY version "2026.08.11av">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Docs: Scenario E — cold physical-disk qcow2 on Unraid + honest BTRFS snapshot versioning.
 - Docs: Scenario C wording — Host where disk plugs in (may lack free space); Pull qcow2 onto roomy Unraid/array.
 - Docs: Host wording — raw blocks visible over the network.
 - Docs: disambiguate TB — Thunderbolt vs multi-terabyte (spell out both).

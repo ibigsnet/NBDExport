@@ -188,14 +188,51 @@ Thunderbolt Net “Unraid services / listening” (SMB/NFS/web on the Thunderbol
 
 ---
 
-## Scenario E — Archive a data volume as qcow2
+## Scenario E — Cold physical-disk archive on Unraid (qcow2 + optional BTRFS versions)
 
-1. RO host on the volume (Host tab / peer qemu-nbd).  
-2. Pull to `/mnt/user/domains/…` or a large share.  
-3. Keep Destructive mode **Off** unless you knowingly need array/mounted devices.  
-4. Stop hosting; verify with `qemu-img check`.
+**Goal:** Keep a **backup image of a whole physical disk** on Unraid (for restore later, or attach as a VM disk), and optionally keep **several point-in-time versions** without storing N full independent multi-terabyte copies if the filesystem can help.
 
-Day-to-day model files still belong on **SMB/NFS**.
+This is **not** gibberish — it is a real pattern — with one important accuracy note about **how** space savings work.
+
+### What NBD is for here
+
+1. **Host** the physical disk RO (this Unraid or another — often Scenario C).  
+2. **Pull** to a qcow2 on Unraid storage, e.g. `/mnt/user/domains/workstation-nvme.qcow2` or a dedicated share on a large pool/array.  
+3. **Stop** the host when the job finishes.  
+4. Verify: `qemu-img check …`.
+
+You now have a **file-shaped** copy of the disk on Unraid. Day-to-day files still belong on SMB/NFS; this is for **disk-shaped** cold archive.
+
+### Versioning / “little overhead of differences” — what actually works
+
+| Approach | Space-efficient for successive versions? | Notes |
+|----------|------------------------------------------|--------|
+| **BTRFS snapshot of the subvolume/share** that holds the qcow2 (after each good pull) | **Yes, often** | Classic COW: snapshot freezes the *previous* qcow2 extents; later overwrites only pay for **changed** filesystem blocks. Best when you **update the same file path** (or manage one active image + snapshots), not when every pull creates a brand-new unrelated filename with a full rewrite. |
+| **Two separate full Pulls** to `disk-2026-01.qcow2` and `disk-2026-02.qcow2` | **Usually no** | Two independent full converts ≈ two full sizes unless you run **dedupe** later or use special tools. BTRFS does not magically share extents between two freshly written large files. |
+| **qcow2 internal / external snapshots** (base + overlay) | **Yes, for VM-style deltas** | QEMU’s model (backing file + overlay). Fits “boot this image in a VM and track changes”; less natural for “re-image a bare NVMe from scratch every month” unless you design the chain carefully. |
+| **Expect Unraid “array parity” to version qcow2s** | **No** | Array parity is not a per-file COW history of your images. |
+
+**Practical recipe many labs use**
+
+1. Prefer a **BTRFS pool** (or BTRFS subvolume) for the archive share if you want filesystem snapshots.  
+2. First time: Pull → e.g. `/mnt/cache_btrfs/disk-archives/workstation.qcow2` (path is an example).  
+3. After a good check: take a **BTRFS snapshot** of that subvolume/share (Unraid UI / `btrfs subvolume snapshot` / your backup tool).  
+4. Next month: Pull **again** (overwrite the live `workstation.qcow2`, or write then replace carefully). The **snapshot** keeps the old point-in-time; COW means unchanged parts of the old image are not fully duplicated for the snapshot’s view.  
+5. Prune old snapshots on a schedule so free space returns.
+
+**Honest limits**
+
+- A **full** re-image that rewrites almost every block of the qcow2 still costs a lot of new space until old snapshots are deleted.  
+- NBD Export does **not** implement incremental NBD or automatic BTRFS snapshots — it only delivers the **image file**. Snapshots/versioning are **storage-layer** (or qcow2-layer) follow-ups.  
+- Sparse qcow2 from `qemu-img convert` already helps **empty** disk regions; that is separate from BTRFS snapshot savings between versions.
+
+### Minimal steps (single archive, no snapshot yet)
+
+1. RO **Host** of the physical disk.  
+2. **Pull** to `/mnt/user/domains/…` or a large BTRFS share.  
+3. Destructive mode **Off** unless you knowingly need array/mounted source devices.  
+4. **Stop** host; `qemu-img check`.  
+5. Optional: BTRFS snapshot of the archive subvolume for a named restore point.
 
 ---
 
@@ -208,6 +245,7 @@ Day-to-day model files still belong on **SMB/NFS**.
 | Pull output path `/dev/sda` | Always a **file** under `/mnt/` |
 | Bind `0.0.0.0` with WAN exposure | Specific private IP only |
 | Expect hosting in Windows Explorer as a share | Use SMB for files; NBD is for block tools / qemu-img |
+| Expect two full Pulls to two qcow2 names to auto-share space on BTRFS | Use **snapshots** of one image path, or qcow2 backing chains, or dedupe tools |
 
 ---
 

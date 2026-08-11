@@ -21,6 +21,8 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
+**Versioned cold archives on Unraid:** NBD gets you a **qcow2 of the whole disk** on array/pool storage. For several restore points with less-than-full copies each time, use **BTRFS snapshots** of the share/subvolume (or qcow2 snapshot chains) — not “pull a second full file and hope BTRFS merges them.” See [how-to-use.md — Scenario E](how-to-use.md#scenario-e--cold-physical-disk-archive-on-unraid-qcow2--optional-btrfs-versions).
+
 **Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access** and **Host** it RO there (that box may lack free space for a multi-terabyte qcow2). **Pull** on the roomy Unraid (big array / pool) so the **qcow2 file is written there** over the network — no need to open the rack or install the NVMe on the big server. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
 
 ---
