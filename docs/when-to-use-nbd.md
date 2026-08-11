@@ -11,7 +11,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 - [Common scenarios](#common-scenarios)
 - [1. Disk imaging, migration, and cold backups](#1-disk-imaging-migration-and-cold-backups)
-- [2. Fast private links (Thunderbolt / USB4 host-net, or 10G+)](#2-fast-private-links-thunderbolt-usb4-host-net-or-10g)
+- [2. Private links (Thunderbolt, 10G, LAN — and when Wi‑Fi is fine)](#2-private-links-thunderbolt-10g-lan--and-when-wifi-is-fine)
 - [3. Local AI / inference peers](#3-local-ai-inference-peers)
 - [4. Random multi-seek access to remote block media](#4-random-multi-seek-access-to-remote-block-media)
 - [5. Lab / homelab operations](#5-lab-homelab-operations)
@@ -54,7 +54,7 @@ You have (or had) a **gaming or desktop environment as a VM or disk image** on U
 2. On the portable machine (or a temporary host with the target NVMe/SSD plugged in), write the image **to the physical disk** with `qemu-img convert` (or equivalent) from `nbd://…` if Unraid is hosting the source, or convert from the qcow2 file over a fast path.  
 3. Boot the physical device from that media.
 
-Direction is the reverse of “bare metal → VM”: **image on Unraid → physical disk**. Use a private/fast link; multi-terabyte restores are not a Wi‑Fi job.
+Direction is the reverse of “bare metal → VM”: **image on Unraid → physical disk**. Prefer a private, stable path; multi-terabyte restores are slow and fragile on weak or congested wireless.
 
 ### Someone else’s disk — preserve a copy before recovery work
 
@@ -102,13 +102,20 @@ Physical access on a small Unraid / dock / mini-PC; multi-terabyte free space on
 
 ---
 
-## 2. Fast private links (Thunderbolt / USB4 host-net, or 10G+)
+## 2. Private links (Thunderbolt, 10G, LAN — and when Wi‑Fi is fine)
 
-**Use NBD when** the path is **high bandwidth and trusted** (direct Thunderbolt cable, dedicated VLAN — not the open Internet). Multi-terabyte images are impractical on Wi‑Fi; they become realistic on Thunderbolt host networking or fast wired underlay.
+**Use NBD on a path you trust** (private LAN, Thunderbolt host-net, dedicated VLAN — not the open Internet). Bind to a **specific private IP**, not `0.0.0.0` / WAN.
 
-**Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use Thunderbolt/USB4 host-to-host networking.
+### Link choice
 
-Thunderbolt 4 host-net is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way for bulk imaging (TCP below line rate; still far above Wi‑Fi).
+| Path | Role for NBD |
+|------|----------------|
+| **Thunderbolt / USB4 host-net** | Best default for multi-terabyte Host/Pull. TB4-class is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way (TCP below line rate). Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet). |
+| **10G+ / dedicated Ethernet** | Excellent for large images when you already have it. |
+| **Solid home Wi‑Fi (private SSID)** | Fine for **smaller** disks or when you have no faster private path. NBD is still ordinary TCP: a stable wireless link can carry a Host/Pull job; a **spotty** link can still drop mid-convert and force a restart. |
+| **Guest / congested / roaming Wi‑Fi** | Poor for multi-hour multi-terabyte jobs — not because NBD “hates Wi‑Fi,” but because long bulk transfers need **sustained** bandwidth and a connection that stays up. |
+
+NBD does **not** add special resume magic over flaky wireless the way some file tools (e.g. rsync of many small files) can. What it *does* give you is a **single seekable disk stream** into sparse qcow2 — useful on any private IP, including Wi‑Fi, once the link is good enough for the job size.
 
 ---
 

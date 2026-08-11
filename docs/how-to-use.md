@@ -167,8 +167,8 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 
 ### Steps
 
-1. **Network:** A and B must reach each other on a **private** path — not the open Internet / WAN. Prefer [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) for multi-terabyte pulls; a dedicated LAN or 10G+ also works. Bind NBD to that private (or Thunderbolt) IP.  
-   Thunderbolt 4 host-net is often stickered **40 Gbit/s** and commonly trains about **20 Gbit/s each way** under Linux — still roughly **twice a 10 Gbit/s NIC** one-way for bulk copy (TCP will be lower than trained rate; still far above Wi‑Fi).  
+1. **Network:** A and B must reach each other on a **private** path — not the open Internet / WAN. Prefer [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) or 10G+ for multi-terabyte pulls; a solid private LAN (including stable home Wi‑Fi for smaller disks) also works. Bind NBD to that private (or Thunderbolt) IP.  
+   Thunderbolt 4 host-net is often stickered **40 Gbit/s** and commonly trains about **20 Gbit/s each way** under Linux — still roughly **twice a 10 Gbit/s NIC** one-way for bulk copy (TCP below line rate). See [when-to-use — link choice](when-to-use-nbd.md#2-private-links-thunderbolt-10g-lan--and-when-wifi-is-fine).  
 2. **Unraid A — Host**  
    - Destructive mode **Off** when possible (unassigned / not mounted / not array).  
    - Device = the whole physical disk (or the partition you need).  

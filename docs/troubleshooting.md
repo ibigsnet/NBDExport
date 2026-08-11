@@ -39,12 +39,13 @@ Probe: `qemu-img info nbd://IP:PORT`
 - Path not under `/mnt/` (or `/tmp/`)  
 - Check job log on **Status** or `/var/log/nbdexport/job-*.log`
 
-## Slow throughput
+## Slow throughput or failed mid-pull
 
-- Wi‑Fi is the wrong medium for multi-terabyte images  
+- Multi-terabyte jobs need **sustained** bandwidth and a link that stays up for hours — Thunderbolt host-net or 10G+ when you can  
+- Solid private Wi‑Fi can work for smaller disks; spotty/congested wireless often fails mid-`qemu-img convert` (NBD is ordinary TCP, not a special resume protocol)  
 - Prefer Thunderbolt host-net or 10G+ wired; raise MTU on **both** ends if appropriate (Thunderbolt Net docs)  
 - Trained Thunderbolt rate ≠ full TCP — expect less than the sticker number  
-- Reality check: Thunderbolt 4–class host-net often trains ~**20 Gbit/s each way** (not 40 each way), which is still roughly **2× a 10 Gbit/s NIC** one-way — if you are slower than that class of path, look at bind IP (Wi‑Fi/br0 by mistake), cable, or CPU/storage on the Pull side  
+- Reality check: Thunderbolt 4–class host-net often trains ~**20 Gbit/s each way** (not 40 each way), roughly **2× a 10 Gbit/s NIC** one-way — if you expected that class of speed, check bind IP (guest Wi‑Fi/br0 by mistake), cable, or CPU/storage on the Pull side  
 
 ## Blank first tab / old “section 3” docs
 
