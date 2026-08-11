@@ -42,7 +42,7 @@ Probe: `qemu-img info nbd://IP:PORT`
 ## Slow throughput or failed mid-pull
 
 - Multi-terabyte jobs need **sustained** bandwidth and a link that stays up for hours — Thunderbolt host-net or 10G+ when you can  
-- Solid private Wi‑Fi can work for smaller disks; spotty/congested wireless often fails mid-`qemu-img convert` (NBD is ordinary TCP, not a special resume protocol)  
+- Solid private Wi‑Fi can work for smaller disks (single stream + sparse convert; re-Pull while the host is still up). Spotty/congested wireless often fails mid-`qemu-img convert` — ordinary TCP, no special resume  
 - Prefer Thunderbolt host-net or 10G+ wired; raise MTU on **both** ends if appropriate (Thunderbolt Net docs)  
 - Trained Thunderbolt rate ≠ full TCP — expect less than the sticker number  
 - Reality check: Thunderbolt 4–class host-net often trains ~**20 Gbit/s each way** (not 40 each way), roughly **2× a 10 Gbit/s NIC** one-way — if you expected that class of speed, check bind IP (guest Wi‑Fi/br0 by mistake), cable, or CPU/storage on the Pull side  

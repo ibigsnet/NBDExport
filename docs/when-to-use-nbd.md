@@ -112,10 +112,10 @@ Physical access on a small Unraid / dock / mini-PC; multi-terabyte free space on
 |------|----------------|
 | **Thunderbolt / USB4 host-net** | Best default for multi-terabyte Host/Pull. TB4-class is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way (TCP below line rate). Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet). |
 | **10G+ / dedicated Ethernet** | Excellent for large images when you already have it. |
-| **Solid home Wi‑Fi (private SSID)** | Fine for **smaller** disks or when you have no faster private path. NBD is still ordinary TCP: a stable wireless link can carry a Host/Pull job; a **spotty** link can still drop mid-convert and force a restart. |
+| **Solid home Wi‑Fi (private SSID)** | Fine for **smaller** disks or when you have no faster private path. Stable wireless can finish a Host/Pull; a **spotty** link can still drop mid-convert. |
 | **Guest / congested / roaming Wi‑Fi** | Poor for multi-hour multi-terabyte jobs — not because NBD “hates Wi‑Fi,” but because long bulk transfers need **sustained** bandwidth and a connection that stays up. |
 
-NBD does **not** add special resume magic over flaky wireless the way some file tools (e.g. rsync of many small files) can. What it *does* give you is a **single seekable disk stream** into sparse qcow2 — useful on any private IP, including Wi‑Fi, once the link is good enough for the job size.
+**What NBD helps with on Wi‑Fi (and what it doesn’t):** NBD is still ordinary TCP — it does **not** resume a half-finished convert the way rsync can resume many small files. What *does* help on a private wireless path is the job shape: one **seekable** block stream, `qemu-img convert` that can **skip zeros** (less airtime than a raw dump), and a **Host that stays up** so you can re-Pull cleanly if a job fails without re-plugging or re-exporting the disk. Prefer Thunderbolt / 10G+ when the image is multi-terabyte or the link is flaky; use solid private Wi‑Fi when the disk is smaller and the SSID is reliable.
 
 ---
 
