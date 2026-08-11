@@ -148,19 +148,18 @@ if ($default_bind === '' && $binds) {
 
   <dl>
     <dt>How this page works:</dt>
-    <dd class="nbd-muted">Listener (server) · Image job (client) · Apply only saves settings</dd>
+    <dd class="nbd-muted">Host a local disk (server) · Pull a remote disk to a file (client) · Apply only saves settings</dd>
   </dl>
   <blockquote class="inline_help">
-    <strong>Two separate actions:</strong><br><br>
-    <strong>1. Start NBD listener</strong> — runs <code>qemu-nbd</code> on this Unraid: it
-    <em>listens</em> on a chosen IP:port and offers one <code>/dev/…</code> disk as a network block device.
-    Nothing is copied until a client connects. This is a process you start and later <strong>Stop</strong> —
-    not a permanent Unraid “share service” like SMB.<br><br>
-    <strong>2. Start image job</strong> — runs <code>qemu-img convert</code> on this Unraid as a
-    <em>client</em>: it connects to <code>nbd://IP:port</code> (here or on a peer) and writes a
-    <strong>file</strong> under <code>/mnt/…</code> (qcow2/raw). Survives closing the browser.<br><br>
-    Typical lab flow: peer starts a listener on its disk → this Unraid runs an image job → stop the listener.
-    Full walkthrough:
+    <strong>Two separate jobs on this page:</strong><br><br>
+    <strong>Section 3 — Host a disk on the network</strong> — publish one Unraid block device
+    (<code>/dev/…</code> whole disk or partition) as an NBD <em>server</em> on IP:port.
+    Peers see raw blocks (partition table + data), not a folder share. Nothing is copied until a client connects.<br><br>
+    <strong>Section 4 — Pull a remote disk into a file here</strong> — as a <em>client</em>, connect to
+    <code>nbd://…</code> hosted by another Unraid (or any machine running <code>qemu-nbd</code>) and write a
+    qcow2/raw <strong>file</strong> under <code>/mnt/…</code>. Survives closing the browser.<br><br>
+    Typical flow: peer hosts its disk → this Unraid pulls to <code>/mnt/cache/…</code> → peer stops hosting.
+    Guide:
     <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">How to use ↗</a>
     ·
     <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/when-to-use-nbd.md" target="_blank" rel="noopener">when / scenarios ↗</a>
@@ -316,14 +315,14 @@ if ($default_bind === '' && $binds) {
   </div>
 
   <div class="nbd-section">
-    <h3>2 · Active NBD listeners</h3>
+    <h3>2 · Disks currently hosted on the network</h3>
     <p class="nbd-section-lead">
-      Running <code>qemu-nbd</code> <strong>servers</strong> on this host right now.
-      Clients use <code>nbd://IP:port</code> (section 4 image job, or <code>qemu-img</code> on a peer).
-      This table is status only — start a new listener in section 3.
+      Unraid block devices this server is <strong>publishing right now</strong> via NBD (live <code>qemu-nbd</code>).
+      Clients connect with <code>nbd://IP:port</code> (section 4, or tools on another host).
+      Status only — to host another disk, use section 3.
     </p>
 <?php if (!$exports): ?>
-    <p class="nbd-muted">No listeners running — go to <strong>section 3</strong> to offer a disk.</p>
+    <p class="nbd-muted">Nothing hosted yet — use <strong>section 3</strong> to publish a local disk or partition.</p>
 <?php else: ?>
     <table class="nbd-data tablesorter">
       <thead>
@@ -374,11 +373,12 @@ if ($default_bind === '' && $binds) {
   </div>
 
   <div class="nbd-section">
-    <h3>3 · Start NBD listener (offer a disk on the network)</h3>
+    <h3>3 · Host a local Unraid disk on the network (NBD server)</h3>
     <p class="nbd-section-lead">
-      <strong>Server role.</strong> Starts <code>qemu-nbd</code>: this Unraid <em>listens</em> on IP:port and presents one disk.
-      It does <em>not</em> copy data by itself — a peer or <strong>section 4</strong> (image job) must connect.
-      When finished imaging, use <strong>Stop listener</strong> in section 2.
+      <strong>Server role.</strong> Publish one <strong>local block device</strong> from this Unraid
+      (whole disk or partition — GPT/MBR + contents as raw blocks) so other machines can read it over TCP.
+      Starts <code>qemu-nbd</code> listening on the bind IP:port. Does <em>not</em> copy data by itself —
+      a peer or <strong>section 4</strong> must connect and pull. When imaging is done, <strong>Stop</strong> in section 2.
     </p>
     <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
@@ -468,19 +468,21 @@ if ($default_bind === '' && $binds) {
       </p>
 
       <div class="nbd-actions">
-        <input type="submit" name="#apply" value="Start NBD listener"
+        <input type="submit" name="#apply" value="Host this disk on the network"
           <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.75em">← ends this section (server only)</span>
+        <span class="nbd-muted" style="margin-left:0.75em">← section 3 only (publish local /dev)</span>
       </div>
     </form>
   </div>
 
   <div class="nbd-section">
-    <h3>4 · Image job (pull remote disk → file on Unraid)</h3>
+    <h3>4 · Pull a remote disk into a file on this Unraid (NBD client)</h3>
     <p class="nbd-section-lead">
       <strong>Client role — separate from section 3.</strong>
-      Connect to an existing <code>nbd://</code> listener (this host or a peer) and write a qcow2/raw
-      <em>file</em> under <code>/mnt/…</code>. Does <em>not</em> start a listener.
+      Connect to a disk already hosted elsewhere on the network
+      (another Unraid using this plugin, or any host running <code>qemu-nbd</code> / custom NBD server)
+      and save it as a <strong>file</strong> under an Unraid path (<code>/mnt/cache/…</code>, array, or share) as qcow2/raw.
+      Does <em>not</em> publish a local disk. Does <em>not</em> write to <code>/dev/…</code>.
       Job keeps running if you close the browser.
     </p>
     <form method="POST" action="/update.php" target="progressFrame" onsubmit="return nbdConfirmImage(this)">
@@ -496,7 +498,7 @@ if ($default_bind === '' && $binds) {
       </dl>
       <blockquote class="inline_help">
         URL of a running NBD listener, e.g. <code>nbd://10.255.0.1:10809</code>.
-        Someone must already have clicked <strong>Start NBD listener</strong> (or run <code>qemu-nbd</code>) on that address.
+        Must already be hosted: another Unraid (section 3 there) or any host with <code>qemu-nbd</code> listening on that address.
       </blockquote>
 
       <dl>
@@ -526,9 +528,9 @@ if ($default_bind === '' && $binds) {
       </blockquote>
 
       <div class="nbd-actions">
-        <input type="submit" name="#apply" value="Start image job (pull to file)"
+        <input type="submit" name="#apply" value="Pull remote disk to file"
           <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.75em">← ends this section (client only)</span>
+        <span class="nbd-muted" style="margin-left:0.75em">← section 4 only (save under /mnt)</span>
       </div>
     </form>
 
@@ -667,13 +669,13 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
     }
 
     if (needConfirm) {
-      var msg = 'Start NBD listener (qemu-nbd server) for:\n  ' + devSel.value + '\n\n';
-      msg += 'This shares the disk over the network on the bind IP:port.\n';
-      msg += 'It does NOT copy data by itself — a client must connect (image job or qemu-img).\n\n';
+      var msg = 'Host this Unraid block device on the network:\n  ' + devSel.value + '\n\n';
+      msg += 'Publishes raw disk/partition blocks via NBD on the bind IP:port.\n';
+      msg += 'Does NOT copy data by itself — a client must pull (section 4 or qemu-img elsewhere).\n\n';
       if (!ro) {
         msg += 'WARNING: WRITABLE — the peer can modify or wipe this disk.\n\n';
       } else {
-        msg += 'Read-only listener (peer cannot write).\n\n';
+        msg += 'Read-only (peer can image but not write).\n\n';
       }
       if (warn) {
         msg += 'Device flags: ' + (flags || 'risky') + '\n\n';
@@ -695,8 +697,8 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
     } else {
       // Safe RO path — light confirm still helps fat-finger Start
       if (!window.confirm(
-        'Start read-only NBD listener for ' + devSel.value + '?\n\n' +
-        'This runs qemu-nbd (server). Clients use nbd://IP:port to image the disk.'
+        'Host this Unraid disk on the network (read-only)?\n  ' + devSel.value + '\n\n' +
+        'Runs qemu-nbd as a server. Clients use nbd://IP:port to pull/image the blocks.'
       )) {
         return false;
       }
@@ -718,9 +720,9 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
       return false;
     }
     return window.confirm(
-      'Start image job (client):\n  write → ' + path + '\n\n' +
-      'Pulls from the NBD URL into a file via qemu-img convert.\n' +
-      'Does not wipe a local disk. Does not start a listener. Continue?'
+      'Pull remote NBD disk into a file on this Unraid?\n  → ' + path + '\n\n' +
+      'Connects to nbd://… (other Unraid or any hosted NBD) and writes a file under /mnt.\n' +
+      'Does not publish a local disk. Does not write to /dev. Continue?'
     );
   };
 })();

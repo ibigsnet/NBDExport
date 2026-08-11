@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11af">
+<!ENTITY version "2026.08.11ag">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- Wording: section 3 host local Unraid disk/partition on network; section 4 pull remote hosted disk into a file under /mnt.
+
+###2026.08.11af
 - Uninstall: stop managed pids only (no global pkill qemu-nbd); clear /var/log/nbdexport and case-variant paths.
 
 ###2026.08.11ae

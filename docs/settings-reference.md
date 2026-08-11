@@ -12,9 +12,9 @@
 | Destructive mode | No | UD-style: allow writable and/or array/mounted/flash exports; UI confirm still required |
 | Rehydrate on start | No | Reserved; v1 does not auto-export disks |
 
-## Start NBD listener (server)
+## Section 3 — Host a local Unraid disk (NBD server)
 
-Starts `qemu-nbd` so this host **listens** and offers one disk. Does not copy data until a client connects.
+Publishes one local **block device** (whole disk or partition — raw blocks including partition table) on the network. Does not copy data until a client connects.
 
 | Field | Notes |
 |-------|--------|
@@ -23,19 +23,19 @@ Starts `qemu-nbd` so this host **listens** and offers one disk. Does not copy da
 | Listen port | TCP port for the server |
 | Read-only | Strongly recommended Yes |
 | Label | Optional note |
-| **Start NBD listener** | Start server process |
+| **Host this disk on the network** | Start `qemu-nbd` server |
 | **Stop listener** | Kill that process |
 
-## Image job (client)
+## Section 4 — Pull a remote disk into a file (NBD client)
 
-Pulls from an existing `nbd://` listener into a **file**. Does not start a listener.
+Connects to a disk already hosted on the network (other Unraid or any `qemu-nbd` host) and writes a **file** under Unraid storage. Does not publish a local disk.
 
 | Field | Notes |
 |-------|--------|
-| NBD URL | `nbd://ip:port` of a running listener |
+| NBD URL | `nbd://ip:port` of a running host |
 | Output path | File under `/mnt/` or `/tmp/` — never `/dev/…` |
 | Format | qcow2 (default) or raw |
-| **Start image job** | Background `qemu-img convert` |
+| **Pull remote disk to file** | Background `qemu-img convert` |
 
 ## Runtime paths
 
