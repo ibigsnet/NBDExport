@@ -5,7 +5,7 @@
 | Share movies, documents, app data | **SMB / NFS** | File semantics, multi-user, Unraid shares |
 | Bootable **whole-disk image** / VM disk capture | **NBD** + `qemu-img` | Seekable block source → sparse qcow2; preserves GPT/partitions |
 | Copy a few large files over a fast link | **rsync / SMB** | Simpler; no raw disk exposure |
-| Mount remote volume as a **block device** (filesystem tools, recovery) | **NBD** (RO recommended) | Tools see a disk, not a folder tree |
+| Mount remote volume as a **block device** (filesystem tools, recovery) | **NBD** (read-only recommended) | Tools see a disk, not a folder tree |
 | Always-on multi-writer shared storage for VMs | **Not v1 NBD** | Use proper SAN/cluster designs |
 | Casual LAN file access from a laptop | **SMB** | Auth, discovery, OS integration |
 

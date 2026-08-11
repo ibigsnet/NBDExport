@@ -802,7 +802,7 @@ function nbd_destructive_mode_on(array $cfg = null) {
 }
 
 /**
- * Start RO (or RW) qemu-nbd export.
+ * Start read-only (or writable) qemu-nbd export.
  *
  * Safety (Unassigned Devices–style):
  * - Default: read-only only; non-array, unmounted disks.
@@ -854,11 +854,11 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
       'error' => 'Writable export blocked. Enable Destructive mode under Settings (like Unassigned Devices), keep Read-only=Yes, or both.',
     ];
   }
-  // Array / mounted / flash require destructive mode even when RO
+  // Array / mounted / flash require destructive mode even when read-only
   if ($risk['risky'] && !$destructive) {
     return [
       'ok' => false,
-      'error' => 'Device is ' . $risk['summary'] . '. Enable Destructive mode under Settings to allow array/mounted/flash exports (RO still recommended).',
+      'error' => 'Device is ' . $risk['summary'] . '. Enable Destructive mode under Settings to allow array/mounted/flash hosts (read-only still recommended).',
     ];
   }
   // Never allow writable flash

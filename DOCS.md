@@ -109,7 +109,7 @@ Also needs **`qemu-nbd` and `qemu-img`** (normally present with Unraid **VM** to
 
 ### Pull a remote disk into a qcow2 (client)
 
-1. Peer hosts RO `qemu-nbd` (or **Host** on another Unraid).  
+1. Peer hosts read-only `qemu-nbd` (or **Host** on another Unraid).  
 2. **Pull** tab → `nbd://ip:port` → e.g. `/mnt/user/domains/name.qcow2` → start pull.  
 3. Job runs in the background (see **Status**); when **Done**, stop the peer’s host.
 
@@ -159,7 +159,7 @@ Image files under `/mnt/` are never part of this export.
 | [docs/how-to-use.md](docs/how-to-use.md) | **Start here** — if you click…, tabs, walkthroughs |
 | [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) | Why NBD vs SMB/NFS |
 | [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md) | Files vs disks decision table |
-| [docs/security-and-bind.md](docs/security-and-bind.md) | Destructive mode, RO, bind IP |
+| [docs/security-and-bind.md](docs/security-and-bind.md) | Destructive mode, read-only, bind IP |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
 | [docs/integration-unraidfrr.md](docs/integration-unraidfrr.md) | Fabric Routing / multi-hop (optional) |

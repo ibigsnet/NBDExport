@@ -35,7 +35,7 @@ nbd_page_styles();
           <td>Destructive mode</td>
           <td><?= $destructive === 'yes'
             ? '<span class="nbd-badge nbd-badge-rw">ON</span> <span class="nbd-warn">— change under Settings</span>'
-            : '<span class="nbd-ok">Off</span> <span class="nbd-muted">— RO non-array only</span>' ?></td>
+            : '<span class="nbd-ok">Off</span> <span class="nbd-muted">— read-only, non-array only</span>' ?></td>
         </tr>
       </table>
     </div>

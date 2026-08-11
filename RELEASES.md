@@ -30,6 +30,6 @@ https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg
 ### 2026.08.11
 
 - Initial public release: Network Services → NBD UI  
-- RO `qemu-nbd` export with bind IP picker (Thunderbolt first)  
+- read-only `qemu-nbd` export with bind IP picker (Thunderbolt first)  
 - Background `qemu-img convert` image jobs  
 - Docs: when to use, vs NFS/SMB, security, imaging, Thunderbolt/FRR integration  

@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ax">
+<!ENTITY version "2026.08.11ay">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Docs/UI: spell out read-only (not RO); table entry not row — avoid RO/row confusion.
 - Docs: Scenario E — clear BTRFS snapshot recipe only (public tone).
 - Docs: quirky Thunderbolt vs 10G speed notes (TB4 ~20G each way ≈ 2× 10G NIC) in how-to / when-to / integration.
 - Docs: Scenario E — cold physical-disk qcow2 on Unraid + honest BTRFS snapshot versioning.

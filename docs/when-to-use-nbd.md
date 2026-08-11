@@ -23,7 +23,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Versioned cold archives on Unraid:** Pull a whole disk to one stable qcow2 path, then take **BTRFS snapshots** of that subvolume for restore points. See [how-to-use.md — Scenario E](how-to-use.md#scenario-e--cold-physical-disk-archive-on-unraid-qcow2--btrfs-snapshots).
 
-**Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access** and **Host** it RO there (that box may lack free space for a multi-terabyte qcow2). **Pull** on the roomy Unraid (big array / pool) so the **qcow2 file is written there** over the network — no need to open the rack or install the NVMe on the big server. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
+**Both ends Unraid (common):** plug the NVMe into the Unraid with **easy physical access** and **Host** it read-only there (that box may lack free space for a multi-terabyte qcow2). **Pull** on the roomy Unraid (big array / pool) so the **qcow2 file is written there** over the network — no need to open the rack or install the NVMe on the big server. Same plugin, swapped roles — see [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
 
 ---
 
@@ -47,7 +47,7 @@ High-performance mini-PCs and workstations used for **local LLMs and inference**
 |----------|------------------|
 | Archive a model-weight or dataset **volume** as a disk image on Unraid | Whole-volume capture without re-walking millions of small files |
 | Pull a prepared **qcow2/raw dataset disk** from Unraid onto a peer | Single block stream; durable convert jobs |
-| Snapshot a peer data disk before a big toolchain upgrade | RO host → Pull/image → known-good image on Unraid |
+| Snapshot a peer data disk before a big toolchain upgrade | read-only host → Pull/image → known-good image on Unraid |
 | Offline copy of a workstation data drive into the lab NAS | Same imaging pattern as §1 |
 
 **Not the primary tool for:** day-to-day “load weights from a CIFS share into an inference runtime.” SMB/NFS is fine for ordinary file access. NBD is for **disk-shaped** moves and archives next to AI boxes, not a replacement for every share path.
@@ -77,7 +77,7 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 | Application expects a **disk**, not a folder tree | Partition recovery, disk-map tools, VM disk attach, offline clone-class tooling over the network |
 | High-latency media needed careful multi-stream scheduling | Fast links reduce pain, but **seekable block export** still beats “tar the world over SMB” for disk-shaped work |
 
-**Honesty for this plugin:** classic multi-writer shared block SAN is **not** the v1 goal. Prefer **read-only export** and controlled readers for inspect/image. Multi-writer without fencing is dangerous. The multi-seek history explains *why block export exists*; the product focuses on **safe imaging and RO access**.
+**Honesty for this plugin:** classic multi-writer shared block SAN is **not** the v1 goal. Prefer **read-only export** and controlled readers for inspect/image. Multi-writer without fencing is dangerous. The multi-seek history explains *why block export exists*; the product focuses on **safe imaging and read-only access**.
 
 ---
 

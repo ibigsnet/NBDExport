@@ -37,6 +37,6 @@ NBD runs on any private IPv4. For multi-terabyte pulls, Thunderbolt host-net is 
 
 1. Thunderbolt Net: link up, static IPs on both sides, ping both ways.  
 2. Optional: listening Yes if you also need SMB on the same path.  
-3. NBD **Host**: RO host bound to the **Thunderbolt** IP (not WAN).  
+3. NBD **Host**: read-only host bound to the **Thunderbolt** IP (not WAN).  
 4. NBD **Pull** on the peer Unraid, or peer `qemu-img convert`.  
 5. **Stop** the host when finished.

@@ -25,14 +25,14 @@ Hosting alone does **not** create a file. Pulling alone needs someone already ho
 
 ---
 
-## If you click this… (read each row left → right)
+## If you click this… (read each line left → right)
 
-Each **row** is one control. Read **across** the row.
+Each **line** in the table is one control. Read **left to right**.
 
 | If you click… | What runs under the hood | What that means for you |
 |---------------|--------------------------|-------------------------|
 | **Host** tab → **Host disk/partition on network** | `qemu-nbd` listens on the bind IP:port | This Unraid is the **server**. One local `/dev/…` (whole disk or partition, including the partition table) is offered as raw blocks visible over the network. Nothing is copied until a client connects. |
-| **Stop** (on a live host row) | That `qemu-nbd` process exits | Server off for that disk; the port closes. |
+| **Stop** (on a hosted disk in the live list) | That `qemu-nbd` process exits | Server off for that disk; the port closes. |
 | **Pull** tab → **Pull remote disk → file** | Background `qemu-img convert` from `nbd://…` | This Unraid is the **client**. A remote hosted disk is written to a **file** under `/mnt/…` (never to `/dev/…`). |
 | **Settings** → **Apply** | Writes plugin config only | Does **not** start hosting and does **not** start a pull. |
 
@@ -118,7 +118,7 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
   nbd://<unraid-ip>:port /path/to/out.qcow2
 ```
 
-4. On Unraid: **Stop** that host row  
+4. On Unraid: **Stop** that hosted disk  
 
 ---
 
@@ -137,7 +137,7 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
   ──────────────────────────────              ─────────────────────────
   Plug in the NVMe / disk here                 Array / pool / NAS capacity
   May be low on free space                     Free space for multi-TB qcow2
-  Host tab → RO qemu-nbd on private IP  ───►  Pull tab → nbd://A-ip:port
+  Host tab → read-only qemu-nbd on private IP  ───►  Pull tab → nbd://A-ip:port
   Publishes raw blocks only                      → /mnt/user/domains/…/disk.qcow2
   Stop host when B finishes                    Image file lives on B forever
 ```
@@ -166,14 +166,14 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
    - Output: e.g. `/mnt/user/domains/nvme-serial-or-name.qcow2` (a **file** on B’s array/share under `/mnt/…`, never `/dev/…`).  
    - Format: **qcow2**.  
    - Start pull; watch **Status** for Running → Done.  
-4. **Unraid A — Stop** the host row when B is **Done** (or sooner if you abort).  
+4. **Unraid A — Stop** that hosted disk when B is **Done** (or sooner if you abort).  
 5. Optional: on B, `qemu-img check /mnt/user/domains/….qcow2`, then attach as a VM disk or archive.
 
 ### Tips
 
 - On A, free space only needs to cover normal Unraid operation; the **qcow2 is written entirely on B**.  
 - Multi-terabyte images: Thunderbolt host-net or 10G+ wired; **Wi‑Fi is the wrong medium**.  
-- If the NVMe is already an Unraid array member or mounted on A, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
+- If the NVMe is already an Unraid array member or mounted on A, Destructive mode is required even for read-only — prefer an **unassigned** disk for this workflow.  
 - Leave Destructive mode **Off** and Read-only **Yes** for cold imaging.
 
 ---
@@ -227,7 +227,7 @@ NBD does not create snapshots for you — after each good Pull, snapshot on the 
 
 | Don’t | Do instead |
 |-------|------------|
-| Leave a writable NBD on the LAN “for convenience” | RO + stop when done |
+| Leave a writable NBD on the LAN “for convenience” | read-only + stop when done |
 | Host array parity “to see if it works” | Unassigned disk; Destructive mode only if you must |
 | Pull output path `/dev/sda` | Always a **file** under `/mnt/` |
 | Bind `0.0.0.0` with WAN exposure | Specific private IP only |

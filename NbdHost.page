@@ -109,7 +109,7 @@ nbd_page_styles();
 
       <p class="nbd-muted" id="nbd_export_hint">
 <?php if ($destructive !== 'yes'): ?>
-        Destructive mode is <strong>Off</strong> — only safe RO listeners on non-array disks (Settings tab).
+        Destructive mode is <strong>Off</strong> — only safe read-only listeners on non-array disks (Settings tab).
 <?php else: ?>
         <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only.</span>
 <?php endif; ?>
