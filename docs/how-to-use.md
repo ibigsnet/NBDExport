@@ -27,17 +27,17 @@ NBD is **not** a file share (SMB/NFS) and does **not** stay on forever like a sh
 There are only two jobs:
 
 1. **Host (server)** — this Unraid publishes a local disk (`/dev/…`) so others can read it over TCP.  
-2. **Pull (client)** — this Unraid (or another machine) **saves** a hosted disk into a **file** under `/mnt/…` (qcow2/raw).
+2. **Pull (client)** — this Unraid (or another machine) **saves** a hosted disk into a **file** under `/mnt/…` (**qcow2** or **raw**; raw is often named `.img`).
 
 ```text
   HOST (server)                         PULL (client)
   ─────────────                         ─────────────
   Pick a local /dev disk                Point at nbd://IP:port
-  Start qemu-nbd on IP:port    ──────►  qemu-img convert → /mnt/.../disk.qcow2
+  Start qemu-nbd on IP:port    ──────►  qemu-img convert → qcow2 or raw/.img
   Peer can image those blocks           When done, stop the host
 ```
 
-Hosting alone does **not** create a file. Pulling alone needs someone already hosting.
+Hosting alone does **not** create a file. Pulling alone needs someone already hosting. NBD carries **blocks**; qcow2/raw are **storage formats** after convert — [formats](when-to-use-nbd.md#image-formats-not-only-qcow2).
 
 ---
 
@@ -264,7 +264,7 @@ NBD does not create snapshots for you — after each good Pull, snapshot on the 
 
 | Doc | Topic |
 |-----|--------|
-| [when-to-use-nbd.md](when-to-use-nbd.md) | Why NBD vs SMB/NFS · common scenarios (laptop→VM, recovery, gaming PC→array) |
+| [when-to-use-nbd.md](when-to-use-nbd.md) | Why NBD vs SMB/NFS · formats (qcow2/raw/img) · one-slot NVMe · laptop→VM · recovery |
 | [imaging-workflow.md](imaging-workflow.md) | CLI golden path + restore |
 | [security-and-bind.md](security-and-bind.md) | Destructive mode, bind IP |
 | [nbd-vs-nfs-smb.md](nbd-vs-nfs-smb.md) | Files vs disks decision |

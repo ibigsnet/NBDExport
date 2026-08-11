@@ -10,6 +10,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 ## Contents
 
 - [Common scenarios](#common-scenarios)
+- [Image formats (not only qcow2)](#image-formats-not-only-qcow2)
 - [1. Disk imaging, migration, and cold backups](#1-disk-imaging-migration-and-cold-backups)
 - [2. Private links (Thunderbolt, 10G, LAN — and when Wi‑Fi is fine)](#2-private-links-thunderbolt-10g-lan--and-when-wifi-is-fine)
 - [3. Local AI / inference peers](#3-local-ai-inference-peers)
@@ -22,7 +23,11 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 ## Common scenarios
 
-These are the kinds of jobs NBD Export is built for. Typical path: **Host** the physical disk read-only → **Pull** to a qcow2 on Unraid → **Stop** the host → attach the qcow2 as a VM disk, archive it, or convert back to physical later.
+These are the kinds of jobs NBD Export is built for.
+
+**NBD itself is format-agnostic:** the Host publishes **raw blocks** (a disk or partition). What you *store* afterward — **qcow2**, **raw** (often named `.img`), or another `qemu-img` target — is a **file format choice**, not a limit of NBD. qcow2 is the usual default because it sparsifies well and plugs into Unraid VMs; it is not the only option. Details: [Image formats](#image-formats-not-only-qcow2).
+
+Typical path: **Host** the physical disk read-only → **Pull** (or `qemu-img convert`) to a file on Unraid → **Stop** the host → attach the image as a VM disk, archive it, or **write it back to physical media** later.
 
 ### Laptop → bootable VM on Unraid (remote via VNC / RDP)
 
@@ -82,11 +87,48 @@ The expensive I/O lands on healthy Unraid media; the patient disk is read as lit
 
 Physical access on a small Unraid / dock / mini-PC; multi-terabyte free space on the rack Unraid. Host on A, Pull on B. Full walkthrough: [how-to-use.md — Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room).
 
+### One NVMe slot — prepare a larger drive before you open the chassis
+
+Many thin laptops, gaming tablets, and mini-PCs have **only one internal NVMe slot**. You cannot leave the factory 1 TB installed *and* write a full OS to a second internal 2 TB at the same time — there is no spare bay. You still want a **ready-to-boot larger disk** without doing a slow “install after the swap and hope.”
+
+**Public pattern (prepare offline → swap once):**
+
+1. **Build the system as a disk image on Unraid** — for example install Linux/Windows in an Unraid **VM** to a **qcow2** (or raw `.img`) under `/mnt/user/domains/`, *or* Host + Pull an existing machine’s disk into an image first.  
+2. When the **new empty NVMe** arrives, put it in a **USB/Thunderbolt enclosure**, dock, or any Linux/Unraid box that has a free slot — not inside the one-slot device yet.  
+3. **Write the image to that physical NVMe** with `qemu-img convert` (qcow2/raw → device), e.g.  
+   `qemu-img convert -p -f qcow2 -O raw /mnt/user/domains/ready.qcow2 /dev/nvmeXn1`  
+   (triple-check the target device). Prefer a private/fast path if the image file and the dock are on different machines; Host/Pull or file copy both work depending on layout.  
+4. Power down, **install the prepared 2 TB into the one-slot device**, boot. Keep the old 1 TB as a spare or archive it with another Host → Pull if you still need a bit-level copy.
+
+**Why NBD fits this story:** the hard part is not “share a folder of installers” — it is **moving whole bootable disks** (partition tables, ESP, OS) between *machines that have a free slot or a dock* and *images on Unraid*. NBD is one way to get physical ↔ image without sneakernet when the disk is plugged in where it is easy. SMB/NFS still win for copying ISO installers or a documents folder.
+
+**Simpler variant:** skip the VM — Host the current internal disk read-only (live USB or another host if the OS cannot export itself), Pull to Unraid, later convert that image onto the larger drive in a dock, then swap. Same idea: **image lives on the NAS; physical write happens where the new media is plugged in.**
+
+Avoid the long path of “install over live NBD into a remote qcow2, then later copy again to hardware” unless you enjoy extra steps. Prefer **image on Unraid → one convert onto the new physical disk in a dock → install once**.
+
+---
+
+## Image formats (not only qcow2)
+
+NBD Export **hosts a block device**. Clients see raw sectors. **File formats are what you convert into (or from) for storage and VMs.**
+
+| Format / artifact | Role with this plugin |
+|-------------------|------------------------|
+| **Physical `/dev/…`** | What **Host** publishes (whole disk or partition). |
+| **qcow2** | Default **Pull** target. Sparse, snapshot-friendly, natural Unraid **VM** disk. Best everyday archive. |
+| **raw** (often named **`.img`**) | Full bit image; Pull format option; simple restore target (`convert … -O raw /dev/…`). Larger on disk than sparse qcow2 when the source had empty space. |
+| **Other `qemu-img` outputs** (vmdk, vdi, …) | Possible on the **CLI** with `qemu-img convert` from `nbd://…` or from an intermediate qcow2/raw. The Unraid **Pull** tab offers **qcow2** and **raw** only. |
+| **`.iso`** | Optical/install **file**, not a whole GPT system disk. Share installers with **SMB/NFS** or attach as a VM CD. Do not expect “Pull to ISO” to replace disk imaging; a disk image and an ISO solve different problems. |
+
+**Mental model:** NBD = *the wire and the remote disk*. qcow2/raw/img = *how you store or hand that disk to a VM or a future physical drive*.
+
+Restore / reverse path examples: [imaging-workflow.md](imaging-workflow.md).
+
 ---
 
 ## 1. Disk imaging, migration, and cold backups
 
-**Use NBD when** you need a **bit-level (or near bit-level) image** of a physical disk or partition: boot drives, lab rebuilds, a restorable qcow2 before reinstall, or moving a bare-metal disk into a VM later.
+**Use NBD when** you need a **bit-level (or near bit-level) image** of a physical disk or partition: boot drives, lab rebuilds, a restorable image before reinstall, or moving a bare-metal disk into a VM later.
 
 **Why not only SMB/NFS?** File shares export the *mounted filesystem tree*. They do not cleanly give you:
 
@@ -94,7 +136,7 @@ Physical access on a small Unraid / dock / mini-PC; multi-terabyte free space on
 - A **seekable** source that `qemu-img convert` can sparsify (skip zeros → smaller qcow2)  
 - Offline imaging of a disk that should not be written during capture  
 
-**Pattern:** **Host** the disk **read-only** on a private/fast link → peer runs `qemu-img convert` (or Unraid **Pull** tab) to qcow2/raw → **Stop** the host. Restore later by converting back to a device or attaching the qcow2 to a VM.
+**Pattern:** **Host** the disk **read-only** on a private/fast link → peer runs `qemu-img convert` (or Unraid **Pull** tab) to **qcow2 or raw** → **Stop** the host. Restore later by converting back to a device or attaching the image to a VM.
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
@@ -153,7 +195,8 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 - Capture a disk before reinstall or hardware RMA  
 - Build Unraid VMs from physical disks without sneakernet  
 - Move a disk image between two Linux hosts when multi-terabyte file copies were flaky  
-- Keep “golden” disk images on Unraid; re-host only when needed  
+- Keep “golden” disk images on Unraid (qcow2/raw); write them to new physical media when a dock or free slot is available  
+- One-slot devices: prepare the replacement NVMe offline, then swap once  
 
 ---
 
@@ -162,6 +205,7 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 | Situation | Prefer instead |
 |-----------|----------------|
 | Everyday file sharing | **SMB / NFS** |
+| Handing out OS **installers** (`.iso`) | SMB/NFS, HTTP, or Unraid VM CD attachment |
 | Exposing a disk on `0.0.0.0` / WAN | **Never** for basic NBD (no auth) |
 | Production multi-writer VM datastores | Proper shared storage design |
 | Offsite backup *policy* (versioning product, cloud sync) | Backup tools; NBD is a **transport for imaging**, not a full backup product |
@@ -171,4 +215,4 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 
 ## One-line summary
 
-**Files and folders → SMB/NFS. Whole disks, partitions, bootable systems, and seekable images → NBD Export.**
+**Files and folders → SMB/NFS. Whole disks and partitions over the network (then store as qcow2, raw/`.img`, or convert back to physical) → NBD Export.**

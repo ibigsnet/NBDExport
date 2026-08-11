@@ -44,7 +44,7 @@ Neither is required. This plugin does **not** PHP-require them.
 | **Not iSCSI** | Similar idea (remote block); different stack; this plugin uses **qemu-nbd** |
 | **Not PXE** | Firmware netboot is a separate stack; do not point PXE at a qcow2 over NBD |
 
-NBD is for **whole-disk imaging**, **sparse qcow2 capture**, and other **disk-shaped** jobs. For movies, documents, and app data, use SMB or NFS.
+NBD is for **whole-disk imaging** and other **disk-shaped** jobs: Host publishes raw blocks; store or move them as **qcow2**, **raw** (`.img`), or convert back to physical media — not qcow2-only. For movies, documents, installers (`.iso`), and app data, use SMB or NFS.
 
 Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision table: [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md).
 

@@ -3,11 +3,15 @@
 | Need | Prefer | Why |
 |------|--------|-----|
 | Share movies, documents, app data | **SMB / NFS** | File semantics, multi-user, Unraid shares |
-| Bootable **whole-disk image** / VM disk capture | **NBD** + `qemu-img` | Seekable block source → sparse qcow2; preserves GPT/partitions |
+| Hand out **`.iso` installers** or ordinary folders | **SMB / NFS** | Files, not whole disks |
+| Bootable **whole-disk image** / VM disk capture | **NBD** + `qemu-img` | Seekable blocks → **qcow2**, **raw** (`.img`), or other convert targets; preserves GPT/partitions |
+| Write a prepared image onto a new NVMe in a dock (one-slot laptop later) | **NBD** and/or local `qemu-img convert` | Disk-shaped move; see [when-to-use](when-to-use-nbd.md#image-formats-not-only-qcow2) |
 | Copy a few large files over a fast link | **rsync / SMB** | Simpler; no raw disk exposure |
 | Mount remote volume as a **block device** (filesystem tools, recovery) | **NBD** (read-only recommended) | Tools see a disk, not a folder tree |
 | Always-on multi-writer shared storage for VMs | **Not v1 NBD** | Use proper SAN/cluster designs |
 | Casual LAN file access from a laptop | **SMB** | Auth, discovery, OS integration |
+
+**Formats:** NBD is not “qcow2-only.” Host exports **raw blocks**; Pull defaults to **qcow2** (sparse, VM-friendly) and also supports **raw**. Other `qemu-img` formats are CLI territory.
 
 ## Unraid menu map
 
