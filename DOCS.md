@@ -102,8 +102,8 @@ Also needs **`qemu-nbd` and `qemu-img`** (normally present with Unraid **VM** to
 
 ### Offer a disk from this Unraid (server)
 
-1. Private IP up (Thunderbolt Net recommended for multi-terabyte jobs).  
-2. **Host** tab → device → listen IP → port → **Read-only Yes** → host.  
+1. Private IP up between peers. [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) recommended for multi-terabyte jobs (TB4-class host-net is often ~20 Gbit/s each way under Linux — still ~2× a 10G NIC one-way; not Wi‑Fi).  
+2. **Host** tab → device → listen IP (prefer Thunderbolt) → port → **Read-only Yes** → host.  
 3. Peer: `qemu-img info nbd://<bind-ip>:<port>` then convert, **or** **Pull** on another Unraid.  
 4. When finished: **Stop** on the hosted-disks table (top of any tab).
 

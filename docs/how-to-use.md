@@ -151,7 +151,8 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 
 ### Steps
 
-1. **Network:** A and B can reach each other on a **private** path (Thunderbolt Net recommended for multi-terabyte images; or a dedicated LAN). Prefer binding NBD to that private IP, not WAN.  
+1. **Network:** A and B must reach each other on a **private** path — not the open Internet / WAN. Prefer [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) for multi-terabyte pulls; a dedicated LAN or 10G+ also works. Bind NBD to that private (or Thunderbolt) IP.  
+   *Why Thunderbolt for big images?* A Thunderbolt 4–class host-net path is often marketed as **40 Gbit/s**, but under Linux you commonly see about **20 Gbit/s each way** (simplex lanes / full-duplex style use). That is still roughly **twice a 10 Gbit/s NIC** in one direction — and far beyond Wi‑Fi for dumping a whole NVMe. Trained rate ≠ full TCP, but the gap vs 10G is still why a TB cable next to the desk is worth it for NBD.  
 2. **Unraid A — Host**  
    - Destructive mode **Off** when possible (unassigned / not mounted / not array).  
    - Device = the whole physical disk (or the partition you need).  
@@ -171,7 +172,7 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 ### Tips
 
 - On A, free space only needs to cover normal Unraid operation; the **qcow2 is written entirely on B**.  
-- Multi-terabyte images: use Thunderbolt or 10G+; Wi‑Fi is the wrong medium.  
+- Multi-terabyte images: Thunderbolt host-net or 10G+ wired; **Wi‑Fi is the wrong medium**.  
 - If the NVMe is already an Unraid array member or mounted on A, Destructive mode is required even for RO — prefer an **unassigned** disk for this workflow.  
 - Leave Destructive mode **Off** and Read-only **Yes** for cold imaging.
 
@@ -182,7 +183,9 @@ So: **local Unraid holds the physical disk but can be short on free space; remot
 1. Install [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) so both sides have **Thunderbolt host-net IPs** (addresses on `thunderboltN` / tbn tabs).  
 2. **Host:** bind NBD to that **Thunderbolt** address (not br0/WAN, not Wi‑Fi).  
 3. **Pull** (or a peer) uses `nbd://<thunderbolt-ip>:port`.  
-4. For **multi-terabyte** images, use Thunderbolt or 10G+ wired — **not** Wi‑Fi.
+4. For **multi-terabyte** images, stay on that path — **not** Wi‑Fi.
+
+**Speed gut-check (why bother with Thunderbolt Net):** Thunderbolt 4 ports are often stickered **40 Gbit/s**. On Linux host-net you frequently train about **20 Gbit/s each direction** (not 40 each way). That is still in the same ballpark as **~2× a 10 Gbit/s Ethernet NIC** for one-way bulk copy — before you even compare cable chaos (one TB cable between peers vs switch, DAC, etc.). Real TCP will be lower than the trained line rate; it is still the comfortable home for NBD dumps of whole disks.
 
 Thunderbolt Net “Unraid services / listening” (SMB/NFS/web on the Thunderbolt IP) is **independent** of NBD.
 

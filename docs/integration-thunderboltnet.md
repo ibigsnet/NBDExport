@@ -29,10 +29,14 @@ If `thunderbolt*` has an IPv4 address, the Host tab bind dropdown lists it **fir
 Turn listening **Yes** on Thunderbolt / tbn if you want file/web services on the Thunderbolt IP.  
 Use NBD **Host** separately if you need block export on that IP.
 
+## Why pair them for big images
+
+NBD will run on any private IPv4. Thunderbolt host-net is worth using when the image is large: a **Thunderbolt 4–class** path (sticker **40 Gbit/s**, often ~**20 Gbit/s each way** under Linux) is still about **2× a 10 Gbit/s NIC** one-way for bulk block copy — and one cable between peers beats waiting on Wi‑Fi. See Thunderbolt Net docs for trained rate vs sticker honesty.
+
 ## Recommended order for multi-terabyte imaging
 
-1. Thunderbolt Net: link up, static IPs, ping both ways.  
+1. Thunderbolt Net: link up, static IPs on both sides, ping both ways.  
 2. Optional: listening Yes if you also need SMB on the same path.  
-3. NBD **Host**: RO host bound to the Thunderbolt IP.  
+3. NBD **Host**: RO host bound to the **Thunderbolt** IP (not WAN).  
 4. NBD **Pull** on the peer Unraid, or peer `qemu-img convert`.  
 5. **Stop** the host when finished.

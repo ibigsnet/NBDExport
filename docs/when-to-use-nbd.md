@@ -31,7 +31,9 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 **Use NBD when** the path is **high bandwidth and trusted** (direct Thunderbolt cable, dedicated VLAN — not the open Internet). Multi-terabyte images are impractical on Wi‑Fi; they become realistic on Thunderbolt host networking or fast wired underlay.
 
-**Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use Thunderbolt/USB4 host-to-host networking. Trained link rate is not the same as sustained TCP throughput, but private 10G-class paths are the intended habitat for large images.
+**Guidance:** bind NBD to a **Thunderbolt** or other **private** IP. Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) when you use Thunderbolt/USB4 host-to-host networking.
+
+**Quirky but useful comparison:** a Thunderbolt 4–class path is often sold as **40 Gbit/s**. Under Linux host-net you commonly see about **20 Gbit/s each way** (simplex lanes — not PCIe-style 40 full duplex both ways). That is still roughly **twice a 10 Gbit/s NIC** in one direction — so for “dump this NVMe into a qcow2 on the other Unraid,” a TB cable is not a toy next to your 10G card. Trained rate still is not full TCP; expect less than the line number, and still far above Wi‑Fi.
 
 ---
 
