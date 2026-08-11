@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ae">
+<!ENTITY version "2026.08.11af">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- Uninstall: stop managed pids only (no global pkill qemu-nbd); clear /var/log/nbdexport and case-variant paths.
+
+###2026.08.11ae
 - UI: numbered sections with full-width dividers; action bars under each block so listener vs image job are visually separate.
 
 ###2026.08.11ad
@@ -203,7 +206,7 @@ echo "NbdExport: Hard-refresh the browser (Ctrl+Shift+R)."
 <INLINE><![CDATA[
 echo "NbdExport: removing plugin (full cleanup)..."
 
-# 1) Stop all exports and image jobs
+# 1) Stop managed listeners/jobs only (via state files — not global pkill qemu-nbd)
 if [ -f /usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php ]; then
   php -r '
     require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
@@ -213,23 +216,45 @@ if [ -f /usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php ]; then
     }
   ' 2>/dev/null || true
 fi
-pkill -f 'qemu-nbd' 2>/dev/null || true
-# only kill our managed ones if possible — best effort
-rm -rf /var/run/nbdexport
+# Best-effort: kill only pids recorded under our run dir
+if [ -d /var/run/nbdexport ]; then
+  for pf in /var/run/nbdexport/*.pid; do
+    [ -f "$pf" ] || continue
+    pid=$(tr -cd '0-9' <"$pf" 2>/dev/null || true)
+    if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 0.2
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+fi
 
-# 2) Remove emhttp tree
+# 2) Runtime + logs (RAM; not flash)
+rm -rf /var/run/nbdexport
+rm -rf /var/log/nbdexport
+
+# 3) Emhttp tree (all case variants)
 rm -rf /usr/local/emhttp/plugins/NbdExport
 rm -rf /usr/local/emhttp/plugins/nbdexport
+rm -rf /usr/local/emhttp/plugins/Nbdexport
 
-# 3) Remove flash state
+# 4) Flash plugin state (cfg, companion). Unraid also removes nbdexport.plg from /boot/config/plugins/
 rm -rf /boot/config/plugins/NbdExport
 rm -rf /boot/config/plugins/nbdexport
+rm -f /boot/config/plugins/nbdexport.plg 2>/dev/null || true
 
-# 4) Temp
-rm -f /tmp/plugins/nbdexport.plg /tmp/plugins/NbdExport* 2>/dev/null || true
+# 5) Temp install copies
+rm -f /tmp/plugins/nbdexport.plg /tmp/plugins/nbdexport.txt 2>/dev/null || true
+rm -f /tmp/plugins/NbdExport* /tmp/inline*-nbdexport.sh 2>/dev/null || true
 
+if [ -e /usr/local/emhttp/plugins/NbdExport ] || [ -e /usr/local/emhttp/plugins/nbdexport ]; then
+  echo "NbdExport: WARNING — emhttp plugin path still present"
+else
+  echo "NbdExport: emhttp plugin paths clear"
+fi
 echo "NbdExport: removed."
 echo "NbdExport: did not modify network.cfg, Thunderbolt Net, or UnraidFRR."
+echo "NbdExport: user image files under /mnt/ were left untouched."
 echo "NbdExport: hard-refresh the browser."
 ]]></INLINE>
 </FILE>
