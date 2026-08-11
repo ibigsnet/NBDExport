@@ -28,8 +28,18 @@ $enabled = (($cfg['enabled'] ?? 'yes') === 'yes') ? 'yes' : 'no';
 $def_ro = (($cfg['default_read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no';
 $def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
 $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['unraidfrr']);
+// Disk risk map for JS confirm (path => summary)
+$disk_risk_js = [];
+foreach ($disks as $d) {
+  $disk_risk_js[$d['path']] = [
+    'warn' => !empty($d['warn']),
+    'flags' => $d['flags'] ?? [],
+    'label' => $d['label'] ?? $d['path'],
+  ];
+}
 $default_bind = '';
 foreach ($binds as $b) {
   if (!empty($b['preferred'])) {
@@ -136,6 +146,12 @@ if ($default_bind === '' && $binds) {
       <td>Active exports</td>
       <td><?= count($exports) ?> · Image jobs: <?= count($jobs) ?></td>
     </tr>
+    <tr>
+      <td>Destructive mode</td>
+      <td><?= $destructive === 'yes'
+        ? '<span class="nbd-warn"><strong>ON</strong> — writable and array/mounted exports allowed</span>'
+        : '<span class="nbd-ok">Off</span> <span class="nbd-muted">— RO exports of non-array disks only (safe default)</span>' ?></td>
+    </tr>
   </table>
 
   <dl>
@@ -211,8 +227,27 @@ if ($default_bind === '' && $binds) {
         (Thunderbolt or LAN). Only enable all-interfaces bind on a fully isolated network you control.
       </blockquote>
 
+      <dl>
+        <dt>Destructive mode:</dt>
+        <dd>
+          <select name="destructive_mode" id="nbd_destructive_mode">
+            <?= mk_option($destructive, 'no', 'No (recommended)') ?>
+            <?= mk_option($destructive, 'yes', 'Yes — allow writable / array / mounted exports') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Like Unassigned Devices’ <strong>Destructive Mode</strong>: off by default so you cannot accidentally
+        expose array disks or open a <em>writable</em> raw disk over the network.<br><br>
+        <strong>No</strong> (default): only <strong>read-only</strong> exports of disks that are not Unraid array/parity
+        members and not mounted (and not the flash device).<br><br>
+        <strong>Yes</strong>: allows writable exports and/or array/mounted/flash devices. The Start export button
+        still requires a browser confirmation. Leave <strong>No</strong> for normal imaging of unassigned disks.
+        Turn back to No when finished.
+      </blockquote>
+
       <p class="nbd-actions">
-        <input type="submit" name="#apply" value="Apply">
+        <input type="submit" name="#apply" value="Apply" onclick="return nbdConfirmDestructiveSave(this.form)">
         <input type="button" value="Done" onclick="done()">
       </p>
     </form>
@@ -271,27 +306,32 @@ if ($default_bind === '' && $binds) {
 
   <div class="nbd-section">
     <h3>New export</h3>
-    <form method="POST" action="/update.php" target="progressFrame">
+    <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="export_start">
+      <input type="hidden" name="nbd_confirm" id="nbd_confirm" value="no">
 
       <dl>
         <dt>Device:</dt>
         <dd>
-          <select name="device" style="max-width:36em">
+          <select name="device" id="nbd_device" style="max-width:36em">
             <option value="">— select —</option>
 <?php foreach ($disks as $d):
   $warn = !empty($d['warn']) ? ' ⚠' : '';
+  $flags = !empty($d['flags']) ? implode(',', $d['flags']) : '';
 ?>
-            <option value="<?= htmlspecialchars($d['path']) ?>"><?= htmlspecialchars($d['label'] . $warn) ?></option>
+            <option value="<?= htmlspecialchars($d['path']) ?>"
+              data-warn="<?= !empty($d['warn']) ? '1' : '0' ?>"
+              data-flags="<?= htmlspecialchars($flags) ?>"><?= htmlspecialchars($d['label'] . $warn) ?></option>
 <?php endforeach; ?>
           </select>
         </dd>
       </dl>
       <blockquote class="inline_help">
         Whole disks and partitions from <code>lsblk</code>. Entries marked ⚠ may be array members or mounted —
-        export only if you understand the risk. Prefer unassigned / offline disks for imaging.
+        they require <strong>Destructive mode = Yes</strong> even for read-only.
+        Prefer unassigned / offline disks for imaging.
       </blockquote>
 
       <dl>
@@ -323,14 +363,15 @@ if ($default_bind === '' && $binds) {
       <dl>
         <dt>Read-only:</dt>
         <dd>
-          <select name="read_only">
+          <select name="read_only" id="nbd_read_only">
             <?= mk_option($def_ro, 'yes', 'Yes (recommended)') ?>
-            <?= mk_option($def_ro, 'no', 'No — writable (dangerous)') ?>
+            <?= mk_option($def_ro, 'no', 'No — writable (requires Destructive mode)') ?>
           </select>
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>Yes</strong> uses <code>qemu-nbd --read-only</code>. Writable exports can destroy a boot disk if the peer writes.
+        <strong>Yes</strong> uses <code>qemu-nbd --read-only</code> (peer cannot wipe the disk).
+        <strong>No</strong> is blocked unless Destructive mode is On — a writable NBD is raw disk over TCP.
       </blockquote>
 
       <dl>
@@ -339,6 +380,14 @@ if ($default_bind === '' && $binds) {
           <input type="text" name="label" value="" maxlength="80" placeholder="optional note">
         </dd>
       </dl>
+
+      <p class="nbd-muted" id="nbd_export_hint">
+<?php if ($destructive !== 'yes'): ?>
+        Destructive mode is <strong>Off</strong> — only safe RO exports of non-array disks.
+<?php else: ?>
+        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only before Start.</span>
+<?php endif; ?>
+      </p>
 
       <p class="nbd-actions">
         <input type="submit" name="#apply" value="Start export"
@@ -349,7 +398,7 @@ if ($default_bind === '' && $binds) {
 
   <div class="nbd-section">
     <h3>Image job (nbd:// → file)</h3>
-    <form method="POST" action="/update.php" target="progressFrame">
+    <form method="POST" action="/update.php" target="progressFrame" onsubmit="return nbdConfirmImage(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="image_start">
@@ -367,11 +416,12 @@ if ($default_bind === '' && $binds) {
       <dl>
         <dt>Output path:</dt>
         <dd>
-          <input type="text" name="output" style="width:28em" placeholder="/mnt/cache/images/disk.qcow2" value="">
+          <input type="text" name="output" id="nbd_image_out" style="width:28em" placeholder="/mnt/cache/images/disk.qcow2" value="">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Must be under <code>/mnt/</code> (cache, array, or share) or <code>/tmp/</code>.
+        Must be a <strong>file</strong> under <code>/mnt/</code> (cache, array, or share) or <code>/tmp/</code>.
+        <strong>Not</strong> a block device (<code>/dev/…</code>) — the plugin refuses paths that would wipe a disk.
         Ensure free space ≥ expected image size.
       </blockquote>
 
@@ -480,3 +530,104 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
     </p>
   </div>
 </div>
+<script>
+(function () {
+  var destructiveOn = <?= $destructive === 'yes' ? 'true' : 'false' ?>;
+
+  window.nbdConfirmDestructiveSave = function (form) {
+    if (!form) return true;
+    var sel = form.querySelector('[name="destructive_mode"]');
+    if (!sel || sel.value !== 'yes') return true;
+    return window.confirm(
+      'Enable Destructive mode?\n\n' +
+      'This allows:\n' +
+      '• Writable NBD exports (peer can write your disk)\n' +
+      '• Exporting Unraid array / mounted / flash devices\n\n' +
+      'Leave OFF unless you need those. You can turn it back off anytime.'
+    );
+  };
+
+  window.nbdConfirmExport = function (form) {
+    var conf = form.querySelector('#nbd_confirm');
+    if (conf) conf.value = 'no';
+    var devSel = form.querySelector('#nbd_device');
+    var roSel = form.querySelector('#nbd_read_only');
+    if (!devSel || !devSel.value) {
+      window.alert('Select a device to export.');
+      return false;
+    }
+    var opt = devSel.options[devSel.selectedIndex];
+    var warn = opt && opt.getAttribute('data-warn') === '1';
+    var flags = (opt && opt.getAttribute('data-flags')) || '';
+    var ro = !roSel || roSel.value === 'yes';
+    var needConfirm = !ro || warn;
+
+    if (!ro && !destructiveOn) {
+      window.alert(
+        'Writable export is blocked.\n\n' +
+        'Enable Destructive mode under Settings (Apply), or set Read-only to Yes.'
+      );
+      return false;
+    }
+    if (warn && !destructiveOn) {
+      window.alert(
+        'This device is marked risky (' + (flags || 'array/mounted') + ').\n\n' +
+        'Enable Destructive mode under Settings (Apply) before exporting array, mounted, or flash devices.\n' +
+        'Prefer an unassigned, unmounted disk for imaging.'
+      );
+      return false;
+    }
+
+    if (needConfirm) {
+      var msg = 'Start NBD export of:\n  ' + devSel.value + '\n\n';
+      if (!ro) {
+        msg += 'WARNING: WRITABLE export — the peer can modify or wipe this disk.\n\n';
+      } else {
+        msg += 'Read-only export.\n\n';
+      }
+      if (warn) {
+        msg += 'Device flags: ' + (flags || 'risky') + '\n\n';
+      }
+      msg += 'Continue?';
+      if (!window.confirm(msg)) {
+        return false;
+      }
+      // Second confirm for writable
+      if (!ro) {
+        if (!window.confirm(
+          'FINAL CONFIRMATION\n\nWritable NBD of ' + devSel.value + '.\n' +
+          'A mistake can destroy data. Type OK thinking: are you sure?\n\nClick OK only if intentional.'
+        )) {
+          return false;
+        }
+      }
+      if (conf) conf.value = 'yes';
+    } else {
+      // Safe RO path — light confirm still helps fat-finger Start
+      if (!window.confirm('Start read-only NBD export of ' + devSel.value + '?')) {
+        return false;
+      }
+      // Safe path does not need server-side confirm flag
+      if (conf) conf.value = 'no';
+    }
+    return true;
+  };
+
+  window.nbdConfirmImage = function (form) {
+    var out = form.querySelector('#nbd_image_out');
+    var path = out ? String(out.value || '').trim() : '';
+    if (!path) {
+      window.alert('Enter an output path under /mnt/…');
+      return false;
+    }
+    if (path.indexOf('/dev/') === 0) {
+      window.alert('Output cannot be a block device (/dev/…). Use a file path under /mnt/.');
+      return false;
+    }
+    return window.confirm(
+      'Start image job to:\n  ' + path + '\n\n' +
+      'This writes a new file (does not wipe a disk). Continue?'
+    );
+  };
+})();
+</script>

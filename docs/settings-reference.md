@@ -9,6 +9,7 @@
 | Default read-only | Yes | Used as default for new exports |
 | Default port | 10809 | 1024–65535 |
 | Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth |
+| Destructive mode | No | UD-style: allow writable and/or array/mounted/flash exports; UI confirm still required |
 | Rehydrate on start | No | Reserved; v1 does not auto-export disks |
 
 ## New export

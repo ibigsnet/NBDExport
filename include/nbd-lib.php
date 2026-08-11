@@ -33,6 +33,7 @@ function nbd_load_cfg() {
     'default_read_only' => 'yes',
     'default_port' => '10809',
     'allow_bind_all' => 'no',
+    'destructive_mode' => 'no',
     'rehydrate_on_start' => 'no',
   ];
   $path = nbd_cfg_path();
@@ -65,7 +66,7 @@ function nbd_write_cfg(array $cfg) {
   if (!is_dir(NBDEXPORT_CFG_DIR)) {
     @mkdir(NBDEXPORT_CFG_DIR, 0755, true);
   }
-  $keys = ['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'rehydrate_on_start'];
+  $keys = ['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
     $v = isset($cfg[$k]) ? (string)$cfg[$k] : '';
@@ -404,11 +405,107 @@ function nbd_new_export_id() {
 }
 
 /**
+ * Risk assessment for a block device path (array / mounted / flash).
+ *
+ * @return array{
+ *   path:string,name:string,array:bool,mounted:bool,flash:bool,risky:bool,
+ *   flags:string[],summary:string
+ * }
+ */
+function nbd_device_risk($device) {
+  $device = trim((string)$device);
+  $name = preg_replace('#^/dev/#', '', $device);
+  $flags = [];
+  $array = false;
+  $mounted = false;
+  $flash = false;
+
+  $array_devs = nbd_unraid_array_devices();
+  if (isset($array_devs[$name]) || isset($array_devs[$device]) || preg_match('/^md\d+/', $name)) {
+    $array = true;
+    $flags[] = 'array';
+  }
+  // Parity / cache naming in disks.ini is covered by array_devs when present
+
+  // Any mount under this device or partitions
+  $mp = trim((string)@shell_exec('lsblk -n -o MOUNTPOINT ' . escapeshellarg($device) . ' 2>/dev/null'));
+  if ($mp !== '') {
+    foreach (preg_split('/\s+/', $mp) as $p) {
+      if ($p !== '' && $p !== '-') {
+        $mounted = true;
+        $flags[] = 'mounted';
+        break;
+      }
+    }
+  }
+  // Children mounts
+  if (!$mounted) {
+    $kids = trim((string)@shell_exec('lsblk -n -o MOUNTPOINT -r ' . escapeshellarg($device) . ' 2>/dev/null'));
+    if ($kids !== '') {
+      foreach (preg_split('/\s+/', $kids) as $p) {
+        if ($p !== '' && $p !== '-') {
+          $mounted = true;
+          $flags[] = 'mounted';
+          break;
+        }
+      }
+    }
+  }
+
+  // Unraid flash boot device (common names)
+  $boot = '';
+  if (is_readable('/var/local/emhttp/var.ini')) {
+    $vi = @parse_ini_file('/var/local/emhttp/var.ini');
+    if (is_array($vi) && !empty($vi['flashGUID'])) {
+      // fall through — check mount /boot
+    }
+  }
+  $boot_src = trim((string)@shell_exec('findmnt -n -o SOURCE /boot 2>/dev/null'));
+  if ($boot_src !== '') {
+    $boot_base = preg_replace('#p?\d+$#', '', preg_replace('#^/dev/#', '', $boot_src));
+    $dev_base = preg_replace('#p?\d+$#', '', $name);
+    if ($boot_base !== '' && ($name === $boot_base || $dev_base === $boot_base || strpos($boot_src, $device) === 0)) {
+      $flash = true;
+      $flags[] = 'flash';
+    }
+  }
+
+  $flags = array_values(array_unique($flags));
+  $risky = $array || $mounted || $flash;
+  $summary = $risky ? implode(', ', $flags) : 'ok';
+  return [
+    'path' => $device,
+    'name' => $name,
+    'array' => $array,
+    'mounted' => $mounted,
+    'flash' => $flash,
+    'risky' => $risky,
+    'flags' => $flags,
+    'summary' => $summary,
+  ];
+}
+
+/**
+ * Whether destructive mode is enabled (writable / array / mounted exports).
+ */
+function nbd_destructive_mode_on(array $cfg = null) {
+  if ($cfg === null) {
+    $cfg = nbd_load_cfg();
+  }
+  return (($cfg['destructive_mode'] ?? 'no') === 'yes');
+}
+
+/**
  * Start RO (or RW) qemu-nbd export.
+ *
+ * Safety (Unassigned Devices–style):
+ * - Default: read-only only; non-array, unmounted disks.
+ * - destructive_mode=yes required for writable exports OR array/mounted/flash devices.
+ * - confirm must be true for any risky or RW start (UI double-check; server-enforced).
  *
  * @return array{ok:bool,error?:string,id?:string}
  */
-function nbd_export_start($device, $bind, $port, $read_only = true, $label = '', $shared = 2) {
+function nbd_export_start($device, $bind, $port, $read_only = true, $label = '', $shared = 2, $confirm = false) {
   nbd_ensure_runtime_dirs();
   $cfg = nbd_load_cfg();
   if (($cfg['enabled'] ?? 'yes') !== 'yes') {
@@ -421,6 +518,8 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
   $device = trim((string)$device);
   $bind = trim((string)$bind);
   $port = (int)$port;
+  $read_only = (bool)$read_only;
+  $confirm = (bool)$confirm;
   // Allow common block paths; reject traversal and non-/dev
   if ($device === '' || strpos($device, '..') !== false
       || !preg_match('#^/dev/[A-Za-z0-9][A-Za-z0-9._+-]*$#', $device)) {
@@ -438,6 +537,36 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
   if ($port < 1024 || $port > 65535) {
     return ['ok' => false, 'error' => 'Port must be 1024–65535.'];
   }
+
+  $risk = nbd_device_risk($device);
+  $destructive = nbd_destructive_mode_on($cfg);
+
+  // Writable always requires destructive mode
+  if (!$read_only && !$destructive) {
+    return [
+      'ok' => false,
+      'error' => 'Writable export blocked. Enable Destructive mode under Settings (like Unassigned Devices), keep Read-only=Yes, or both.',
+    ];
+  }
+  // Array / mounted / flash require destructive mode even when RO
+  if ($risk['risky'] && !$destructive) {
+    return [
+      'ok' => false,
+      'error' => 'Device is ' . $risk['summary'] . '. Enable Destructive mode under Settings to allow array/mounted/flash exports (RO still recommended).',
+    ];
+  }
+  // Never allow writable flash
+  if (!$read_only && !empty($risk['flash'])) {
+    return ['ok' => false, 'error' => 'Refusing writable export of Unraid flash/boot device.'];
+  }
+  // Risky or RW requires explicit confirm from UI
+  if ((!$read_only || $risk['risky']) && !$confirm) {
+    return [
+      'ok' => false,
+      'error' => 'Confirmation required for this export (writable and/or ' . ($risk['summary'] !== 'ok' ? $risk['summary'] : 'high risk') . '). Confirm in the UI and try again.',
+    ];
+  }
+
   // Port conflict
   foreach (nbd_exports_state() as $e) {
     if (!empty($e['alive']) && (int)($e['port'] ?? 0) === $port && ($e['bind'] ?? '') === $bind) {
@@ -595,6 +724,10 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   }
   if ($output === '' || strpos($output, '..') !== false) {
     return ['ok' => false, 'error' => 'Invalid output path.'];
+  }
+  // Never write image jobs onto block devices (wipe risk)
+  if (preg_match('#^/dev/#', $output) || (function_exists('is_block') && @is_block($output))) {
+    return ['ok' => false, 'error' => 'Output cannot be a block device (/dev/…). Use a file under /mnt/ (e.g. qcow2 on cache).'];
   }
   // Prefer under /mnt/
   if (strpos($output, '/mnt/') !== 0 && strpos($output, '/tmp/') !== 0) {

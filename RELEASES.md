@@ -11,6 +11,10 @@ https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg
 
 ## History
 
+### 2026.08.11ac
+
+- Destructive mode (default Off): server + UI guards against accidental writable/array exports; image jobs cannot target block devices.
+
 ### 2026.08.11ab
 
 - Settings page layout aligned with UnraidFRR / Thunderbolt Net (forms, help panels, companion strip).

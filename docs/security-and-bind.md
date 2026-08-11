@@ -2,14 +2,29 @@
 
 NBD is effectively **raw disk over TCP**. Treat it like temporarily plugging a drive into another machine — over the network.
 
+## Destructive mode (like Unassigned Devices)
+
+| Destructive mode | Allowed |
+|------------------|---------|
+| **No** (default) | **Read-only** exports of disks that are **not** Unraid array/parity members, **not** mounted, **not** the flash device |
+| **Yes** | Writable exports; array / mounted / flash device exports (still prompts in the browser) |
+
+Server-side enforcement refuses blocked combinations even if the UI is bypassed.  
+Image jobs **never** write to `/dev/…` block devices (file under `/mnt/` only).
+
+Turn Destructive mode **back to No** when you finish a special job.
+
 ## Rules
 
 | Rule | Default in this plugin |
 |------|-------------------------|
 | Read-only export | **Yes** (`qemu-nbd --read-only`) |
+| Destructive mode | **No** |
 | Bind address | Specific host IP — **Thunderbolt first** when present |
 | Bind `0.0.0.0` | **Disabled** unless you set Allow bind 0.0.0.0 = Yes |
-| Array / mounted disks | Listed with warnings; you must choose deliberately |
+| Array / mounted disks | Blocked unless Destructive mode = Yes (+ UI confirm) |
+| Writable export | Blocked unless Destructive mode = Yes (+ double UI confirm) |
+| Image output to `/dev/…` | **Always refused** |
 | Authentication | **None** in basic qemu-nbd — rely on network isolation |
 
 ## Recommended isolation

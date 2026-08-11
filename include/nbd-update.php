@@ -17,9 +17,15 @@ try {
   switch ($action) {
     case 'save_cfg':
       $cfg = nbd_load_cfg();
-      foreach (['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'rehydrate_on_start'] as $k) {
+      foreach (['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
         if (isset($_POST[$k])) {
           $cfg[$k] = trim((string)$_POST[$k]);
+        }
+      }
+      // Normalize yes/no
+      foreach (['enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+        if (isset($cfg[$k])) {
+          $cfg[$k] = ($cfg[$k] === 'yes') ? 'yes' : 'no';
         }
       }
       if (($cfg['enabled'] ?? 'yes') !== 'yes') {
@@ -27,7 +33,11 @@ try {
       }
       nbd_write_cfg($cfg);
       nbd_write_companion_marker();
-      nbd_flash('NBD Export: settings saved.');
+      $msg = 'NBD Export: settings saved.';
+      if (($cfg['destructive_mode'] ?? 'no') === 'yes') {
+        $msg .= ' WARNING: Destructive mode is ON (writable / array / mounted exports allowed).';
+      }
+      nbd_flash($msg);
       break;
 
     case 'export_start':
@@ -36,11 +46,12 @@ try {
       $port = (int)($_POST['port'] ?? 10809);
       $ro = (($_POST['read_only'] ?? 'yes') === 'yes');
       $label = trim((string)($_POST['label'] ?? ''));
-      $r = nbd_export_start($dev, $bind, $port, $ro, $label);
+      $confirm = (($_POST['nbd_confirm'] ?? '') === 'yes');
+      $r = nbd_export_start($dev, $bind, $port, $ro, $label, 2, $confirm);
       if (empty($r['ok'])) {
         nbd_flash('NBD Export: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
-        nbd_flash('NBD Export: started ' . ($r['url'] ?? $r['id']));
+        nbd_flash('NBD Export: started ' . ($r['url'] ?? $r['id']) . ($ro ? ' (read-only)' : ' (WRITABLE)'));
       }
       break;
 
