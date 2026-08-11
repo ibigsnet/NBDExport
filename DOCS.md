@@ -141,10 +141,11 @@ Details: [docs/security-and-bind.md](docs/security-and-bind.md).
 
 | Doc | Topic |
 |-----|--------|
-| [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) | Scenarios: imaging, fast links, AI peers, multi-seek heritage |
+| [docs/how-to-use.md](docs/how-to-use.md) | **Start here** — button meanings, listener vs image job, walkthroughs |
+| [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) | Why NBD vs SMB/NFS; scenario overview |
 | [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md) | Files vs disks decision table |
-| [docs/security-and-bind.md](docs/security-and-bind.md) | RO, bind IP, warnings |
-| [docs/imaging-workflow.md](docs/imaging-workflow.md) | Export + convert + restore |
+| [docs/security-and-bind.md](docs/security-and-bind.md) | Destructive mode, RO, bind IP |
+| [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | TB underlay + listening vs NBD |
 | [docs/integration-unraidfrr.md](docs/integration-unraidfrr.md) | Multi-hop (optional) |
 | [docs/settings-reference.md](docs/settings-reference.md) | Every control |
