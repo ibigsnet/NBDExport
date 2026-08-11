@@ -69,7 +69,7 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | Read-only | **Yes** | Imaging must not scribble on source disks |
 | Default port | **10809** | Common qemu-nbd default |
 | Allow bind 0.0.0.0 | **No** | Basic NBD has no auth |
-| Destructive mode | **No** | Only for writable host or array/mounted/flash — [destructive-mode.md](docs/destructive-mode.md) |
+| Destructive mode | **No** | Only for writable host or array/cache/pool/mounted/boot — [destructive-mode.md](docs/destructive-mode.md) |
 
 ### What it does *not* do
 
@@ -135,7 +135,7 @@ NBD is effectively **raw disk over TCP**.
 
 - Prefer **read-only**  
 - Bind to a **specific private IP** (Thunderbolt or LAN) — not the Internet  
-- Do not host array/parity disks without understanding the risk  
+- Do not host array/cache/pool disks without understanding the risk  
 - Isolation is the access control model for basic qemu-nbd  
 
 When Destructive is required: [docs/destructive-mode.md](docs/destructive-mode.md) · Isolation: [docs/security-and-bind.md](docs/security-and-bind.md).

@@ -86,7 +86,7 @@ Until a client connects, the host just **waits** on the port (minimal disk serve
 
 ## Safe defaults checklist
 
-1. **Destructive mode = No** (default) — only turn **Yes** for the cases in [destructive-mode.md](destructive-mode.md) (writable host, or array / mounted / flash source)  
+1. **Destructive mode = No** (default) — only turn **Yes** for the cases in [destructive-mode.md](destructive-mode.md) (writable host, or array/cache/pool / mounted / boot source)  
 2. **Read-only = Yes** when hosting  
 3. **Bind IP** = Thunderbolt or private LAN (not `0.0.0.0`)  
 4. Prefer an **unassigned / not array / not mounted** disk  
@@ -244,7 +244,7 @@ NBD does not create snapshots for you — after each good Pull, snapshot on the 
 | Don’t | Do instead |
 |-------|------------|
 | Leave a writable NBD on the LAN “for convenience” | read-only + stop when done |
-| Host array parity “to see if it works” | Unassigned disk; Destructive mode only if you must |
+| Host array/cache/pool “to see if it works” | Unassigned disk; Destructive mode only if you must |
 | Pull output path `/dev/sda` | Always a **file** under `/mnt/` |
 | Bind `0.0.0.0` with WAN exposure | Specific private IP only |
 | Expect hosting in Windows Explorer as a share | Use SMB for files; NBD is for block tools / qemu-img |

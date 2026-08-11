@@ -55,8 +55,9 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Whole disks and partitions from <code>lsblk</code>. ⚠ = array/mounted — needs Destructive mode
-        (Settings tab) even for read-only. Prefer unassigned / unmounted disks.
+        Whole disks and partitions from <code>lsblk</code>. ⚠ = Unraid storage (array/cache/pool),
+        mounted, or boot device — needs Destructive mode (Settings) even for read-only.
+        Prefer unassigned / unmounted disks.
       </blockquote>
 
       <dl>

@@ -21,7 +21,7 @@ Enable/install VM-related components so `qemu-nbd` and `qemu-img` appear under `
 - Check bind IP is assigned (`ip -4 addr`)  
 - Port already in use → pick another port (multi-disk needs unique ports)  
 - Device path missing (VFIO-bound disks are invisible to the host)  
-- Destructive mode Off while selecting array/mounted/flash or writable  
+- Destructive mode Off while selecting array/cache/pool, mounted, boot, or writable  
 - See `/var/log/nbdexport/*.log`
 
 ## Peer cannot connect

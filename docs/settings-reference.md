@@ -35,7 +35,7 @@ Every tab shows a shared header: **disks currently hosted** (and an orange banne
 | Default read-only | Yes | Prefill for new Host listeners |
 | Default port | 10809 | 1024–65535; multi-disk uses other free ports |
 | Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth |
-| Destructive mode | No | Only for writable host or hosting array/mounted/flash disks. See [destructive-mode.md](destructive-mode.md). Host tab still confirms the device. |
+| Destructive mode | No | Only for writable host or hosting array/cache/pool, mounted, or boot disks. See [destructive-mode.md](destructive-mode.md). Host tab still confirms the device. |
 | Export config | — | Download JSON or write `/boot/config/nbdexport-config-*.json` (outside plugin dir). Uninstall wipes plugin flash state. |
 | Import config | — | Path under `/boot/config/` or `/mnt/` only |
 
@@ -49,7 +49,7 @@ Publishes one local **block device** (whole disk or partition — raw blocks inc
 
 | Field / action | Notes |
 |----------------|--------|
-| Device | From `lsblk`; array/mounted/flash need Destructive mode |
+| Device | From `lsblk`; array/cache/pool, mounted, or boot need Destructive mode |
 | Listen on (bind IP) | Thunderbolt IPs listed first |
 | Listen port | TCP port for the server |
 | Read-only | Strongly recommended Yes |

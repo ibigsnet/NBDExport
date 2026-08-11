@@ -711,7 +711,9 @@ function nbd_new_export_id() {
 }
 
 /**
- * Risk assessment for a block device path (array / mounted / flash).
+ * Risk assessment for a block device path.
+ * "array" flag = Unraid inventory (array, parity, cache, pools via disks.ini) or md*.
+ * "flash" flag = device that currently backs /boot (USB flash or disk boot).
  *
  * @return array{
  *   path:string,name:string,array:bool,mounted:bool,flash:bool,risky:bool,
@@ -726,12 +728,12 @@ function nbd_device_risk($device) {
   $mounted = false;
   $flash = false;
 
+  // disks.ini: array, parity, cache, pools — all Unraid-assigned storage
   $array_devs = nbd_unraid_array_devices();
   if (isset($array_devs[$name]) || isset($array_devs[$device]) || preg_match('/^md\d+/', $name)) {
     $array = true;
     $flags[] = 'array';
   }
-  // Parity / cache naming in disks.ini is covered by array_devs when present
 
   // Any mount under this device or partitions
   $mp = trim((string)@shell_exec('lsblk -n -o MOUNTPOINT ' . escapeshellarg($device) . ' 2>/dev/null'));
@@ -758,14 +760,7 @@ function nbd_device_risk($device) {
     }
   }
 
-  // Unraid flash boot device (common names)
-  $boot = '';
-  if (is_readable('/var/local/emhttp/var.ini')) {
-    $vi = @parse_ini_file('/var/local/emhttp/var.ini');
-    if (is_array($vi) && !empty($vi['flashGUID'])) {
-      // fall through — check mount /boot
-    }
-  }
+  // Unraid boot device: whatever currently backs /boot (USB flash or disk/partition)
   $boot_src = trim((string)@shell_exec('findmnt -n -o SOURCE /boot 2>/dev/null'));
   if ($boot_src !== '') {
     $boot_base = preg_replace('#p?\d+$#', '', preg_replace('#^/dev/#', '', $boot_src));
@@ -805,8 +800,8 @@ function nbd_destructive_mode_on(array $cfg = null) {
  * Start read-only (or writable) qemu-nbd export.
  *
  * Safety (Unassigned Devices–style):
- * - Default: read-only only; non-array, unmounted disks.
- * - destructive_mode=yes required for writable exports OR array/mounted/flash devices.
+ * - Default: read-only only; unassigned, unmounted, non-boot disks.
+ * - destructive_mode=yes required for writable exports OR array/cache/pool/mounted/boot devices.
  * - confirm must be true for any risky or RW start (UI double-check; server-enforced).
  *
  * @return array{ok:bool,error?:string,id?:string}

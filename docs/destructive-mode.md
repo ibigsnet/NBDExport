@@ -12,7 +12,9 @@ While **On**, every NBD tab shows an **orange banner**. Set it back to **No** wh
 
 ## Leave it Off (the usual case)
 
-Host **read-only**, disk **unassigned**, **not mounted**, **not** the Unraid flash — Destructive mode stays **No**.
+Host **read-only**, disk **not** part of Unraid storage, **not mounted**, **not** the Unraid boot device — Destructive mode stays **No**.
+
+Typical safe source: an **unassigned** NVMe/SSD you plugged in only to image.
 
 ---
 
@@ -27,23 +29,27 @@ Turn Destructive mode **On** only for one of these four Host situations:
 - Prefer read-only Host + Pull to a file instead  
 - Use only for rare in-place lab recovery  
 
-### 2. Array or parity member
+### 2. Unraid storage disk (array, parity, cache, or pool)
 
-- Array data disk, parity, or related `md*` member  
+- Array data disks, parity, **cache**, and **named pools** (anything Unraid tracks in its disk inventory — not only “the array”)  
+- Also `md*` array devices  
 - Even **read-only** Host is blocked without Destructive mode  
-- Prefer an unassigned disk; live array hosts risk consistency and load  
+- Prefer an unassigned disk; hosting live storage risks consistency and load  
 
 ### 3. Mounted disk
 
-- Any filesystem from that device still mounted under `/mnt/…`  
+- Any filesystem from that device still mounted (e.g. under `/mnt/…`)  
 - Host (read-only or writable) is blocked without Destructive mode  
 - Unmount first when you can — live mounts often mean an inconsistent image  
+- Catches pool/cache/user mounts even when you think of the disk as “not array”  
 
-### 4. Unraid flash (USB boot drive)
+### 4. Unraid boot device (usually the USB flash)
 
-- The device behind `/boot`  
+- Whatever device currently holds **`/boot`** (the Unraid OS config drive)  
+- Almost always the **USB flash**; if Unraid is booted from a disk/partition instead, **that** media is treated the same  
 - Host is blocked without Destructive mode  
-- Almost never needed; writable host of flash is especially dangerous  
+- Writable host of the boot device is **refused** entirely (even with Destructive mode On)  
+- Almost never needed for routine work  
 
 ---
 

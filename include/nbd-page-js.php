@@ -70,10 +70,10 @@ if (!isset($presets) || !is_array($presets)) {
       '• Writable host — peer can write to the Unraid disk you select ' +
       '(not just image it read-only)\n\n' +
       '• Host disks that are already in use or critical:\n' +
-      '  – Unraid array / parity members\n' +
+      '  – Unraid array / parity / cache / pool members\n' +
       '  – disks with a mounted filesystem\n' +
-      '  – the Unraid flash (USB boot) drive\n\n' +
-      'Safe default is OFF: only read-only host of free, non-array disks.\n' +
+      '  – the Unraid boot device (usually USB flash; whatever holds /boot)\n\n' +
+      'Safe default is OFF: only read-only host of free, unassigned disks.\n' +
       'Leave OFF unless you intentionally need one of the above.'
     );
   };
@@ -108,8 +108,8 @@ if (!isset($presets) || !is_array($presets)) {
       window.alert(
         'This Unraid disk is already in use or critical:\n  ' + devLabel + '\n\n' +
         'Flags: ' + (flags || 'array / mounted / flash') + '\n\n' +
-        'Destructive mode (Settings) is required before hosting array members, ' +
-        'mounted disks, or the Unraid flash drive — even read-only.\n' +
+        'Destructive mode (Settings) is required before hosting array/cache/pool ' +
+        'members, mounted disks, or the Unraid boot device — even read-only.\n' +
         'Prefer an unassigned, unmounted disk for imaging.'
       );
       return false;

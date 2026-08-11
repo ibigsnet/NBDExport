@@ -35,7 +35,7 @@ try {
       nbd_write_companion_marker();
       $msg = 'NBD Export: settings saved.';
       if (($cfg['destructive_mode'] ?? 'no') === 'yes') {
-        $msg .= ' WARNING: Destructive mode is ON (writable / array / mounted exports allowed).';
+        $msg .= ' WARNING: Destructive mode is ON (writable / array-cache-pool / mounted / boot hosts allowed).';
       }
       nbd_flash($msg);
       break;
