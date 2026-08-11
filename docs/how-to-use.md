@@ -54,6 +54,15 @@ Until a client connects, the host just **waits** on the port (like a minimal dis
 
 ---
 
+## UI tabs (Settings → Network Services → NBD)
+
+| Tab | What it is |
+|-----|------------|
+| **Status** | Live hosted disks, pull jobs, tools, collapsible CLI |
+| **Host** | Publish a local `/dev/…` (server). Multi-disk: host again with another free port |
+| **Pull** | Image a remote `nbd://…` into `/mnt/…` (client) |
+| **Settings** | Enable, destructive mode, export/import config |
+
 ## Scenario A — Peer Linux has a disk; Unraid saves a qcow2 (most common lab path)
 
 **Goal:** Copy a whole disk from a desktop/laptop into Unraid over a fast private link.

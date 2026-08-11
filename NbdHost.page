@@ -1,0 +1,158 @@
+Menu="NbdExport:2"
+Title="Host"
+Icon="database"
+Tag="upload"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+nbd_page_styles();
+?>
+<div class="nbd-wrap">
+  <div class="nbd-section" style="margin-top:0">
+    <h3>Host a local Unraid disk/partition on the network</h3>
+    <p class="nbd-section-lead">
+      <strong>Server — publish raw blocks from this Unraid.</strong>
+      Starts <code>qemu-nbd</code> on bind IP:port. Does <em>not</em> copy data — a peer or the
+      <strong>Pull</strong> tab must connect. Stop from the <strong>Status</strong> tab when finished.
+    </p>
+    <div class="nbd-tip">
+      <strong>Multi-disk:</strong> host several disks at once. Each listener needs a <strong>different port</strong>
+      (and usually the same private bind IP). Status lists them all.
+      Suggested free port prefilled when others are already listening.
+    </div>
+    <div class="nbd-tip">
+      <strong>Remembered settings:</strong> last fields restore automatically; named presets below.
+      Backup under <strong>Settings</strong> → Export config.
+    </div>
+<?php if ($host_presets): ?>
+    <p class="nbd-muted">
+      Restore host preset:
+      <select id="nbd_host_preset_pick" onchange="nbdApplyHostPreset(this.value)">
+        <option value="">— choose —</option>
+<?php foreach ($host_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+    </p>
+<?php endif; ?>
+    <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="export_start">
+      <input type="hidden" name="nbd_confirm" id="nbd_confirm" value="no">
+
+      <dl>
+        <dt>Device:</dt>
+        <dd>
+          <select name="device" id="nbd_device" style="max-width:36em">
+            <option value="">— select —</option>
+<?php foreach ($disks as $d):
+  $warn = !empty($d['warn']) ? ' ⚠' : '';
+  $flags = !empty($d['flags']) ? implode(',', $d['flags']) : '';
+  $sel = ($pref_device !== '' && $pref_device === $d['path']) ? ' selected' : '';
+?>
+            <option value="<?= htmlspecialchars($d['path']) ?>"
+              data-warn="<?= !empty($d['warn']) ? '1' : '0' ?>"
+              data-flags="<?= htmlspecialchars($flags) ?>"<?= $sel ?>><?= htmlspecialchars($d['label'] . $warn) ?></option>
+<?php endforeach; ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Whole disks and partitions from <code>lsblk</code>. ⚠ = array/mounted — needs Destructive mode
+        (Settings tab) even for read-only. Prefer unassigned / unmounted disks.
+      </blockquote>
+
+      <dl>
+        <dt>Listen on (bind IP):</dt>
+        <dd>
+          <select name="bind" id="nbd_bind">
+<?php if (!$binds): ?>
+            <option value="">No addresses found</option>
+<?php else: foreach ($binds as $b): ?>
+            <option value="<?= htmlspecialchars($b['ip']) ?>" <?= $b['ip'] === $default_bind ? 'selected' : '' ?>>
+              <?= htmlspecialchars($b['label']) ?>
+            </option>
+<?php endforeach; endif; ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Only this IP accepts connections. Thunderbolt / private first. Clients use <code>nbd://ip:port</code>.
+      </blockquote>
+
+      <dl>
+        <dt>Listen port:</dt>
+        <dd>
+          <input type="number" name="port" id="nbd_port" class="narrow" value="<?= $pref_port ?>" min="1024" max="65535">
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Default <strong>10809</strong>. For a second disk, pick another free port (prefill may already be free).
+      </blockquote>
+
+      <dl>
+        <dt>Read-only:</dt>
+        <dd>
+          <select name="read_only" id="nbd_read_only">
+            <?= mk_option($pref_ro, 'yes', 'Yes (recommended)') ?>
+            <?= mk_option($pref_ro, 'no', 'No — writable (requires Destructive mode)') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        <strong>Yes</strong> — peer can image but not write. <strong>No</strong> — peer can modify the disk (dangerous).
+      </blockquote>
+
+      <dl>
+        <dt>Label:</dt>
+        <dd>
+          <input type="text" name="label" id="nbd_label" value="<?= $pref_label ?>" maxlength="80" placeholder="optional note">
+        </dd>
+      </dl>
+
+      <p class="nbd-muted" id="nbd_export_hint">
+<?php if ($destructive !== 'yes'): ?>
+        Destructive mode is <strong>Off</strong> — only safe RO listeners on non-array disks (Settings tab).
+<?php else: ?>
+        <span class="nbd-warn">Destructive mode is <strong>ON</strong> — double-check device and read-only.</span>
+<?php endif; ?>
+      </p>
+
+      <div class="nbd-actions">
+        <input type="submit" name="#apply" value="Host disk/partition on network"
+          <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
+        <span class="nbd-muted" style="margin-left:0.75em">then watch Status</span>
+      </div>
+    </form>
+
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillHostPreset(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_save_host">
+      <input type="hidden" name="device" id="nbd_ps_device" value="">
+      <input type="hidden" name="bind" id="nbd_ps_bind" value="">
+      <input type="hidden" name="port" id="nbd_ps_port" value="">
+      <input type="hidden" name="read_only" id="nbd_ps_ro" value="">
+      <input type="hidden" name="label" id="nbd_ps_label" value="">
+      <span class="nbd-muted">Save host preset as</span>
+      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. lab-nvme-ro" style="width:12em">
+      <input type="submit" name="#apply" value="Save host preset">
+    </form>
+<?php if ($host_presets): ?>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_delete">
+      <select name="preset_name">
+<?php foreach ($host_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+      <input type="submit" name="#apply" value="Delete host preset">
+    </form>
+<?php endif; ?>
+  </div>
+</div>
+<?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>

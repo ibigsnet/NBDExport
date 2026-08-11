@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ak">
+<!ENTITY version "2026.08.11al">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,10 @@
 
 <CHANGES>
 ###&version;
+- UI tabs (Unraid xmenu): Status · Host · Pull · Settings — like Network Settings / SMB strip.
+- Multi-disk hosting documented (already supported; free port prefill); CLI under Status as collapsible.
+
+###2026.08.11ak
 - Pull output placeholder: `/mnt/user/domains/disk.qcow2` (Unraid VM share default) instead of `/mnt/cache/images/…`.
 
 ###2026.08.11aj
@@ -92,6 +96,22 @@ echo "NbdExport: directories ready."
 <URL>&raw;/NbdExport.page?v=&version;</URL>
 </FILE>
 
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdStatus.page">
+<URL>&raw;/NbdStatus.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdHost.page">
+<URL>&raw;/NbdHost.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdPull.page">
+<URL>&raw;/NbdPull.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdSettings.page">
+<URL>&raw;/NbdSettings.page?v=&version;</URL>
+</FILE>
+
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/default.cfg">
 <URL>&raw;/default.cfg?v=&version;</URL>
 </FILE>
@@ -116,6 +136,14 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-download-config.php">
 <URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php">
+<URL>&raw;/include/nbd-page-boot.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php">
+<URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start">
@@ -257,6 +285,13 @@ rm -rf /var/log/nbdexport
 rm -rf /usr/local/emhttp/plugins/NbdExport
 rm -rf /usr/local/emhttp/plugins/nbdexport
 rm -rf /usr/local/emhttp/plugins/Nbdexport
+
+# Stray tab pages if ever copied outside plugin dir
+rm -f /usr/local/emhttp/webGui/Nbd*.page \
+      /usr/local/emhttp/plugins/dynamix/Nbd*.page 2>/dev/null || true
+find /usr/local/emhttp/webGui /usr/local/emhttp/plugins/dynamix -maxdepth 1 -type f \
+  \( -name 'NbdExport.page' -o -name 'NbdStatus.page' -o -name 'NbdHost.page' \
+     -o -name 'NbdPull.page' -o -name 'NbdSettings.page' \) -delete 2>/dev/null || true
 
 # 4) Flash plugin state (cfg, companion). Unraid also removes nbdexport.plg from /boot/config/plugins/
 # Flash: cfg + memory/presets (admin-only paths/IPs — wiped on uninstall like plugin state)

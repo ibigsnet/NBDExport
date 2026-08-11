@@ -1,0 +1,121 @@
+Menu="NbdExport:4"
+Title="Settings"
+Icon="database"
+Tag="gears"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+nbd_page_styles();
+?>
+<div class="nbd-wrap">
+  <div class="nbd-section" style="margin-top:0">
+    <h3>Plugin settings</h3>
+    <p class="nbd-section-lead">
+      Master switches only. <strong>Apply</strong> saves config — it does <em>not</em> start a listener or image job.
+    </p>
+    <form method="POST" action="/update.php" target="progressFrame">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="save_cfg">
+
+      <dl>
+        <dt>Enable NBD Export:</dt>
+        <dd>
+          <select name="enabled">
+            <?= mk_option($enabled, 'yes', 'Yes') ?>
+            <?= mk_option($enabled, 'no', 'No') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Master switch. Setting <strong>No</strong> and applying stops all active exports.
+      </blockquote>
+
+      <dl>
+        <dt>Default read-only:</dt>
+        <dd>
+          <select name="default_read_only">
+            <?= mk_option($def_ro, 'yes', 'Yes (recommended)') ?>
+            <?= mk_option($def_ro, 'no', 'No') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Default for new host listeners. Imaging should almost always be read-only.
+      </blockquote>
+
+      <dl>
+        <dt>Default port:</dt>
+        <dd>
+          <input type="number" name="default_port" class="narrow" value="<?= $def_port ?>" min="1024" max="65535">
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Suggested for new exports (common qemu-nbd default <strong>10809</strong>). Multi-disk uses other free ports.
+      </blockquote>
+
+      <dl>
+        <dt>Allow bind 0.0.0.0:</dt>
+        <dd>
+          <select name="allow_bind_all">
+            <?= mk_option($allow_all, 'no', 'No (recommended)') ?>
+            <?= mk_option($allow_all, 'yes', 'Yes (dangerous)') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Basic NBD has <strong>no authentication</strong>. Keep <strong>No</strong> and bind a private IP.
+      </blockquote>
+
+      <dl>
+        <dt>Destructive mode:</dt>
+        <dd>
+          <select name="destructive_mode" id="nbd_destructive_mode">
+            <?= mk_option($destructive, 'no', 'No (recommended)') ?>
+            <?= mk_option($destructive, 'yes', 'Yes — allow writable / array / mounted exports') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Like Unassigned Devices’ Destructive Mode. <strong>No</strong> (default): only RO exports of non-array,
+        unmounted disks. <strong>Yes</strong>: writable and/or array/mounted/flash (Host tab still confirms).
+      </blockquote>
+
+      <p class="nbd-actions">
+        <input type="submit" name="#apply" value="Apply" onclick="return nbdConfirmDestructiveSave(this.form)">
+        <input type="button" value="Done" onclick="done()">
+      </p>
+    </form>
+
+    <div class="nbd-tip nbd-config-backup">
+      <strong>Export / import config</strong>
+      <span class="nbd-muted"> — settings, last-used fields, and named presets (JSON).</span>
+      <div class="nbd-config-backup-actions">
+        <a class="nbd-btn-link" href="/plugins/NbdExport/include/nbd-download-config.php">Download JSON…</a>
+        <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+          <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+          <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+          <input type="hidden" name="nbd_action" value="config_export_flash">
+          <input type="submit" name="#apply" value="Save to flash (/boot/config/)">
+        </form>
+      </div>
+      <p class="nbd-muted" style="margin:0.4em 0 0">
+        Flash plugin config is <strong>wiped on uninstall</strong>. Export first if you need it after remove/reinstall.
+      </p>
+      <details class="nbd-import-details">
+        <summary>Import config from file</summary>
+        <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.45em">
+          <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+          <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+          <input type="hidden" name="nbd_action" value="config_import">
+          <label class="nbd-muted">Path under <code>/boot/config/</code> or <code>/mnt/…</code></label><br>
+          <input type="text" name="import_path" style="width:min(36em,100%)" placeholder="/boot/config/nbdexport-config-….json"
+            value="/boot/config/">
+          <input type="submit" name="#apply" value="Import" onclick="return confirm('Replace current NBD settings, last-used fields, and presets from this file?');">
+        </form>
+      </details>
+    </div>
+  </div>
+</div>
+<?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>

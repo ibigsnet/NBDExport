@@ -47,7 +47,8 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | **Export** | Start/stop `qemu-nbd` on a chosen device, bind IP, and port (default **read-only**) |
 | **Bind picker** | Lists host IPv4 addresses; **Thunderbolt** interfaces first |
 | **Image job** | Background `qemu-img convert` from `nbd://host:port` to a path under `/mnt/` |
-| **Status** | Active exports, job list, tool detection (`qemu-nbd` / `qemu-img`) |
+| **UI tabs** | **Status** (live hosts + jobs) · **Host** (publish disk) · **Pull** (image to file) · **Settings** (options + config export) |
+| **Multi-disk host** | Yes — multiple `qemu-nbd` listeners; each needs its own port |
 | **Safety** | No default `0.0.0.0`; array/mounted disks flagged; Enable=No stops exports |
 
 ### Product defaults

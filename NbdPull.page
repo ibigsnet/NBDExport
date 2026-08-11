@@ -1,0 +1,103 @@
+Menu="NbdExport:3"
+Title="Pull"
+Icon="database"
+Tag="download"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+nbd_page_styles();
+?>
+<div class="nbd-wrap">
+  <div class="nbd-section" style="margin-top:0">
+    <h3>Pull a remotely hosted disk into a file on this Unraid</h3>
+    <p class="nbd-section-lead">
+      <strong>Client — save someone else’s NBD disk here as a file.</strong>
+      Connect to <code>nbd://…</code> (another Unraid’s Host tab, or any <code>qemu-nbd</code> host)
+      and write qcow2/raw under <code>/mnt/…</code>
+      (default share hint: <code>/mnt/user/domains/</code>). Does <em>not</em> host a local disk.
+      Job keeps running if you close the browser. Watch jobs on <strong>Status</strong>.
+    </p>
+<?php if ($pull_presets): ?>
+    <p class="nbd-muted">
+      Restore pull preset:
+      <select id="nbd_pull_preset_pick" onchange="nbdApplyPullPreset(this.value)">
+        <option value="">— choose —</option>
+<?php foreach ($pull_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+    </p>
+<?php endif; ?>
+    <form method="POST" action="/update.php" target="progressFrame" id="nbd_pull_form" onsubmit="return nbdConfirmImage(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="image_start">
+
+      <dl>
+        <dt>NBD URL:</dt>
+        <dd>
+          <input type="text" name="nbd_url" id="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Must already be hosted (Host tab on peer Unraid, or any qemu-nbd listener).
+      </blockquote>
+
+      <dl>
+        <dt>Output path:</dt>
+        <dd>
+          <input type="text" name="output" id="nbd_image_out" style="width:28em" placeholder="/mnt/user/domains/disk.qcow2" value="<?= $pref_out ?>">
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
+        Placeholder uses Unraid’s VM share (<code>/mnt/user/domains/</code>); cache is fine for speed.
+      </blockquote>
+
+      <dl>
+        <dt>Format:</dt>
+        <dd>
+          <select name="format" id="nbd_format">
+            <option value="qcow2" <?= $pref_fmt === 'qcow2' ? 'selected' : '' ?>>qcow2 (recommended)</option>
+            <option value="raw" <?= $pref_fmt === 'raw' ? 'selected' : '' ?>>raw</option>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        <strong>qcow2</strong> is sparse-friendly. Job survives closing the browser.
+      </blockquote>
+
+      <div class="nbd-actions">
+        <input type="submit" name="#apply" value="Pull remote disk → file on Unraid"
+          <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
+      </div>
+    </form>
+
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillPullPreset(this)">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_save_pull">
+      <input type="hidden" name="nbd_url" id="nbd_ps_url" value="">
+      <input type="hidden" name="output" id="nbd_ps_out" value="">
+      <input type="hidden" name="format" id="nbd_ps_fmt" value="">
+      <span class="nbd-muted">Save pull preset as</span>
+      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. peer-holo-qcow" style="width:12em">
+      <input type="submit" name="#apply" value="Save pull preset">
+    </form>
+<?php if ($pull_presets): ?>
+    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
+      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="nbd_action" value="preset_delete">
+      <select name="preset_name">
+<?php foreach ($pull_presets as $pn => $pv): ?>
+        <option value="<?= htmlspecialchars($pn) ?>"><?= htmlspecialchars($pn) ?></option>
+<?php endforeach; ?>
+      </select>
+      <input type="submit" name="#apply" value="Delete pull preset">
+    </form>
+<?php endif; ?>
+  </div>
+</div>
+<?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>
