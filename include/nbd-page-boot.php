@@ -235,8 +235,9 @@ function nbd_page_header() {
 <div class="nbd-chrome-top">
 <?php if ($destructive === 'yes'): ?>
   <div class="nbd-destructive-banner" role="status">
-    Destructive mode is <strong>ON</strong> — writable and/or array/mounted/flash exports allowed.
-    Prefer read-only. Turn off under
+    Destructive mode is <strong>ON</strong> —
+    writable host (peer can write the Unraid disk you select) and/or hosting in-use/critical disks
+    (array, mounted, flash) is unlocked. Prefer read-only. Turn off under
     <a href="/Settings/NbdSettings">Settings</a>
     when finished.
   </div>

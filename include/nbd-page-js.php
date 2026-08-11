@@ -66,10 +66,15 @@ if (!isset($presets) || !is_array($presets)) {
     if (!sel || sel.value !== 'yes') return true;
     return window.confirm(
       'Enable Destructive mode?\n\n' +
-      'This allows:\n' +
-      '• Writable NBD exports (peer can write your disk)\n' +
-      '• Exporting Unraid array / mounted / flash devices\n\n' +
-      'Leave OFF unless you need those.'
+      'This unlocks riskier Host options (you still pick the device later):\n\n' +
+      '• Writable host — peer can write to the Unraid disk you select ' +
+      '(not just image it read-only)\n\n' +
+      '• Host disks that are already in use or critical:\n' +
+      '  – Unraid array / parity members\n' +
+      '  – disks with a mounted filesystem\n' +
+      '  – the Unraid flash (USB boot) drive\n\n' +
+      'Safe default is OFF: only read-only host of free, non-array disks.\n' +
+      'Leave OFF unless you intentionally need one of the above.'
     );
   };
 
@@ -88,32 +93,46 @@ if (!isset($presets) || !is_array($presets)) {
     var ro = !roSel || roSel.value === 'yes';
     var needConfirm = !ro || warn;
 
+    var devPath = devSel.value;
+    var devLabel = (opt && opt.textContent) ? String(opt.textContent).replace(/\s+/g, ' ').trim() : devPath;
+
     if (!ro && !destructiveOn) {
-      window.alert('Writable export is blocked.\n\nEnable Destructive mode under Settings, or set Read-only to Yes.');
+      window.alert(
+        'Writable host is blocked.\n\n' +
+        'Either set Read-only to Yes, or enable Destructive mode under Settings ' +
+        '(allows a peer to write to the Unraid disk you select).'
+      );
       return false;
     }
     if (warn && !destructiveOn) {
       window.alert(
-        'This device is marked risky (' + (flags || 'array/mounted') + ').\n\n' +
-        'Enable Destructive mode under Settings before exporting array, mounted, or flash devices.'
+        'This Unraid disk is already in use or critical:\n  ' + devLabel + '\n\n' +
+        'Flags: ' + (flags || 'array / mounted / flash') + '\n\n' +
+        'Destructive mode (Settings) is required before hosting array members, ' +
+        'mounted disks, or the Unraid flash drive — even read-only.\n' +
+        'Prefer an unassigned, unmounted disk for imaging.'
       );
       return false;
     }
 
     if (needConfirm) {
-      var msg = 'Host this Unraid block device on the network:\n  ' + devSel.value + '\n\n';
-      msg += 'Publishes raw blocks via NBD. A client must pull (Pull tab or qemu-img).\n\n';
+      var msg = 'Host this Unraid disk on the network?\n  ' + devLabel + '\n  (' + devPath + ')\n\n';
+      msg += 'Publishes raw blocks via NBD. A client must connect (Pull tab or qemu-img).\n\n';
       if (!ro) {
-        msg += 'WARNING: WRITABLE — the peer can modify this disk.\n\n';
+        msg += 'WARNING: WRITABLE — the peer can write to this Unraid disk and can destroy data.\n\n';
       } else {
-        msg += 'Read-only (peer can image but not write).\n\n';
+        msg += 'Read-only — peer can image this disk but cannot write it.\n\n';
       }
-      if (warn) msg += 'Device flags: ' + (flags || 'risky') + '\n\n';
+      if (warn) {
+        msg += 'Note: this disk is marked in-use/critical (' + (flags || 'array/mounted/flash') + ').\n\n';
+      }
       msg += 'Continue?';
       if (!window.confirm(msg)) return false;
       if (!ro) {
         if (!window.confirm(
-          'FINAL CONFIRMATION\n\nWritable NBD for ' + devSel.value + '.\nA mistake can destroy data.'
+          'FINAL CONFIRMATION\n\n' +
+          'Writable NBD — peer can write to:\n  ' + devLabel + '\n  ' + devPath + '\n\n' +
+          'A mistake can destroy data on this Unraid disk.'
         )) return false;
       }
       if (conf) conf.value = 'yes';
