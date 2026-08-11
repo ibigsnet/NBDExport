@@ -53,7 +53,7 @@ if ($default_bind === '' && $binds) {
 ?>
 <style>
 /* Match FRR/TBN density; lean on Unraid theme for forms */
-.nbd-wrap { max-width: 52em; }
+.nbd-wrap { max-width: 54em; }
 .nbd-wrap .nbd-companion {
   margin: 0.5em 0 1em;
   padding: 0.55em 0.75em;
@@ -74,14 +74,51 @@ if ($default_bind === '' && $binds) {
   background: rgba(128, 128, 128, 0.25);
 }
 .nbd-wrap .nbd-badge-ok { background: rgba(80, 160, 80, 0.35); }
-.nbd-wrap .nbd-actions { margin: 0.75em 0 1em; }
-.nbd-wrap .nbd-section { margin-top: 1.5em; }
-.nbd-wrap .nbd-section > h3 { margin-bottom: 0.35em; }
+
+/* Full-width section cards + dividers so buttons stay in their section */
+.nbd-wrap .nbd-section {
+  margin: 1.75em 0 0;
+  padding: 0 0 1.25em;
+  border-top: 2px solid rgba(128, 128, 128, 0.45);
+}
+.nbd-wrap .nbd-section:first-of-type {
+  border-top: none;
+  margin-top: 1em;
+}
+.nbd-wrap .nbd-section > h3 {
+  margin: 0 0 0.5em;
+  padding: 0.65em 0 0.5em;
+  font-size: 1.15em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.28);
+}
+.nbd-wrap .nbd-section-lead {
+  margin: 0 0 0.85em;
+  font-size: 0.92em;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+/* Pin primary actions to bottom of section with a top rule */
+.nbd-wrap .nbd-actions {
+  margin: 1.1em 0 0;
+  padding: 0.85em 0 0.15em;
+  border-top: 1px dashed rgba(128, 128, 128, 0.4);
+}
+.nbd-wrap .nbd-actions input[type="submit"] {
+  min-width: 10em;
+}
+/* Horizontal rule helper between intro and first section */
+.nbd-wrap hr.nbd-rule {
+  border: 0;
+  border-top: 2px solid rgba(128, 128, 128, 0.45);
+  margin: 1.25em 0 0;
+}
 .nbd-wrap pre.nbd-cli {
   white-space: pre-wrap;
   font-size: 0.88em;
   opacity: 0.85;
-  margin: 0.5em 0 1em;
+  margin: 0.5em 0 0;
   padding: 0.5em 0.65em;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.06);
@@ -92,7 +129,7 @@ if ($default_bind === '' && $binds) {
   font-size: 0.85em;
   opacity: 0.8;
 }
-.nbd-wrap table.nbd-data { width: 100%; margin: 0.5em 0 1em; }
+.nbd-wrap table.nbd-data { width: 100%; margin: 0.5em 0 0.75em; }
 .nbd-wrap table.nbd-data th,
 .nbd-wrap table.nbd-data td {
   text-align: left;
@@ -190,8 +227,13 @@ if ($default_bind === '' && $binds) {
     <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
   </blockquote>
 
+  <hr class="nbd-rule" />
+
   <div class="nbd-section">
-    <h3>Settings</h3>
+    <h3>1 · Plugin settings</h3>
+    <p class="nbd-section-lead">
+      Master switches only. <strong>Apply</strong> saves config — it does <em>not</em> start a listener or image job.
+    </p>
     <form method="POST" action="/update.php" target="progressFrame">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
@@ -274,13 +316,14 @@ if ($default_bind === '' && $binds) {
   </div>
 
   <div class="nbd-section">
-    <h3>Active NBD listeners</h3>
-    <p class="nbd-muted">
-      Running <code>qemu-nbd</code> servers on this host. Clients connect with
-      <code>nbd://bind:port</code> (image job below, or <code>qemu-img</code> on a peer).
+    <h3>2 · Active NBD listeners</h3>
+    <p class="nbd-section-lead">
+      Running <code>qemu-nbd</code> <strong>servers</strong> on this host right now.
+      Clients use <code>nbd://IP:port</code> (section 4 image job, or <code>qemu-img</code> on a peer).
+      This table is status only — start a new listener in section 3.
     </p>
 <?php if (!$exports): ?>
-    <p class="nbd-muted">No listeners running — use <strong>Start NBD listener</strong> below to offer a disk.</p>
+    <p class="nbd-muted">No listeners running — go to <strong>section 3</strong> to offer a disk.</p>
 <?php else: ?>
     <table class="nbd-data tablesorter">
       <thead>
@@ -319,20 +362,23 @@ if ($default_bind === '' && $binds) {
 <?php endforeach; ?>
       </tbody>
     </table>
+    <div class="nbd-actions">
     <form method="POST" action="/update.php" target="progressFrame">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
       <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="export_stop_all">
       <input type="submit" name="#apply" value="Stop all listeners">
     </form>
+    </div>
 <?php endif; ?>
   </div>
 
   <div class="nbd-section">
-    <h3>Start NBD listener (offer a disk)</h3>
-    <p class="nbd-muted">
-      Starts a <strong>server</strong> process: this Unraid listens on IP:port and presents the chosen disk
-      to the network. It does <em>not</em> copy data by itself — a peer (or the image job below) must connect.
+    <h3>3 · Start NBD listener (offer a disk on the network)</h3>
+    <p class="nbd-section-lead">
+      <strong>Server role.</strong> Starts <code>qemu-nbd</code>: this Unraid <em>listens</em> on IP:port and presents one disk.
+      It does <em>not</em> copy data by itself — a peer or <strong>section 4</strong> (image job) must connect.
+      When finished imaging, use <strong>Stop listener</strong> in section 2.
     </p>
     <form method="POST" action="/update.php" target="progressFrame" id="nbd_export_form" onsubmit="return nbdConfirmExport(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
@@ -421,18 +467,21 @@ if ($default_bind === '' && $binds) {
 <?php endif; ?>
       </p>
 
-      <p class="nbd-actions">
+      <div class="nbd-actions">
         <input type="submit" name="#apply" value="Start NBD listener"
           <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
-      </p>
+        <span class="nbd-muted" style="margin-left:0.75em">← ends this section (server only)</span>
+      </div>
     </form>
   </div>
 
   <div class="nbd-section">
-    <h3>Image job (pull remote disk → file on Unraid)</h3>
-    <p class="nbd-muted">
-      <strong>Client</strong> role: connect to an existing <code>nbd://</code> listener (this host or a peer)
-      and write a qcow2/raw <em>file</em>. Does not start a listener. Job keeps running if you close the browser.
+    <h3>4 · Image job (pull remote disk → file on Unraid)</h3>
+    <p class="nbd-section-lead">
+      <strong>Client role — separate from section 3.</strong>
+      Connect to an existing <code>nbd://</code> listener (this host or a peer) and write a qcow2/raw
+      <em>file</em> under <code>/mnt/…</code>. Does <em>not</em> start a listener.
+      Job keeps running if you close the browser.
     </p>
     <form method="POST" action="/update.php" target="progressFrame" onsubmit="return nbdConfirmImage(this)">
       <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
@@ -476,13 +525,15 @@ if ($default_bind === '' && $binds) {
         Job runs in the background (survives closing this browser tab).
       </blockquote>
 
-      <p class="nbd-actions">
+      <div class="nbd-actions">
         <input type="submit" name="#apply" value="Start image job (pull to file)"
           <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
-      </p>
+        <span class="nbd-muted" style="margin-left:0.75em">← ends this section (client only)</span>
+      </div>
     </form>
 
 <?php if ($jobs): ?>
+    <hr class="nbd-rule" style="margin-top:1.25em;border-top-width:1px" />
     <h4>Recent jobs</h4>
     <table class="nbd-data tablesorter">
       <thead>
@@ -541,7 +592,7 @@ if ($default_bind === '' && $binds) {
   </div>
 
   <div class="nbd-section">
-    <h3>CLI reference</h3>
+    <h3>5 · CLI reference</h3>
     <dl>
       <dt>Golden path:</dt>
       <dd class="nbd-muted">export · convert · check</dd>

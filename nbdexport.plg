@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11ad">
+<!ENTITY version "2026.08.11ae">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,9 @@
 
 <CHANGES>
 ###&version;
+- UI: numbered sections with full-width dividers; action bars under each block so listener vs image job are visually separate.
+
+###2026.08.11ad
 - UX/docs: “Start NBD listener” vs image job (server/client); how-to-use guide with scenarios; clearer helpers and status wording.
 
 ###2026.08.11ac
