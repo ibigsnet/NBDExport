@@ -354,7 +354,7 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
         <strong>No</strong> (default): only <strong>read-only</strong> exports of disks that are not Unraid array/parity
         members and not mounted (and not the flash device).<br><br>
         <strong>Yes</strong>: allows writable listeners and/or array/mounted/flash devices.
-        <strong>Start NBD listener</strong> still requires a browser confirmation.
+        <strong>Host disk/partition on network</strong> still requires a browser confirmation.
         Leave <strong>No</strong> for normal imaging of unassigned disks. Turn back to No when finished.
       </blockquote>
 
@@ -382,8 +382,8 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
     <div class="nbd-empty">
       <strong>No disks hosted right now.</strong><br>
       This is normal when you are not sharing anything.<br>
-      To publish a local Unraid disk or partition for others to image, go to
-      <strong>section 3</strong> and choose a device → <em>Host this disk on the network</em>.
+      To publish a local Unraid disk or partition (raw blocks) for others to image, go to
+      <strong>section 3</strong> → <em>Host disk/partition on network</em>.
     </div>
 <?php else: ?>
     <table class="nbd-data tablesorter">
@@ -439,12 +439,13 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
   </div>
 
   <div class="nbd-section">
-    <h3>3 · Host a local Unraid disk on the network (NBD server)</h3>
+    <h3>3 · Host a local Unraid disk/partition on the network</h3>
     <p class="nbd-section-lead">
-      <strong>Server role.</strong> Publish one <strong>local block device</strong> from this Unraid
-      (whole disk or partition — GPT/MBR + contents as raw blocks) so other machines can read it over TCP.
-      Starts <code>qemu-nbd</code> listening on the bind IP:port. Does <em>not</em> copy data by itself —
-      a peer or <strong>section 4</strong> must connect and pull. When imaging is done, <strong>Stop</strong> in section 2.
+      <strong>Server — publish raw blocks from this Unraid.</strong>
+      Offer one local device (<code>/dev/…</code> whole disk <em>or</em> a single partition, including its
+      partition table / filesystem blocks) so other machines can access it over TCP as an NBD target.
+      Starts <code>qemu-nbd</code> on the bind IP:port. Does <em>not</em> copy data by itself —
+      a peer or <strong>section 4</strong> must connect and pull. When finished, <strong>Stop</strong> in section 2.
     </p>
     <div class="nbd-tip">
       <strong>Remembered settings:</strong> last host/pull fields are restored automatically after use
@@ -551,9 +552,9 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
       </p>
 
       <div class="nbd-actions">
-        <input type="submit" name="#apply" value="Host this disk on the network"
+        <input type="submit" name="#apply" value="Host disk/partition on network"
           <?= (!$st['tools_ok'] || $enabled !== 'yes') ? 'disabled' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.75em">← section 3 only (publish local /dev)</span>
+        <span class="nbd-muted" style="margin-left:0.75em">← section 3 only (publish local /dev blocks)</span>
       </div>
     </form>
     <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillHostPreset(this)">
@@ -585,13 +586,14 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
   </div>
 
   <div class="nbd-section">
-    <h3>4 · Pull a remote disk into a file on this Unraid (NBD client)</h3>
+    <h3>4 · Pull a remotely hosted disk into a file on this Unraid</h3>
     <p class="nbd-section-lead">
-      <strong>Client role — separate from section 3.</strong>
-      Connect to a disk already hosted elsewhere on the network
-      (another Unraid using this plugin, or any host running <code>qemu-nbd</code> / custom NBD server)
-      and save it as a <strong>file</strong> under an Unraid path (<code>/mnt/cache/…</code>, array, or share) as qcow2/raw.
-      Does <em>not</em> publish a local disk. Does <em>not</em> write to <code>/dev/…</code>.
+      <strong>Client — save someone else’s NBD disk here as a file.</strong>
+      Connect to a disk already hosted on the network
+      (another Unraid’s section 3, or any PC/NAS running <code>qemu-nbd</code> / a custom NBD host)
+      and write it into an <strong>Unraid directory</strong> as qcow2 or raw
+      (e.g. <code>/mnt/cache/images/…</code>, array, or a user share).
+      Does <em>not</em> host a local disk. Does <em>not</em> write to <code>/dev/…</code>.
       Job keeps running if you close the browser.
     </p>
 <?php if ($pull_presets): ?>
@@ -644,9 +646,9 @@ $presets_js = htmlspecialchars(json_encode($presets), ENT_QUOTES, 'UTF-8');
       </blockquote>
 
       <div class="nbd-actions">
-        <input type="submit" name="#apply" value="Pull remote disk to file"
+        <input type="submit" name="#apply" value="Pull remote disk → file on Unraid"
           <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.75em">← section 4 only (save under /mnt)</span>
+        <span class="nbd-muted" style="margin-left:0.75em">← section 4 only (save under /mnt/…)</span>
       </div>
     </form>
     <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillPullPreset(this)">
