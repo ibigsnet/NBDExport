@@ -31,7 +31,7 @@ Each **row** is one control. Read **across** the row.
 
 | If you click… | What runs under the hood | What that means for you |
 |---------------|--------------------------|-------------------------|
-| **Host** tab → **Host disk/partition on network** | `qemu-nbd` listens on the bind IP:port | This Unraid is the **server**. One local `/dev/…` (whole disk or partition, including the partition table) is offered as raw blocks. Nothing is copied until a client connects. |
+| **Host** tab → **Host disk/partition on network** | `qemu-nbd` listens on the bind IP:port | This Unraid is the **server**. One local `/dev/…` (whole disk or partition, including the partition table) is offered as raw blocks visible over the network. Nothing is copied until a client connects. |
 | **Stop** (on a live host row) | That `qemu-nbd` process exits | Server off for that disk; the port closes. |
 | **Pull** tab → **Pull remote disk → file** | Background `qemu-img convert` from `nbd://…` | This Unraid is the **client**. A remote hosted disk is written to a **file** under `/mnt/…` (never to `/dev/…`). |
 | **Settings** → **Apply** | Writes plugin config only | Does **not** start hosting and does **not** start a pull. |

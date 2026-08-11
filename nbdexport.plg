@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11as">
+<!ENTITY version "2026.08.11at">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- Docs: Host wording — raw blocks visible over the network.
 - Docs: disambiguate TB — Thunderbolt vs multi-terabyte (spell out both).
 - Docs: Scenario C expanded — Host NVMe on easy-access Unraid, Pull qcow2 on the box with space.
 - Docs: how-to-use tables rewritten for left→right reading; UI map matches tabs (not old section 3/4).
