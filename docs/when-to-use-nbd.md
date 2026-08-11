@@ -3,7 +3,7 @@
 **NFS and SMB share files and folders. NBD shares a disk (or partition) as a block device** — the peer can seek, image, mount, or convert it as if a drive were plugged in over the network.
 
 Use this page to decide whether **Network Block Device** is the right tool.  
-For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)** (listener vs image job).
+For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)** (Host vs Pull tabs).
 
 ---
 
@@ -17,7 +17,7 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 - A **seekable** source that `qemu-img convert` can sparsify (skip zeros → smaller qcow2)  
 - Offline imaging of a disk that should not be written during capture  
 
-**Pattern:** export the disk **read-only** on a private/fast link → peer runs `qemu-img convert` to qcow2/raw → stop the export. Restore later by converting back to a device or attaching the qcow2 to a VM.
+**Pattern:** **Host** the disk **read-only** on a private/fast link → peer runs `qemu-img convert` (or Unraid **Pull** tab) to qcow2/raw → **Stop** the host. Restore later by converting back to a device or attaching the qcow2 to a VM.
 
 **Good fit:** multi-terabyte NVMe archives over Thunderbolt host-net or 10/25/40G Ethernet on a temporary lab link.
 
@@ -41,7 +41,7 @@ High-performance mini-PCs and workstations used for **local LLMs and inference**
 |----------|------------------|
 | Archive a model-weight or dataset **volume** as a disk image on Unraid | Whole-volume capture without re-walking millions of small files |
 | Pull a prepared **qcow2/raw dataset disk** from Unraid onto a peer | Single block stream; durable convert jobs |
-| Snapshot a peer data disk before a big toolchain upgrade | RO export → image job → known-good image on Unraid |
+| Snapshot a peer data disk before a big toolchain upgrade | RO host → Pull/image → known-good image on Unraid |
 | Offline copy of a workstation data drive into the lab NAS | Same imaging pattern as §1 |
 
 **Not the primary tool for:** day-to-day “load weights from a CIFS share into an inference runtime.” SMB/NFS is fine for ordinary file access. NBD is for **disk-shaped** moves and archives next to AI boxes, not a replacement for every share path.
