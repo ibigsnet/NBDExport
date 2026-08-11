@@ -8,6 +8,14 @@ Every tab shows a shared header: **disks currently hosted** (and an orange banne
 
 ---
 
+## Contents
+
+- [Tabs](#tabs)
+- [Settings tab](#settings-tab)
+- [Host tab (NBD server)](#host-tab-nbd-server)
+- [Pull tab (NBD client)](#pull-tab-nbd-client)
+- [Runtime paths](#runtime-paths)
+
 ## Tabs
 
 | Tab | Purpose |

@@ -4,6 +4,22 @@ Settings path: **Settings → Network Services → NBD**
 
 ---
 
+## Contents
+
+- [Mental model](#mental-model)
+- [If you click this… (read each line left → right)](#if-you-click-this-read-each-line-left-right)
+- [Tabs (what each screen is for)](#tabs-what-each-screen-is-for)
+- [Common mix-ups](#common-mix-ups)
+- [Safe defaults checklist](#safe-defaults-checklist)
+- [Scenario A — Peer has the disk; Unraid saves a qcow2](#scenario-a-peer-has-the-disk-unraid-saves-a-qcow2)
+- [Scenario B — This Unraid has the disk; peer pulls](#scenario-b-this-unraid-has-the-disk-peer-pulls)
+- [Scenario C — Both ends are Unraid (plug the NVMe where it’s easy; store the qcow2 where there’s room)](#scenario-c-both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room)
+- [Scenario D — Large images over Thunderbolt (not Wi‑Fi)](#scenario-d-large-images-over-thunderbolt-not-wifi)
+- [Scenario E — Cold physical-disk archive on Unraid (qcow2 + BTRFS snapshots)](#scenario-e-cold-physical-disk-archive-on-unraid-qcow2-btrfs-snapshots)
+- [Scenario F — What not to do](#scenario-f-what-not-to-do)
+- [After you’re done](#after-youre-done)
+- [Related docs](#related-docs)
+
 ## Mental model
 
 NBD is **not** a file share (SMB/NFS) and does **not** stay on forever like a share service.

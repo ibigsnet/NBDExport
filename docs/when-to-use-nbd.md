@@ -7,6 +7,16 @@ For button meanings and step-by-step flows, see **[how-to-use.md](how-to-use.md)
 
 ---
 
+## Contents
+
+- [1. Disk imaging, migration, and cold backups](#1-disk-imaging-migration-and-cold-backups)
+- [2. Fast private links (Thunderbolt / USB4 host-net, or 10G+)](#2-fast-private-links-thunderbolt-usb4-host-net-or-10g)
+- [3. Local AI / inference peers](#3-local-ai-inference-peers)
+- [4. Random multi-seek access to remote block media](#4-random-multi-seek-access-to-remote-block-media)
+- [5. Lab / homelab operations](#5-lab-homelab-operations)
+- [6. When **not** to use NBD](#6-when-not-to-use-nbd)
+- [One-line summary](#one-line-summary)
+
 ## 1. Disk imaging, migration, and cold backups
 
 **Use NBD when** you need a **bit-level (or near bit-level) image** of a physical disk or partition: boot drives, lab rebuilds, a restorable qcow2 before reinstall, or moving a bare-metal disk into a VM later.

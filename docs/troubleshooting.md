@@ -1,5 +1,16 @@
 # Troubleshooting
 
+
+## Contents
+
+- [qemu-nbd / qemu-img missing](#qemu-nbd-qemu-img-missing)
+- [Host fails immediately](#host-fails-immediately)
+- [Peer cannot connect](#peer-cannot-connect)
+- [Pull job stuck / failed](#pull-job-stuck-failed)
+- [Slow throughput](#slow-throughput)
+- [Blank first tab / old “section 3” docs](#blank-first-tab-old-section-3-docs)
+- [Uninstall left something behind](#uninstall-left-something-behind)
+
 ## qemu-nbd / qemu-img missing
 
 These are **userspace tools** (usually with Unraid’s VM stack), not a Linux kernel version gate and not “Unraid 7.2+.”  

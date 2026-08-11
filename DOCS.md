@@ -23,6 +23,18 @@ Neither is required. This plugin does **not** PHP-require them.
 
 ---
 
+## Contents
+
+- [What NBD is (and is not)](#what-nbd-is-and-is-not)
+- [What it does](#what-it-does)
+- [Install / update](#install-update)
+- [Quick start](#quick-start)
+- [Security](#security)
+- [Config backup (export)](#config-backup-export)
+- [Uninstall (clean removal)](#uninstall-clean-removal)
+- [Documentation index](#documentation-index)
+- [Versioning](#versioning)
+
 ## What NBD is (and is not)
 
 | | |

@@ -2,6 +2,14 @@
 
 NBD is effectively **raw disk over TCP**. Treat it like temporarily plugging a drive into another machine — over the network.
 
+## Contents
+
+- [Destructive mode (like Unassigned Devices)](#destructive-mode-like-unassigned-devices)
+- [Rules](#rules)
+- [Recommended isolation](#recommended-isolation)
+- [What “read-only” protects](#what-read-only-protects)
+- [Writable host](#writable-host)
+
 ## Destructive mode (like Unassigned Devices)
 
 **Full list of when to turn it on:** [destructive-mode.md](destructive-mode.md)

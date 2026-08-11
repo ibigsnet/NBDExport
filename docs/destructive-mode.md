@@ -8,6 +8,13 @@ Destructive mode is **only** for the **Host** tab (publishing a local disk). **P
 
 ---
 
+## Contents
+
+- [You need Destructive mode = Yes when…](#you-need-destructive-mode-yes-when)
+- [You do **not** need Destructive mode when…](#you-do-not-need-destructive-mode-when)
+- [After a special job](#after-a-special-job)
+- [Related](#related)
+
 ## You need Destructive mode = Yes when…
 
 Enable it only if **at least one** of the following is true for the disk you want to **Host**:

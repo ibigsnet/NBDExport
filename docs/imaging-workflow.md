@@ -2,6 +2,15 @@
 
 Golden path used by this plugin (`qemu-nbd` + `qemu-img convert`).
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Host (server)](#host-server)
+- [Pull (client / Unraid)](#pull-client-unraid)
+- [Stop host](#stop-host)
+- [Restore later (destructive)](#restore-later-destructive)
+- [qcow2 rationale](#qcow2-rationale)
+
 ## Prerequisites
 
 1. IP connectivity between host and client (Thunderbolt or Ethernet).  
