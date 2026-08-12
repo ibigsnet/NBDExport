@@ -67,13 +67,13 @@ if (!isset($presets) || !is_array($presets)) {
     return window.confirm(
       'Enable Destructive mode?\n\n' +
       'This unlocks riskier Host options (you still pick the device later):\n\n' +
-      '• Writable host — peer can write to the Unraid disk you select ' +
-      '(not just image it read-only)\n\n' +
+      '• Writable host — peer can write blocks to the Unraid disk you select ' +
+      '(not only read them over NBD)\n\n' +
       '• Host disks that are already in use or critical:\n' +
       '  – Unraid array / parity / cache / pool members\n' +
       '  – disks with a mounted filesystem\n' +
       '  – the Unraid boot device (usually USB flash; whatever holds /boot)\n\n' +
-      'Safe default is OFF: only read-only host of free, unassigned disks.\n' +
+      'Safe default is OFF: read-only NBD host of free, unassigned disks.\n' +
       'Leave OFF unless you intentionally need one of the above.'
     );
   };
@@ -110,18 +110,19 @@ if (!isset($presets) || !is_array($presets)) {
         'Flags: ' + (flags || 'array / mounted / flash') + '\n\n' +
         'Destructive mode (Settings) is required before hosting array/cache/pool ' +
         'members, mounted disks, or the Unraid boot device — even read-only.\n' +
-        'Prefer an unassigned, unmounted disk for imaging.'
+        'Prefer an unassigned, unmounted disk for NBD host.'
       );
       return false;
     }
 
     if (needConfirm) {
       var msg = 'Host this Unraid disk on the network?\n  ' + devLabel + '\n  (' + devPath + ')\n\n';
-      msg += 'Publishes raw blocks via NBD. A client must connect (Pull tab or qemu-img).\n\n';
+      msg += 'Publishes raw blocks via NBD (Network Block Device). A client attaches ' +
+        'as a remote disk (tools, nbd-client, Pull tab, qemu-img, …).\n\n';
       if (!ro) {
         msg += 'WARNING: WRITABLE — the peer can write to this Unraid disk and can destroy data.\n\n';
       } else {
-        msg += 'Read-only — peer can image this disk but cannot write it.\n\n';
+        msg += 'Read-only — peer can read blocks but cannot write this disk through NBD.\n\n';
       }
       if (warn) {
         msg += 'Note: this disk is marked in-use/critical (' + (flags || 'array/mounted/flash') + ').\n\n';

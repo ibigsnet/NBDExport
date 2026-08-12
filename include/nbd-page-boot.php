@@ -330,7 +330,7 @@ function nbd_page_footer($show_cli = false) {
   ?>
 <div class="nbd-chrome-footer">
   <strong>Network Block Device</strong> —
-  temporarily share a whole disk/partition over TCP for imaging (not SMB/NFS folders).
+  temporarily publish a whole disk/partition over TCP as NBD — raw blocks for remote tools or convert/archive (not SMB/NFS folders).
   Tabs: <strong>Host</strong> publish · <strong>Pull</strong> save to file · <strong>Settings</strong> options.
   <div class="nbd-companion">
     <strong>Companions</strong> —

@@ -186,7 +186,7 @@ Hardware names above are **example peer classes** (fast host, lots of RAM/GPU, o
 
 Some workloads need a **disk**, not a folder tree: recovery tools, partition editors, VM disks, or multiple readers seeking different regions of a large volume.
 
-A pure file-copy pipeline is sequential and path-oriented. A **block device** lets the OS and applications use normal block I/O and caching. This plugin focuses on **safe imaging and read-only access**, not multi-writer SAN.
+A pure file-copy pipeline is sequential and path-oriented. A **block device** lets the OS and applications use normal block I/O and caching — recovery tools, partition editors, convert/archive jobs, remote attach, and similar. This plugin focuses on **safe Host (prefer read-only) and optional Pull**, not multi-writer SAN.
 
 ---
 
@@ -208,11 +208,11 @@ A pure file-copy pipeline is sequential and path-oriented. A **block device** le
 | Handing out OS **installers** (`.iso`) | SMB/NFS, HTTP, or Unraid VM CD attachment |
 | Exposing a disk on `0.0.0.0` / WAN | **Never** for basic NBD (no auth) |
 | Production multi-writer VM datastores | Proper shared storage design |
-| Offsite backup *policy* (versioning product, cloud sync) | Backup tools; NBD is a **transport for imaging**, not a full backup product |
+| Offsite backup *policy* (versioning product, cloud sync) | Backup tools; NBD is a **block transport**, not a full backup product |
 | “Just copy my documents folder” | SMB/NFS |
 
 ---
 
 ## One-line summary
 
-**Files and folders → SMB/NFS. Whole disks and partitions over the network (then store as qcow2, raw/`.img`, or convert back to physical) → NBD Export.**
+**Files and folders → SMB/NFS. Whole disks and partitions as a block device over the network (read, tools, convert/archive, restore to physical, …) → NBD Export.**

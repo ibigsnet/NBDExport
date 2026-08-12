@@ -80,8 +80,8 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Like Unassigned Devices’ Destructive Mode. Leave <strong>No</strong> for normal imaging of an
-        unassigned, unmounted disk (read-only Host).<br><br>
+        Like Unassigned Devices’ Destructive Mode. Leave <strong>No</strong> for a normal
+        <strong>read-only</strong> Host of an unassigned, unmounted disk (NBD block export over the network).<br><br>
         Turn <strong>Yes</strong> only if you need one of these on the <strong>Host</strong> tab:
         <strong>writable</strong> host (peer can write the disk you select), or host an
         <strong>array/parity/cache/pool</strong>, <strong>mounted</strong>, or

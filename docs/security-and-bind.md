@@ -19,7 +19,7 @@ NBD is effectively **raw disk over TCP**. Treat it like temporarily plugging a d
 | **No** (default) | **Read-only** host of disks that are **not** Unraid array/parity/cache/pool inventory, **not** mounted, **not** the boot device (`/boot`) |
 | **Yes** | Only if you need **writable** host, or to host **array/cache/pool**, **mounted**, or **boot** media (Host tab still confirms the device) |
 
-You need Destructive mode **only** for those Host cases. Everyday imaging of an unassigned, unmounted disk does **not** need it.
+You need Destructive mode **only** for those Host cases. Everyday **read-only** NBD host of an unassigned, unmounted disk does **not** need it.
 
 Server-side enforcement refuses blocked combinations even if the UI is bypassed.  
 Pull jobs **never** write to `/dev/…` block devices (file under `/mnt/` only).
@@ -44,7 +44,7 @@ When Destructive mode is ON, every NBD tab shows an **orange banner**. Turn it *
 1. **Thunderbolt host-net** or a **dedicated VLAN** between trusted machines  
 2. Firewall that does not expose the NBD port to the Internet or guest Wi‑Fi  
 3. **Stop** the host as soon as the pull finishes  
-4. Prefer imaging disks that are **not** Unraid array/cache/pool members  
+4. Prefer hosting disks that are **not** Unraid array/cache/pool members  
 
 ## What “read-only” protects
 
