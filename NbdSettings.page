@@ -84,7 +84,8 @@ nbd_page_styles();
         unassigned, unmounted disk (read-only Host).<br><br>
         Turn <strong>Yes</strong> only if you need one of these on the <strong>Host</strong> tab:
         <strong>writable</strong> host (peer can write the disk you select), or host an
-        <strong>array/parity</strong>, <strong>mounted</strong>, or <strong>flash</strong> disk.
+        <strong>array/parity/cache/pool</strong>, <strong>mounted</strong>, or
+        <strong>Unraid boot</strong> disk (usually USB flash; whatever holds <code>/boot</code>).
         Pull never needs this. Full list:
         <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">when to enable Destructive mode ↗</a>.
         Turn back to No when finished.
