@@ -254,14 +254,10 @@ function nbd_page_header() {
         · <?= (int)$n ?> live<?= $nj ? ' · ' . (int)$nj . ' pull job(s)' : '' ?>
       </span>
     </h3>
-    <p class="nbd-section-lead">
-      Disks this Unraid is publishing over NBD. Use the <strong>Host</strong> tab to add one
-      (a free port for each). <strong>Stop</strong> when finished.
-    </p>
 <?php if (!$exports): ?>
     <div class="nbd-empty" style="margin:0.4em 0 0;padding:0.65em 0.85em">
-      <strong>None hosted right now.</strong>
-      Use the <strong>Host</strong> tab to publish a local disk/partition.
+      None hosted. Use the <strong>Host</strong> tab to publish a disk or partition
+      (one free port per disk).
     </div>
 <?php else: ?>
     <div class="nbd-status-legend" style="margin:0.35em 0 0.45em">
