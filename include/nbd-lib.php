@@ -853,12 +853,12 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
   if ($risk['risky'] && !$destructive) {
     return [
       'ok' => false,
-      'error' => 'Device is ' . $risk['summary'] . '. Enable Destructive mode under Settings to allow array/mounted/flash hosts (read-only still recommended).',
+      'error' => 'Device is ' . $risk['summary'] . '. Enable Destructive mode under Settings to allow array/cache/pool, mounted, or boot-device hosts (read-only still recommended).',
     ];
   }
-  // Never allow writable flash
+  // Never allow writable Unraid boot device (USB flash or disk that holds /boot)
   if (!$read_only && !empty($risk['flash'])) {
-    return ['ok' => false, 'error' => 'Refusing writable export of Unraid flash/boot device.'];
+    return ['ok' => false, 'error' => 'Refusing writable export of Unraid boot device (/boot).'];
   }
   // Risky or RW requires explicit confirm from UI
   if ((!$read_only || $risk['risky']) && !$confirm) {

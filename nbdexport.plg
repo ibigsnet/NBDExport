@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.11bk">
+<!ENTITY version "2026.08.11bl">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -29,6 +29,7 @@
 
 <CHANGES>
 ###&version;
+- UI: remove meta “Always visible” note from hosted-disks header; public copy only.
 - Docs: Destructive mode wording — NBD block protocol, not imaging-only; mounted case less qcow2-centric.
 - Docs/UI: Destructive case 2 = array/parity/cache/pools; case 4 = Unraid boot device (USB or disk holding /boot).
 - Docs: destructive-mode.md — four Host cases only, bullet points.

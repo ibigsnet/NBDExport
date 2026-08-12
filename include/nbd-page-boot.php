@@ -177,7 +177,7 @@ function nbd_page_styles() {
 }
 .nbd-wrap details.nbd-cli-box { margin-top: 1.25em; font-size: 0.95em; }
 .nbd-wrap details.nbd-cli-box summary { cursor: pointer; font-weight: 600; }
-/* Always-on chrome (all tabs) */
+/* Shared header block (all tabs) */
 .nbd-wrap .nbd-chrome-top {
   margin: 0 0 1em;
   padding-bottom: 0.85em;
@@ -221,8 +221,7 @@ CSS;
 }
 
 /**
- * Shared top chrome on every NBD tab: Destructive banner + disks currently hosted.
- * Unraid tab strip stays above this (native); this is the always-visible page header.
+ * Shared header on every NBD tab: Destructive banner + hosted-disks list.
  */
 function nbd_page_header() {
   global $exports, $destructive, $enabled, $tools, $jobs;
@@ -236,8 +235,9 @@ function nbd_page_header() {
 <?php if ($destructive === 'yes'): ?>
   <div class="nbd-destructive-banner" role="status">
     Destructive mode is <strong>ON</strong> —
-    writable host (peer can write the Unraid disk you select) and/or hosting in-use/critical disks
-    (array, mounted, flash) is unlocked. Prefer Read-only = Yes. Turn off under
+    writable host and/or hosting in-use or critical disks
+    (array, cache, pool, mounted, or Unraid boot device) is unlocked.
+    Prefer Read-only = Yes. Turn off under
     <a href="/Settings/NbdSettings">Settings</a>
     when finished.
   </div>
@@ -255,7 +255,8 @@ function nbd_page_header() {
       </span>
     </h3>
     <p class="nbd-section-lead">
-      Always visible. Multi-disk: different ports. Add from <strong>Host</strong> · stop here or on Status.
+      Disks this Unraid is publishing over NBD. Use the <strong>Host</strong> tab to add one
+      (a free port for each). <strong>Stop</strong> when finished.
     </p>
 <?php if (!$exports): ?>
     <div class="nbd-empty" style="margin:0.4em 0 0;padding:0.65em 0.85em">
@@ -323,7 +324,7 @@ function nbd_page_header() {
 }
 
 /**
- * Shared footer on every tab: what NBD is + companions + docs (not a wall at the top).
+ * Shared footer on every tab: short description, companions, docs links.
  */
 function nbd_page_footer($show_cli = false) {
   global $tbn, $frr;
