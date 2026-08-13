@@ -28,15 +28,25 @@ NBD itself lives under **Network Services** (`/Settings/NbdExport`) — that pat
 
 ## Install URLs
 
-```text
-# Latest (preferred — install.plg mirrors nbdexport.plg)
-https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg
+| Track | URL |
+|-------|-----|
+| **Latest (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg` |
+| **Recommended freeze** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable-recommended-2026.08.13aj/install.plg` |
+| **Pinned version tag** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/vVERSION/install.plg` |
 
-# Same body (if raw CDN is healthy)
-https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg
-```
+Same body is also published as `nbdexport.plg` (keep identical on every ship). CA `PluginURL` tracks Latest (`install.plg`).
 
-Keep **`install.plg` and `nbdexport.plg` identical** on every ship. CA `PluginURL` should track Latest (`install.plg`).
+### Recommended freeze (2026-08-13)
+
+| | |
+|--|--|
+| **Label** | **Recommended** (fleet freeze) |
+| **Plugin version** | **`2026.08.13aj`** |
+| **Tag** | [`stable-recommended-2026.08.13aj`](https://github.com/ibigsnet/NbdExport/releases/tag/stable-recommended-2026.08.13aj) |
+| **Also** | `v2026.08.13aj` |
+| **Install / rollback** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable-recommended-2026.08.13aj/install.plg` |
+
+Includes Host/Pull/Settings tabs, Destructive mode, companions (Thunderbolt Net / Fabric Routing), CA-safe PluginURL, Thunderbolt wording. **`main` may move ahead** after this pin.
 
 ## History
 
