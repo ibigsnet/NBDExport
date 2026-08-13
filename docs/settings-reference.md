@@ -1,8 +1,8 @@
 # Settings reference
 
 **Path:** Settings → Network Services → NBD  
-**Config:** `/boot/config/plugins/NbdExport/NbdExport.cfg`  
-**Memory / presets:** `/boot/config/plugins/NbdExport/memory.json`
+**Config:** `/boot/config/plugins/NBDExport/NBDExport.cfg`  
+**Memory / presets:** `/boot/config/plugins/NBDExport/memory.json`
 
 Every tab shows a shared header: **disks currently hosted** (and an orange banner if Destructive mode is ON).
 
@@ -80,5 +80,5 @@ Jobs appear on **Status**; they keep running if you close the browser.
 |------|---------|
 | `/var/run/nbdexport/` | pid + state JSON |
 | `/var/log/nbdexport/` | host and job logs |
-| `/boot/config/plugins/NbdExport/companion.json` | soft companion marker |
-| `/boot/config/plugins/NbdExport/memory.json` | last-used fields + named presets |
+| `/boot/config/plugins/NBDExport/companion.json` | soft companion marker |
+| `/boot/config/plugins/NBDExport/memory.json` | last-used fields + named presets |

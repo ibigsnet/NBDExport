@@ -1,11 +1,11 @@
 #!/bin/bash
 # Array start: optional rehydrate (default off — do not auto-export disks).
-PLUGIN=/usr/local/emhttp/plugins/NbdExport
-CFG=/boot/config/plugins/NbdExport/NbdExport.cfg
+PLUGIN=/usr/local/emhttp/plugins/NBDExport
+CFG=/boot/config/plugins/NBDExport/NBDExport.cfg
 [ -f "$PLUGIN/include/nbd-lib.php" ] || exit 0
 # Write companion marker; rehydrate only if enabled in cfg
 php -r '
-require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
 nbd_write_companion_marker();
 $cfg = nbd_load_cfg();
 // rehydrate reserved for future remembered exports.json

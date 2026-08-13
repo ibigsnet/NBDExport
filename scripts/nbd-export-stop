@@ -7,11 +7,11 @@ if [ -z "$ID" ]; then
   exit 2
 fi
 if [ "$ID" = "all" ]; then
-  php -r 'require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php"; nbd_stop_all_exports(); echo "stopped all\n";'
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_stop_all_exports(); echo "stopped all\n";'
   exit 0
 fi
 php -r '
-require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
 $r = nbd_export_stop($argv[1]);
 fwrite(STDOUT, json_encode($r) . "\n");
 exit(empty($r["ok"]) ? 1 : 0);

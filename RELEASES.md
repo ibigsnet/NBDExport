@@ -22,17 +22,17 @@ Unraid plugin updates use lexicographic `strcmp()` (not PHP `version_compare`).
 | `/Settings/NetworkSettings` + `ibigsGotoNetTab('Fabric Routing')` | `/Settings/FabricRouting` |
 
 Canonical JS: **`ibigsGotoNetTab(needle, event)`** (aliases: `nbdGotoNetTab`, `tbnGotoNetTab`, `frrGotoNetTab`).  
-NBD itself lives under **Network Services** (`/Settings/NbdExport`) — that path is correct for opening NBD, not a Network Settings tab.
+NBD itself lives under **Network Services** (`/Settings/NBDExport`) — that path is correct for opening NBD, not a Network Settings tab.
 
 ## Install URLs
 
 | Track | URL |
 |-------|-----|
-| **Latest (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg` |
-| **Recommended freeze** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable-recommended-2026.08.13aj/install.plg` |
-| **Pinned version tag** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/vVERSION/install.plg` |
+| **Latest (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg` |
+| **Recommended freeze** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.13aj/nbd.plg` |
+| **Pinned version tag** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/vVERSION/nbd.plg` |
 
-Same body is also published as `nbdexport.plg` (keep identical on every ship). CA `PluginURL` tracks Latest (`install.plg`).
+Same body is also published as `nbd.plg` (keep identical on every ship). CA `PluginURL` tracks Latest (`nbd.plg`).
 
 ### Recommended freeze (2026-08-13)
 
@@ -40,9 +40,9 @@ Same body is also published as `nbdexport.plg` (keep identical on every ship). C
 |--|--|
 | **Label** | **Recommended** (fleet freeze) |
 | **Plugin version** | **`2026.08.13aj`** |
-| **Tag** | [`stable-recommended-2026.08.13aj`](https://github.com/ibigsnet/NbdExport/releases/tag/stable-recommended-2026.08.13aj) |
+| **Tag** | [`stable-recommended-2026.08.13aj`](https://github.com/ibigsnet/NBDExport/releases/tag/stable-recommended-2026.08.13aj) |
 | **Also** | `v2026.08.13aj` |
-| **Install / rollback** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable-recommended-2026.08.13aj/install.plg` |
+| **Install / rollback** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.13aj/nbd.plg` |
 
 Includes Host/Pull/Settings tabs, Destructive mode, companions (Thunderbolt Net / Fabric Routing), CA-safe PluginURL, Thunderbolt wording. **`main` may move ahead** after this pin.
 

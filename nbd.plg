@@ -1,6 +1,6 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
-<!ENTITY name "NbdExport">
+<!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
 <!--
   Versioning — Unraid plugin updates use strcmp() (lexicographic), NOT version_compare.
@@ -13,19 +13,19 @@
   (strcmp treats "aa" as older than "z").
   Calendar day = lab wall clock (not invented “tomorrow”). See RELEASES.md.
 
-  Keep install.plg identical to this file. Latest PluginURL may use install.plg
-  if raw CDN poisons bare main/nbdexport.plg.
+  Product: **NBD Export** (UI Network Services → **NBD**). Plugin id **NBDExport**.
+  PluginURL file: nbd.plg (not install.plg / nbdexport.plg).
 
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ab">
-<!ENTITY launch "Settings/NbdExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
-<!ENTITY github "ibigsnet/NbdExport">
-<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
-<!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
-<!ENTITY configdir "/boot/config/plugins/NbdExport">
+<!ENTITY version "2026.08.14ag">
+<!ENTITY launch "Settings/NBDExport">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
+<!ENTITY github "ibigsnet/NBDExport">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NBDExport/main">
+<!ENTITY plugdir "/usr/local/emhttp/plugins/NBDExport">
+<!ENTITY configdir "/boot/config/plugins/NBDExport">
 ]>
 
 <PLUGIN name="&name;"
@@ -41,12 +41,10 @@
 
 <CHANGES>
 ###&version;
-- Wording: spell out **Thunderbolt** (not ambiguous “TB”); storage sizes stay “1 TB”.
-- Companion rename: **Fabric Routing** / **FabricRouting** (was UnraidFRR).
-- CA: PluginURL matches `.plg` entity exactly (no `?v=` query) so appfeed can list/update NBD Export.
-- Docs/code comments: example IPs generic (no personal lab addresses).
-- Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
-- Install: `install.plg?v=` cache-bust on PluginURL (keep body identical to `nbdexport.plg`).
+- **Rename:** product **NBD Export**, plugin id **NBDExport**, PluginURL `nbd.plg` (was NbdExport / install.plg).
+- UI menu title stays **NBD** under Network Services. CA Name: NBD Export.
+- Migrate flash/emhttp from legacy `NbdExport` paths on install; remove old plg basenames.
+
 
 ###2026.08.14ab
 - **Lab channel:** On branch `main`, PluginURL + raw FILE sources point at `main` (lab uninstall/reinstall testing).
@@ -145,51 +143,65 @@
 </CHANGES>
 
 <!--
-  NbdExport is intentionally separate from ThunderboltNet / FabricRouting:
+  NBD Export is intentionally separate from ThunderboltNet / FabricRouting:
   no PHP requires across plugins. NBD is not controlled by network-extra.
 -->
 
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
-echo "NbdExport: preparing directories..."
+echo "NBD Export: preparing directories..."
+# Legacy NbdExport → NBDExport flash migration
+if [ -d /boot/config/plugins/NbdExport ]; then
+  mkdir -p /boot/config/plugins/NBDExport
+  cp -a /boot/config/plugins/NbdExport/. /boot/config/plugins/NBDExport/ 2>/dev/null || true
+  if [ -f /boot/config/plugins/NBDExport/NbdExport.cfg ] && [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ]; then
+    mv /boot/config/plugins/NBDExport/NbdExport.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
+  fi
+  rm -rf /boot/config/plugins/NbdExport
+  echo "NBD Export: migrated flash config from NbdExport → NBDExport"
+fi
+# Drop old plugin basenames so Plugins tab is not install.plg / dual entries
+rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
+      /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
+rm -rf /usr/local/emhttp/plugins/NBDExport
 rm -rf /usr/local/emhttp/plugins/NbdExport
 rm -rf /usr/local/emhttp/plugins/nbdexport
-mkdir -p /usr/local/emhttp/plugins/NbdExport/include
-mkdir -p /usr/local/emhttp/plugins/NbdExport/scripts
-mkdir -p /usr/local/emhttp/plugins/NbdExport/event
-mkdir -p /usr/local/emhttp/plugins/NbdExport/docs
-mkdir -p /boot/config/plugins/NbdExport
+mkdir -p /usr/local/emhttp/plugins/NBDExport/include
+mkdir -p /usr/local/emhttp/plugins/NBDExport/scripts
+mkdir -p /usr/local/emhttp/plugins/NBDExport/event
+mkdir -p /usr/local/emhttp/plugins/NBDExport/docs
+mkdir -p /boot/config/plugins/NBDExport
 mkdir -p /var/run/nbdexport
 mkdir -p /var/log/nbdexport
-echo "NbdExport: directories ready."
+echo "NBD Export: directories ready."
 ]]></INLINE>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdExport.page">
-<URL>&raw;/NbdExport.page?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDExport.page">
+<URL>&raw;/NBDExport.page?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdStatus.page">
-<URL>&raw;/NbdStatus.page?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDStatus.page">
+<URL>&raw;/NBDStatus.page?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdHost.page">
-<URL>&raw;/NbdHost.page?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHost.page">
+<URL>&raw;/NBDHost.page?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdPull.page">
-<URL>&raw;/NbdPull.page?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDPull.page">
+<URL>&raw;/NBDPull.page?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdSettings.page">
-<URL>&raw;/NbdSettings.page?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDSettings.page">
+<URL>&raw;/NBDSettings.page?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/default.cfg">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/default.cfg">
 <URL>&raw;/default.cfg?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/README.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/README.md">
 <INLINE>
 <![CDATA[
 **NBD Export**
@@ -199,120 +211,120 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 </INLINE>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php">
 <URL>&raw;/include/nbd-lib.php?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-update.php">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-update.php">
 <URL>&raw;/include/nbd-update.php?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-download-config.php">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-download-config.php">
 <URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php">
 <URL>&raw;/include/nbd-page-boot.php?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php">
 <URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-start">
 <URL>&raw;/scripts/nbd-export-start?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-stop">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop">
 <URL>&raw;/scripts/nbd-export-stop?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-image-from-url">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-image-from-url">
 <URL>&raw;/scripts/nbd-image-from-url?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/event/started">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/event/started">
 <URL>&raw;/event/started?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/nbdexport.plg">
-<URL>&raw;/nbdexport.plg?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/nbd.plg">
+<URL>&raw;/nbd.plg?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/DOCS.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/DOCS.md">
 <URL>&raw;/DOCS.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/how-to-use.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/how-to-use.md">
 <URL>&raw;/docs/how-to-use.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/when-to-use-nbd.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/when-to-use-nbd.md">
 <URL>&raw;/docs/when-to-use-nbd.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/nbd-vs-nfs-smb.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/nbd-vs-nfs-smb.md">
 <URL>&raw;/docs/nbd-vs-nfs-smb.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/security-and-bind.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/security-and-bind.md">
 <URL>&raw;/docs/security-and-bind.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/destructive-mode.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/destructive-mode.md">
 <URL>&raw;/docs/destructive-mode.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/imaging-workflow.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/imaging-workflow.md">
 <URL>&raw;/docs/imaging-workflow.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-thunderboltnet.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/integration-thunderboltnet.md">
 <URL>&raw;/docs/integration-thunderboltnet.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-fabricrouting.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/integration-fabricrouting.md">
 <URL>&raw;/docs/integration-fabricrouting.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/settings-reference.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/settings-reference.md">
 <URL>&raw;/docs/settings-reference.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/troubleshooting.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/troubleshooting.md">
 <URL>&raw;/docs/troubleshooting.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/README.md">
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/README.md">
 <URL>&raw;/docs/README.md?v=&version;</URL>
 </FILE>
 
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
-echo "NbdExport: finishing install..."
-chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start 2>/dev/null || true
-chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-stop 2>/dev/null || true
-chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-image-from-url 2>/dev/null || true
-chmod 755 /usr/local/emhttp/plugins/NbdExport/event/started 2>/dev/null || true
+echo "NBD Export: finishing install..."
+chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-start 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/nbd-image-from-url 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NBDExport/event/started 2>/dev/null || true
 # Array-start hook
 if [ -d /usr/local/emhttp/plugins ]; then
-  mkdir -p /usr/local/emhttp/plugins/NbdExport/event
+  mkdir -p /usr/local/emhttp/plugins/NBDExport/event
 fi
 # Unraid event symlink style (if present)
 if [ -d /usr/local/emhttp/plugins/dynamix/event ]; then
   :
 fi
 # Install array-start event if Unraid plugin event path exists
-EVDIR=/usr/local/emhttp/plugins/NbdExport/event
+EVDIR=/usr/local/emhttp/plugins/NBDExport/event
 if [ -f "$EVDIR/started" ]; then
   chmod 755 "$EVDIR/started"
 fi
 # Also copy into boot event if using plugin event convention
-mkdir -p /boot/config/plugins/NbdExport
-if [ ! -f /boot/config/plugins/NbdExport/NbdExport.cfg ]; then
-  if [ -f /usr/local/emhttp/plugins/NbdExport/default.cfg ]; then
-    cp -a /usr/local/emhttp/plugins/NbdExport/default.cfg /boot/config/plugins/NbdExport/NbdExport.cfg
-    echo "NbdExport: created default NbdExport.cfg"
+mkdir -p /boot/config/plugins/NBDExport
+if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ]; then
+  if [ -f /usr/local/emhttp/plugins/NBDExport/default.cfg ]; then
+    cp -a /usr/local/emhttp/plugins/NBDExport/default.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
+    echo "NBD Export: created default NBDExport.cfg"
   fi
 fi
 # Soft-link event into Unraid's plugin event system when available
@@ -320,21 +332,21 @@ if [ -d /usr/local/emhttp/plugins ]; then
   # Many plugins register via /boot/config/plugins/*/event or plg FILE — emhttp event/started is enough if plugin manager links it
   :
 fi
-php -r 'require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php"; nbd_write_companion_marker();' 2>/dev/null || true
-echo "NbdExport: install complete."
-echo "NbdExport: Settings → Network Services → NBD"
-echo "NbdExport: Hard-refresh the browser (Ctrl+Shift+R)."
+php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker();' 2>/dev/null || true
+echo "NBD Export: install complete."
+echo "NBD Export: Settings → Network Services → NBD"
+echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."
 ]]></INLINE>
 </FILE>
 
 <FILE Run="/bin/bash" Method="remove">
 <INLINE><![CDATA[
-echo "NbdExport: removing plugin (full cleanup)..."
+echo "NBD Export: removing plugin (full cleanup)..."
 
 # 1) Stop managed listeners/jobs only (via state files — not global pkill qemu-nbd)
-if [ -f /usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php ]; then
+if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
   php -r '
-    require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+    require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
     nbd_stop_all_exports();
     foreach (nbd_jobs_state() as $j) {
       if (!empty($j["id"])) { nbd_image_stop($j["id"]); }
@@ -359,36 +371,38 @@ rm -rf /var/run/nbdexport
 rm -rf /var/log/nbdexport
 
 # 3) Emhttp tree (all case variants)
+rm -rf /usr/local/emhttp/plugins/NBDExport
 rm -rf /usr/local/emhttp/plugins/NbdExport
 rm -rf /usr/local/emhttp/plugins/nbdexport
-rm -rf /usr/local/emhttp/plugins/Nbdexport
 
 # Stray tab pages if ever copied outside plugin dir
-rm -f /usr/local/emhttp/webGui/Nbd*.page \
-      /usr/local/emhttp/plugins/dynamix/Nbd*.page 2>/dev/null || true
+rm -f /usr/local/emhttp/webGui/NBD*.page /usr/local/emhttp/webGui/Nbd*.page \
+      /usr/local/emhttp/plugins/dynamix/NBD*.page /usr/local/emhttp/plugins/dynamix/Nbd*.page 2>/dev/null || true
 find /usr/local/emhttp/webGui /usr/local/emhttp/plugins/dynamix -maxdepth 1 -type f \
-  \( -name 'NbdExport.page' -o -name 'NbdStatus.page' -o -name 'NbdHost.page' \
+  \( -name 'NBDExport.page' -o -name 'NBDStatus.page' -o -name 'NBDHost.page' \
+     -o -name 'NBDPull.page' -o -name 'NBDSettings.page' \
+     -o -name 'NbdExport.page' -o -name 'NbdStatus.page' -o -name 'NbdHost.page' \
      -o -name 'NbdPull.page' -o -name 'NbdSettings.page' \) -delete 2>/dev/null || true
 
-# 4) Flash plugin state (cfg, companion). Unraid also removes nbdexport.plg from /boot/config/plugins/
-# Flash: cfg + memory/presets (admin-only paths/IPs — wiped on uninstall like plugin state)
+# 4) Flash plugin state
+rm -rf /boot/config/plugins/NBDExport
 rm -rf /boot/config/plugins/NbdExport
 rm -rf /boot/config/plugins/nbdexport
-rm -f /boot/config/plugins/nbdexport.plg 2>/dev/null || true
+rm -f /boot/config/plugins/nbd.plg /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
 
 # 5) Temp install copies
-rm -f /tmp/plugins/nbdexport.plg /tmp/plugins/nbdexport.txt 2>/dev/null || true
-rm -f /tmp/plugins/NbdExport* /tmp/inline*-nbdexport.sh 2>/dev/null || true
+rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbdexport.plg /tmp/plugins/install.plg 2>/dev/null || true
+rm -f /tmp/plugins/NBDExport* /tmp/plugins/NbdExport* /tmp/inline*-nbd*.sh 2>/dev/null || true
 
-if [ -e /usr/local/emhttp/plugins/NbdExport ] || [ -e /usr/local/emhttp/plugins/nbdexport ]; then
-  echo "NbdExport: WARNING — emhttp plugin path still present"
+if [ -e /usr/local/emhttp/plugins/NBDExport ] || [ -e /usr/local/emhttp/plugins/nbdexport ]; then
+  echo "NBD Export: WARNING — emhttp plugin path still present"
 else
-  echo "NbdExport: emhttp plugin paths clear"
+  echo "NBD Export: emhttp plugin paths clear"
 fi
-echo "NbdExport: removed."
-echo "NbdExport: did not modify network.cfg, Thunderbolt Net, or FabricRouting."
-echo "NbdExport: user image files under /mnt/ were left untouched."
-echo "NbdExport: hard-refresh the browser."
+echo "NBD Export: removed."
+echo "NBD Export: did not modify network.cfg, Thunderbolt Net, or FabricRouting."
+echo "NBD Export: user image files under /mnt/ were left untouched."
+echo "NBD Export: hard-refresh the browser."
 ]]></INLINE>
 </FILE>
 

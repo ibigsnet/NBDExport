@@ -1,10 +1,10 @@
-Menu="NbdExport:1"
+Menu="NBDExport:1"
 Title="Status"
 Tag="database"
 Markdown="false"
 ---
 <?php
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
@@ -77,8 +77,8 @@ nbd_page_styles();
             <td>
 <?php if ($alive): ?>
               <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
-                <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_stop">
                 <input type="hidden" name="job_id" value="<?= htmlspecialchars($j['id'] ?? '') ?>">
                 <input type="submit" name="#apply" value="Stop">

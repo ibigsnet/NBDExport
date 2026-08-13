@@ -1,10 +1,10 @@
-Menu="NbdExport:4"
+Menu="NBDExport:4"
 Title="Settings"
 Tag="gears"
 Markdown="false"
 ---
 <?php
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
@@ -17,8 +17,8 @@ nbd_page_styles();
       Destructive mode shows in orange at the top of every tab when ON.
     </p>
     <form method="POST" action="/update.php" target="progressFrame">
-      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="save_cfg">
 
       <dl>
@@ -87,7 +87,7 @@ nbd_page_styles();
         <strong>array/parity/cache/pool</strong>, <strong>mounted</strong>, or
         <strong>Unraid boot</strong> disk (usually USB flash; whatever holds <code>/boot</code>).
         Pull never needs this. Full list:
-        <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">when to enable Destructive mode ↗</a>.
+        <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">when to enable Destructive mode ↗</a>.
         Turn back to No when finished.
       </blockquote>
 
@@ -101,10 +101,10 @@ nbd_page_styles();
       <strong>Export / import config</strong>
       <span class="nbd-muted"> — settings, last-used fields, and named presets (JSON).</span>
       <div class="nbd-config-backup-actions">
-        <a class="nbd-btn-link" href="/plugins/NbdExport/include/nbd-download-config.php">Download JSON…</a>
+        <a class="nbd-btn-link" href="/plugins/NBDExport/include/nbd-download-config.php">Download JSON…</a>
         <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
-          <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-          <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+          <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+          <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
           <input type="hidden" name="nbd_action" value="config_export_flash">
           <input type="submit" name="#apply" value="Save to flash (/boot/config/)">
         </form>
@@ -115,8 +115,8 @@ nbd_page_styles();
       <details class="nbd-import-details">
         <summary>Import config from file</summary>
         <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.45em">
-          <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-          <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+          <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+          <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
           <input type="hidden" name="nbd_action" value="config_import">
           <label class="nbd-muted">Path under <code>/boot/config/</code> or <code>/mnt/…</code></label><br>
           <input type="text" name="import_path" style="width:min(36em,100%)" placeholder="/boot/config/nbdexport-config-….json"
@@ -129,4 +129,4 @@ nbd_page_styles();
   </div>
 <?php nbd_page_footer(false); ?>
 </div>
-<?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>
+<?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

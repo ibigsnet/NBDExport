@@ -3,7 +3,7 @@
  * Browser download of NBD Export settings + memory/presets (JSON).
  * Linked from Settings → NBD; requires WebGUI session (Unraid root UI).
  */
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php';
 
 $bundle = nbd_config_export_bundle();
 $json = json_encode($bundle, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

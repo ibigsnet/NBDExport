@@ -4,7 +4,7 @@
  */
 $save = false;
 
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php';
 
 $action = $_POST['nbd_action'] ?? '';
 

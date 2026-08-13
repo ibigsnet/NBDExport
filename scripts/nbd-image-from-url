@@ -5,7 +5,7 @@ URL="${1:-}"
 OUT="${2:-}"
 FMT="${3:-qcow2}"
 php -r '
-require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
 $r = nbd_image_start($argv[1], $argv[2], $argv[3]);
 fwrite(STDOUT, json_encode($r, JSON_PRETTY_PRINT) . "\n");
 exit(empty($r["ok"]) ? 1 : 0);

@@ -2,9 +2,9 @@
 /**
  * Shared bootstrap for NBD Export Settings tabs (Status / Host / Pull / Settings).
  */
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php';
 
-$plugin = 'NbdExport';
+$plugin = 'NBDExport';
 $cfg = function_exists('parse_plugin_cfg') ? parse_plugin_cfg($plugin) : [];
 if (!is_array($cfg)) {
   $cfg = [];
@@ -238,13 +238,13 @@ function nbd_page_header() {
     writable host and/or hosting in-use or critical disks
     (array, cache, pool, mounted, or Unraid boot device) is unlocked.
     Prefer Read-only = Yes. Turn off under
-    <a href="/Settings/NbdSettings">Settings</a>
+    <a href="/Settings/NBDSettings">Settings</a>
     when finished.
   </div>
 <?php endif; ?>
 <?php if ($enabled !== 'yes'): ?>
   <div class="nbd-destructive-banner" role="status" style="border-color:rgba(200,60,60,0.5);background:rgba(200,60,60,0.12);color:#c33">
-    NBD Export is <strong>disabled</strong> — enable under <a href="/Settings/NbdSettings">Settings</a>.
+    NBD Export is <strong>disabled</strong> — enable under <a href="/Settings/NBDSettings">Settings</a>.
   </div>
 <?php endif; ?>
 
@@ -294,8 +294,8 @@ function nbd_page_header() {
           <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
           <td>
             <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
-              <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-              <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+              <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+              <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="export_stop">
               <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
               <input type="submit" name="#apply" value="Stop">
@@ -307,8 +307,8 @@ function nbd_page_header() {
     </table>
 <?php if ($n > 1): ?>
     <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
-      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="export_stop_all">
       <input type="submit" name="#apply" value="Stop all hosted disks">
     </form>
@@ -424,19 +424,19 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
   nbd://10.255.0.1:10809 /mnt/user/domains/example.qcow2</pre>
     <p class="nbd-muted" style="margin:0.4em 0 0">
       Docs:
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
       ·
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging ↗</a>
+      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging ↗</a>
       ·
-      <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
+      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
     </p>
   </details>
 <?php else: ?>
   <p class="nbd-muted" style="margin:0.45em 0 0">
     Docs:
-    <a href="https://github.com/ibigsnet/NbdExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+    <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
     ·
-    <a href="https://github.com/ibigsnet/NbdExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
+    <a href="https://github.com/ibigsnet/NBDExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
   </p>
 <?php endif; ?>
 </div>

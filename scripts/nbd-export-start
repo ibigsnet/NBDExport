@@ -10,7 +10,7 @@ LABEL="${5:-}"
 RO=yes
 [ "$MODE" = "rw" ] && RO=no
 php -r '
-require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
 $r = nbd_export_start(
   $argv[1], $argv[2], (int)$argv[3],
   $argv[4] === "yes", $argv[5]

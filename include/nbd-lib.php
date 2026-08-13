@@ -4,10 +4,10 @@
  */
 
 if (!defined('NBDEXPORT_ROOT')) {
-  define('NBDEXPORT_ROOT', '/usr/local/emhttp/plugins/NbdExport');
+  define('NBDEXPORT_ROOT', '/usr/local/emhttp/plugins/NBDExport');
 }
 if (!defined('NBDEXPORT_CFG_DIR')) {
-  define('NBDEXPORT_CFG_DIR', '/boot/config/plugins/NbdExport');
+  define('NBDEXPORT_CFG_DIR', '/boot/config/plugins/NBDExport');
 }
 if (!defined('NBDEXPORT_RUN')) {
   define('NBDEXPORT_RUN', '/var/run/nbdexport');
@@ -17,7 +17,7 @@ if (!defined('NBDEXPORT_LOG')) {
 }
 
 function nbd_cfg_path() {
-  return NBDEXPORT_CFG_DIR . '/NbdExport.cfg';
+  return NBDEXPORT_CFG_DIR . '/NBDExport.cfg';
 }
 
 function nbd_default_cfg_path() {
@@ -86,7 +86,7 @@ function nbd_ensure_runtime_dirs() {
 
 /**
  * Flash memory: last-used host/pull fields + named presets (no secrets).
- * Path: /boot/config/plugins/NbdExport/memory.json
+ * Path: /boot/config/plugins/NBDExport/memory.json
  */
 function nbd_memory_path() {
   return NBDEXPORT_CFG_DIR . '/memory.json';
@@ -186,14 +186,14 @@ function nbd_memory_delete_preset($name) {
 
 /**
  * Portable backup: settings + last-used + presets (no secrets, no live pids).
- * Safe to keep outside /boot/config/plugins/NbdExport (uninstall wipes that tree).
+ * Safe to keep outside /boot/config/plugins/NBDExport (uninstall wipes that tree).
  */
 function nbd_config_export_bundle() {
   $mem = nbd_memory_load();
   return [
     'format' => 'nbdexport-config',
     'format_version' => 1,
-    'plugin' => 'NbdExport',
+    'plugin' => 'NBDExport',
     'exported_at' => date('c'),
     'plugin_version' => nbd_plugin_version(),
     'settings' => nbd_load_cfg(),
@@ -391,7 +391,7 @@ function nbd_job_ui_status(array $j) {
 }
 
 function nbd_plugin_version() {
-  $plg = NBDEXPORT_ROOT . '/nbdexport.plg';
+  $plg = NBDEXPORT_ROOT . '/nbd.plg';
   if (is_file($plg)) {
     $t = @file_get_contents($plg);
     if (is_string($t) && preg_match('/ENTITY version "([^"]+)"/', $t, $m)) {
@@ -399,7 +399,7 @@ function nbd_plugin_version() {
     }
   }
   // Dev tree
-  $dev = dirname(__DIR__) . '/nbdexport.plg';
+  $dev = dirname(__DIR__) . '/nbd.plg';
   if (is_file($dev)) {
     $t = @file_get_contents($dev);
     if (is_string($t) && preg_match('/ENTITY version "([^"]+)"/', $t, $m)) {
@@ -1111,7 +1111,7 @@ function nbd_image_stop($id) {
 function nbd_write_companion_marker() {
   nbd_ensure_runtime_dirs();
   $m = [
-    'plugin' => 'NbdExport',
+    'plugin' => 'NBDExport',
     'provides' => ['nbd-export', 'qemu-nbd'],
     'version' => nbd_plugin_version(),
   ];

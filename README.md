@@ -8,5 +8,5 @@ GNU General Public License v3.0 or later — copyright **ibigs, LLC** (Author: R
 
 ## Install channel
 
-**Production / CA:** `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg`  
+**Production / CA:** `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/install.plg`  
 **Development:** `main`. Ship via merge to `stable`.

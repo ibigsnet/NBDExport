@@ -1,10 +1,10 @@
-Menu="NbdExport:3"
+Menu="NBDExport:3"
 Title="Pull"
 Tag="download"
 Markdown="false"
 ---
 <?php
-require_once '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php';
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
 <div class="nbd-wrap">
@@ -28,8 +28,8 @@ nbd_page_styles();
     </p>
 <?php endif; ?>
     <form method="POST" action="/update.php" target="progressFrame" id="nbd_pull_form" onsubmit="return nbdConfirmImage(this)">
-      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="image_start">
 
       <dl>
@@ -73,8 +73,8 @@ nbd_page_styles();
     </form>
 
     <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.75em" onsubmit="return nbdFillPullPreset(this)">
-      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="preset_save_pull">
       <input type="hidden" name="nbd_url" id="nbd_ps_url" value="">
       <input type="hidden" name="output" id="nbd_ps_out" value="">
@@ -85,8 +85,8 @@ nbd_page_styles();
     </form>
 <?php if ($pull_presets): ?>
     <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
-      <input type="hidden" name="#file" value="NbdExport/NbdExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NbdExport/include/nbd-update.php">
+      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
       <input type="hidden" name="nbd_action" value="preset_delete">
       <select name="preset_name">
 <?php foreach ($pull_presets as $pn => $pv): ?>
@@ -100,4 +100,4 @@ nbd_page_styles();
   </div>
 <?php nbd_page_footer(false); ?>
 </div>
-<?php require '/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php'; ?>
+<?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

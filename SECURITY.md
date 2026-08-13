@@ -28,13 +28,13 @@ NBD has no built-in auth — treat bind IP as the primary isolation control. Pre
 
 ## Install / update supply chain
 
-- PluginURL (Latest): `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg`
+- PluginURL (Latest): `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg`
 - FILE sources: GitHub `stable` branch
 - Development on `main`; store users use `stable`
 
 ## What to read (5 minutes)
 
-1. `install.plg` — install / Method=remove
+1. `nbd.plg` — install / Method=remove
 2. `default.cfg` — defaults above
 3. `include/nbd-lib.php` — export flags, bind, destructive gates
 4. `docs/security-and-bind.md`, `docs/destructive-mode.md`
@@ -43,4 +43,4 @@ NBD has no built-in auth — treat bind IP as the primary isolation control. Pre
 ## Contact
 
 - Support: GitHub issues (forum thread when published)
-- Project: https://github.com/ibigsnet/NbdExport
+- Project: https://github.com/ibigsnet/NBDExport
