@@ -485,7 +485,7 @@ function nbd_list_bind_ips() {
     $is_virt = (bool)preg_match('/^(docker|br-|veth|virbr|wg|tun|tap|vnet)/', $if)
       || $if === 'docker0';
     $priv = nbd_is_private_ipv4($ip);
-    // Rank: TB private (0), other non-virt private (1), virt private (2), public (3)
+    // Rank: Thunderbolt private (0), other non-virt private (1), virt private (2), public (3)
     $rank = 3;
     if ($is_tb && $priv) {
       $rank = 0;

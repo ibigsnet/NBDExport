@@ -18,7 +18,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.13ai">
+<!ENTITY version "2026.08.13aj">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -40,6 +40,7 @@
 
 <CHANGES>
 ###&version;
+- Wording: spell out **Thunderbolt** (not ambiguous “TB”); storage sizes stay “1 TB”.
 - Companion rename: **Fabric Routing** / **FabricRouting** (was UnraidFRR).
 - CA: PluginURL matches `.plg` entity exactly (no `?v=` query) so appfeed can list/update NBD Export.
 - Docs/code comments: example IPs generic (no personal lab addresses).
@@ -81,11 +82,11 @@
 - Docs: destructive-mode.md — explicit when to enable Destructive mode.
 - Docs/UI: spell out read-only (not RO); table entry not row — avoid RO/row confusion.
 - Docs: Scenario E — clear BTRFS snapshot recipe only (public tone).
-- Docs: quirky Thunderbolt vs 10G speed notes (TB4 ~20G each way ≈ 2× 10G NIC) in how-to / when-to / integration.
+- Docs: quirky Thunderbolt vs 10G speed notes (Thunderbolt 4 ~20G each way ≈ 2× 10G NIC) in how-to / when-to / integration.
 - Docs: Scenario E — cold physical-disk qcow2 on Unraid + honest BTRFS snapshot versioning.
 - Docs: Scenario C wording — Host where disk plugs in (may lack free space); Pull qcow2 onto roomy Unraid/array.
 - Docs: Host wording — raw blocks visible over the network.
-- Docs: disambiguate TB — Thunderbolt vs multi-terabyte (spell out both).
+- Docs: disambiguate Thunderbolt — Thunderbolt vs multi-terabyte (spell out both).
 - Docs: Scenario C expanded — Host NVMe on easy-access Unraid, Pull qcow2 on the box with space.
 - Docs: how-to-use tables rewritten for left→right reading; UI map matches tabs (not old section 3/4).
 - Wording: Destructive confirm clarifies writable = peer writes selected Unraid disk; array/mounted/flash = host in-use/critical devices.
@@ -130,7 +131,7 @@
 
 ###2026.08.11
 - Initial public release: Network Services → NBD, RO qemu-nbd export, image job (nbd:// → qcow2/raw), bind IP picker (Thunderbolt first), docs (when to use, vs NFS/SMB, security).
-- Soft companions: Thunderbolt Net (prefer TB bind), FabricRouting (docs only). Clean uninstall stops exports; does not touch network.cfg.
+- Soft companions: Thunderbolt Net (prefer Thunderbolt bind), FabricRouting (docs only). Clean uninstall stops exports; does not touch network.cfg.
 </CHANGES>
 
 <!--

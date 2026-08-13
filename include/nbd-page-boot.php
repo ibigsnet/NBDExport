@@ -332,7 +332,7 @@ function nbd_page_footer($show_cli = false) {
   <div class="nbd-companion">
     <strong>Companions</strong> —
 <?php if (!empty($tbn)): ?>
-    Thunderbolt Net — prefer a TB bind IP
+    Thunderbolt Net — prefer a Thunderbolt bind IP
     (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).
 <?php else: ?>
     Optional <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>

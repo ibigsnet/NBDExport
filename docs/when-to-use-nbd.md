@@ -152,7 +152,7 @@ Restore / reverse path examples: [imaging-workflow.md](imaging-workflow.md).
 
 | Path | Role for NBD |
 |------|----------------|
-| **Thunderbolt / USB4 host-net** | Best default for multi-terabyte Host/Pull. TB4-class is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way (TCP below line rate). Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet). |
+| **Thunderbolt / USB4 host-net** | Best default for multi-terabyte Host/Pull. Thunderbolt 4-class is often stickered **40 Gbit/s** and under Linux commonly trains about **20 Gbit/s each way** — still about **twice a 10 Gbit/s NIC** one-way (TCP below line rate). Pair with [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet). |
 | **10G+ / dedicated Ethernet** | Excellent for large images when you already have it. |
 | **Solid home Wi‑Fi (private SSID)** | Fine for **smaller** disks or when you have no faster private path. Stable wireless can finish a Host/Pull; a **spotty** link can still drop mid-convert. |
 | **Guest / congested / roaming Wi‑Fi** | Poor for multi-hour multi-terabyte jobs — not because NBD “hates Wi‑Fi,” but because long bulk transfers need **sustained** bandwidth and a connection that stays up. |

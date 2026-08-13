@@ -152,7 +152,7 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
   Unraid A (easy physical access)              Unraid B (roomy storage)
   ──────────────────────────────              ─────────────────────────
   Plug in the NVMe / disk here                 Array / pool / NAS capacity
-  May be low on free space                     Free space for multi-TB qcow2
+  May be low on free space                     Free space for multi-terabyte qcow2
   Host tab → read-only qemu-nbd on private IP  ───►  Pull tab → nbd://A-ip:port
   Publishes raw blocks only                      → /mnt/user/domains/…/disk.qcow2
   Stop host when B finishes                    Image file lives on B forever
