@@ -1,0 +1,351 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name "NbdExport">
+<!ENTITY author "RifleJock">
+<!--
+  Versioning — Unraid plugin updates use strcmp() (lexicographic).
+  YYYY.MM.DD then aa, ab, … same day. No hyphens.
+  Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
+-->
+<!ENTITY version "2026.08.13">
+<!ENTITY launch "Settings/NbdExport">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
+<!ENTITY github "ibigsnet/NbdExport">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
+<!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
+<!ENTITY configdir "/boot/config/plugins/NbdExport">
+]>
+
+<PLUGIN name="&name;"
+  author="&author;"
+  version="&version;"
+  launch="&launch;"
+  pluginURL="&pluginURL;"
+  icon="database"
+  min="6.12.0"
+  support="https://github.com/&github;/issues"
+  project="https://github.com/&github;"
+  readme="https://raw.githubusercontent.com/&github;/main/README.md">
+
+<CHANGES>
+###&version;
+- UI: companion links open **Network Settings** then the **Thunderbolt** / **Fabric Routing** tab (nbdGotoNetTab), not standalone `/Settings/ThunderboltNet` or `/Settings/UnraidFRR`.
+
+###2026.08.11bm
+- UI: drop redundant hosted-disks lead line; empty state is enough.
+- UI: remove meta “Always visible” note from hosted-disks header; public copy only.
+- Docs: Destructive mode wording — NBD block protocol, not imaging-only; mounted case less qcow2-centric.
+- Docs/UI: Destructive case 2 = array/parity/cache/pools; case 4 = Unraid boot device (USB or disk holding /boot).
+- Docs: destructive-mode.md — four Host cases only, bullet points.
+- Docs: NBD is not qcow2-only — raw/.img and other qemu-img targets; formats table.
+- Docs: one NVMe slot scenario — prepare image on Unraid, write new drive in a dock, swap once.
+- Docs: restore how-to-use.md (full scenarios A–F; prior empty file on main).
+- Docs: Wi‑Fi balance — solid private Wi‑Fi OK for smaller jobs; single stream + sparse qcow2 + re-Pull while host stays up; still ordinary TCP (no special resume).
+- Docs: when-to-use — common scenarios (laptop→VM, gaming PC→array, recovery, reverse to physical).
+- Docs: when-to-use opener — local physical disk feel, over the network.
+- Docs: rename “If you click this…” to “What each control does”.
+- Docs: Contents/TOC on large pages (how-to-use, DOCS, destructive-mode, …).
+- Docs: destructive-mode.md — explicit when to enable Destructive mode.
+- Docs/UI: spell out read-only (not RO); table entry not row — avoid RO/row confusion.
+- Docs: Scenario E — clear BTRFS snapshot recipe only (public tone).
+- Docs: quirky Thunderbolt vs 10G speed notes (TB4 ~20G each way ≈ 2× 10G NIC) in how-to / when-to / integration.
+- Docs: Scenario E — cold physical-disk qcow2 on Unraid + honest BTRFS snapshot versioning.
+- Docs: Scenario C wording — Host where disk plugs in (may lack free space); Pull qcow2 onto roomy Unraid/array.
+- Docs: Host wording — raw blocks visible over the network.
+- Docs: disambiguate TB — Thunderbolt vs multi-terabyte (spell out both).
+- Docs: Scenario C expanded — Host NVMe on easy-access Unraid, Pull qcow2 on the box with space.
+- Docs: how-to-use tables rewritten for left→right reading; UI map matches tabs (not old section 3/4).
+- Wording: Destructive confirm clarifies writable = peer writes selected Unraid disk; array/mounted/flash = host in-use/critical devices.
+- Shared chrome: hosted disks + orange Destructive banner on every tab; NBD blurb footer; CLI dropdown on Status.
+- Tabs: header-only parent (no blank first tab, like Network Settings/SMB); center tab strip; text tabs.
+- UI tabs (Unraid xmenu): Status · Host · Pull · Settings — like Network Settings / SMB strip.
+- Multi-disk hosting documented (already supported; free port prefill); CLI under Status as collapsible.
+
+###2026.08.11ak
+- Pull output placeholder: `/mnt/user/domains/disk.qcow2` (Unraid VM share default) instead of `/mnt/cache/images/…`.
+
+###2026.08.11aj
+- Export config: download JSON or save under /boot/config/ (outside plugin dir); short note that uninstall wipes plugin flash state; optional import from path.
+- Keeps auto last-used + named presets on flash as before.
+
+###2026.08.11ai
+- Section titles: host local disk/partition on network vs pull remote NBD into a file under /mnt.
+
+###2026.08.11ah
+- Section 2 colored empty state + status legend; remember last host/pull fields; named presets save/restore on flash.
+
+###2026.08.11ag
+- Wording: section 3 host local Unraid disk/partition on network; section 4 pull remote hosted disk into a file under /mnt.
+
+###2026.08.11af
+- Uninstall: stop managed pids only (no global pkill qemu-nbd); clear /var/log/nbdexport and case-variant paths.
+
+###2026.08.11ae
+- UI: numbered sections with full-width dividers; action bars under each block so listener vs image job are visually separate.
+
+###2026.08.11ad
+- UX/docs: “Start NBD listener” vs image job (server/client); how-to-use guide with scenarios; clearer helpers and status wording.
+
+###2026.08.11ac
+- Safety: Destructive mode (default Off) like Unassigned Devices — blocks writable and array/mounted/flash exports; UI confirms; image jobs refuse /dev output.
+
+###2026.08.11ab
+- UI: layout unified with UnraidFRR/Thunderbolt Net (dl/dt/dd, inline_help, companion strip, status table, Apply/Done).
+
+###2026.08.11aa
+- Docs/UI: Unraid product min 6.12 vs qemu tools (not kernel); clearer Status missing-tool text.
+
+###2026.08.11
+- Initial public release: Network Services → NBD, RO qemu-nbd export, image job (nbd:// → qcow2/raw), bind IP picker (Thunderbolt first), docs (when to use, vs NFS/SMB, security).
+- Soft companions: Thunderbolt Net (prefer TB bind), UnraidFRR (docs only). Clean uninstall stops exports; does not touch network.cfg.
+</CHANGES>
+
+<!--
+  NbdExport is intentionally separate from ThunderboltNet / UnraidFRR:
+  no PHP requires across plugins. NBD is not controlled by network-extra.
+-->
+
+<FILE Run="/bin/bash">
+<INLINE><![CDATA[
+echo "NbdExport: preparing directories..."
+rm -rf /usr/local/emhttp/plugins/NbdExport
+rm -rf /usr/local/emhttp/plugins/nbdexport
+mkdir -p /usr/local/emhttp/plugins/NbdExport/include
+mkdir -p /usr/local/emhttp/plugins/NbdExport/scripts
+mkdir -p /usr/local/emhttp/plugins/NbdExport/event
+mkdir -p /usr/local/emhttp/plugins/NbdExport/docs
+mkdir -p /boot/config/plugins/NbdExport
+mkdir -p /var/run/nbdexport
+mkdir -p /var/log/nbdexport
+echo "NbdExport: directories ready."
+]]></INLINE>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdExport.page">
+<URL>&raw;/NbdExport.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdStatus.page">
+<URL>&raw;/NbdStatus.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdHost.page">
+<URL>&raw;/NbdHost.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdPull.page">
+<URL>&raw;/NbdPull.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/NbdSettings.page">
+<URL>&raw;/NbdSettings.page?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/default.cfg">
+<URL>&raw;/default.cfg?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/README.md">
+<INLINE>
+<![CDATA[
+**NBD Export**
+
+Export a disk or partition as a **Network Block Device** (NBD) and image remote NBD targets to qcow2/raw on Unraid. Lives under **Settings → Network Services → NBD** next to NFS and SMB. Prefer private binds (Thunderbolt Net IPs when available). Read-only by default. Standalone — Thunderbolt Net and FRR are optional companions.
+]]>
+</INLINE>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php">
+<URL>&raw;/include/nbd-lib.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-update.php">
+<URL>&raw;/include/nbd-update.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-download-config.php">
+<URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-boot.php">
+<URL>&raw;/include/nbd-page-boot.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/include/nbd-page-js.php">
+<URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start">
+<URL>&raw;/scripts/nbd-export-start?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-stop">
+<URL>&raw;/scripts/nbd-export-stop?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/scripts/nbd-image-from-url">
+<URL>&raw;/scripts/nbd-image-from-url?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/event/started">
+<URL>&raw;/event/started?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/nbdexport.plg">
+<URL>&raw;/nbdexport.plg?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/DOCS.md">
+<URL>&raw;/DOCS.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/how-to-use.md">
+<URL>&raw;/docs/how-to-use.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/when-to-use-nbd.md">
+<URL>&raw;/docs/when-to-use-nbd.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/nbd-vs-nfs-smb.md">
+<URL>&raw;/docs/nbd-vs-nfs-smb.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/security-and-bind.md">
+<URL>&raw;/docs/security-and-bind.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/destructive-mode.md">
+<URL>&raw;/docs/destructive-mode.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/imaging-workflow.md">
+<URL>&raw;/docs/imaging-workflow.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-thunderboltnet.md">
+<URL>&raw;/docs/integration-thunderboltnet.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-unraidfrr.md">
+<URL>&raw;/docs/integration-unraidfrr.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/settings-reference.md">
+<URL>&raw;/docs/settings-reference.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/troubleshooting.md">
+<URL>&raw;/docs/troubleshooting.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/README.md">
+<URL>&raw;/docs/README.md?v=&version;</URL>
+</FILE>
+
+<FILE Run="/bin/bash">
+<INLINE><![CDATA[
+echo "NbdExport: finishing install..."
+chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-start 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-export-stop 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NbdExport/scripts/nbd-image-from-url 2>/dev/null || true
+chmod 755 /usr/local/emhttp/plugins/NbdExport/event/started 2>/dev/null || true
+# Array-start hook
+if [ -d /usr/local/emhttp/plugins ]; then
+  mkdir -p /usr/local/emhttp/plugins/NbdExport/event
+fi
+# Unraid event symlink style (if present)
+if [ -d /usr/local/emhttp/plugins/dynamix/event ]; then
+  :
+fi
+# Install array-start event if Unraid plugin event path exists
+EVDIR=/usr/local/emhttp/plugins/NbdExport/event
+if [ -f "$EVDIR/started" ]; then
+  chmod 755 "$EVDIR/started"
+fi
+# Also copy into boot event if using plugin event convention
+mkdir -p /boot/config/plugins/NbdExport
+if [ ! -f /boot/config/plugins/NbdExport/NbdExport.cfg ]; then
+  if [ -f /usr/local/emhttp/plugins/NbdExport/default.cfg ]; then
+    cp -a /usr/local/emhttp/plugins/NbdExport/default.cfg /boot/config/plugins/NbdExport/NbdExport.cfg
+    echo "NbdExport: created default NbdExport.cfg"
+  fi
+fi
+# Soft-link event into Unraid's plugin event system when available
+if [ -d /usr/local/emhttp/plugins ]; then
+  # Many plugins register via /boot/config/plugins/*/event or plg FILE — emhttp event/started is enough if plugin manager links it
+  :
+fi
+php -r 'require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php"; nbd_write_companion_marker();' 2>/dev/null || true
+echo "NbdExport: install complete."
+echo "NbdExport: Settings → Network Services → NBD"
+echo "NbdExport: Hard-refresh the browser (Ctrl+Shift+R)."
+]]></INLINE>
+</FILE>
+
+<FILE Run="/bin/bash" Method="remove">
+<INLINE><![CDATA[
+echo "NbdExport: removing plugin (full cleanup)..."
+
+# 1) Stop managed listeners/jobs only (via state files — not global pkill qemu-nbd)
+if [ -f /usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php ]; then
+  php -r '
+    require_once "/usr/local/emhttp/plugins/NbdExport/include/nbd-lib.php";
+    nbd_stop_all_exports();
+    foreach (nbd_jobs_state() as $j) {
+      if (!empty($j["id"])) { nbd_image_stop($j["id"]); }
+    }
+  ' 2>/dev/null || true
+fi
+# Best-effort: kill only pids recorded under our run dir
+if [ -d /var/run/nbdexport ]; then
+  for pf in /var/run/nbdexport/*.pid; do
+    [ -f "$pf" ] || continue
+    pid=$(tr -cd '0-9' <"$pf" 2>/dev/null || true)
+    if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 0.2
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+fi
+
+# 2) Runtime + logs (RAM; not flash)
+rm -rf /var/run/nbdexport
+rm -rf /var/log/nbdexport
+
+# 3) Emhttp tree (all case variants)
+rm -rf /usr/local/emhttp/plugins/NbdExport
+rm -rf /usr/local/emhttp/plugins/nbdexport
+rm -rf /usr/local/emhttp/plugins/Nbdexport
+
+# Stray tab pages if ever copied outside plugin dir
+rm -f /usr/local/emhttp/webGui/Nbd*.page \
+      /usr/local/emhttp/plugins/dynamix/Nbd*.page 2>/dev/null || true
+find /usr/local/emhttp/webGui /usr/local/emhttp/plugins/dynamix -maxdepth 1 -type f \
+  \( -name 'NbdExport.page' -o -name 'NbdStatus.page' -o -name 'NbdHost.page' \
+     -o -name 'NbdPull.page' -o -name 'NbdSettings.page' \) -delete 2>/dev/null || true
+
+# 4) Flash plugin state (cfg, companion). Unraid also removes nbdexport.plg from /boot/config/plugins/
+# Flash: cfg + memory/presets (admin-only paths/IPs — wiped on uninstall like plugin state)
+rm -rf /boot/config/plugins/NbdExport
+rm -rf /boot/config/plugins/nbdexport
+rm -f /boot/config/plugins/nbdexport.plg 2>/dev/null || true
+
+# 5) Temp install copies
+rm -f /tmp/plugins/nbdexport.plg /tmp/plugins/nbdexport.txt 2>/dev/null || true
+rm -f /tmp/plugins/NbdExport* /tmp/inline*-nbdexport.sh 2>/dev/null || true
+
+if [ -e /usr/local/emhttp/plugins/NbdExport ] || [ -e /usr/local/emhttp/plugins/nbdexport ]; then
+  echo "NbdExport: WARNING — emhttp plugin path still present"
+else
+  echo "NbdExport: emhttp plugin paths clear"
+fi
+echo "NbdExport: removed."
+echo "NbdExport: did not modify network.cfg, Thunderbolt Net, or UnraidFRR."
+echo "NbdExport: user image files under /mnt/ were left untouched."
+echo "NbdExport: hard-refresh the browser."
+]]></INLINE>
+</FILE>
+
+</PLUGIN>
