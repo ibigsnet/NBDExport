@@ -1,6 +1,6 @@
 # Contributing
 
-- Versioning: `YYYY.MM.DD` + `aa`/`ab`/… (Unraid `strcmp`). No hyphens.  
+- Versioning: see [RELEASES.md](RELEASES.md).
 - Never force-push `main`.  
 - No empty-file pushes.  
 - Do not hard-`require` ThunderboltNet or FabricRouting PHP.  
@@ -16,6 +16,3 @@ By contributing, you agree that your contributions are licensed under the **GNU 
 - `main` — development (may break)
 - `stable` — production / CA channel only; maintainers merge release-ready work here
 
-## Versioning (calendar)
-
-Version date = **lab host wall clock** (America/Chicago), not UTC and not “previous date + 1”. Run `date` on lab before bumping. See [RELEASES.md](RELEASES.md).
