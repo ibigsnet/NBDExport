@@ -465,7 +465,7 @@ function nbd_list_bind_ips() {
   $out = [];
   @exec('ip -4 -o addr show 2>/dev/null', $out);
   foreach ($out as $line) {
-    // 2: eth0    inet 192.168.1.3/24 ...
+    // 2: eth0    inet 10.0.0.10/24 ...
     if (!preg_match('/^\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/', $line, $m)) {
       continue;
     }
