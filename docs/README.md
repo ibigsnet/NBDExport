@@ -19,7 +19,7 @@ Read in this order for a new install:
 | Doc | Topic |
 |-----|--------|
 | [integration-thunderboltnet.md](integration-thunderboltnet.md) | Thunderbolt underlay |
-| [integration-unraidfrr.md](integration-unraidfrr.md) | Fabric Routing / multi-hop |
+| [integration-fabricrouting.md](integration-fabricrouting.md) | Fabric Routing / multi-hop |
 
 ### Releases
 

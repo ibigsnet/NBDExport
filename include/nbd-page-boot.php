@@ -23,7 +23,7 @@ $def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
 $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $tbn = !empty($st['thunderboltnet']);
-$frr = !empty($st['unraidfrr']);
+$frr = !empty($st['fabricrouting']);
 $mem = nbd_memory_load();
 $last_host = is_array($mem['last_host'] ?? null) ? $mem['last_host'] : [];
 $last_pull = is_array($mem['last_pull'] ?? null) ? $mem['last_pull'] : [];
@@ -349,7 +349,7 @@ function nbd_page_footer($show_cli = false) {
   </div>
 <script>
 /* Fleet standard: Network Settings sibling tabs (ibigsGotoNetTab).
-   Never deep-link /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA). */
+   Never deep-link /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA). */
 (function (global) {
   'use strict';
   var WANT = 'ibigsWantTab';

@@ -1,6 +1,6 @@
 <?php
 /**
- * NBD Export — core helpers (no hard require of ThunderboltNet / UnraidFRR).
+ * NBD Export — core helpers (no hard require of ThunderboltNet / FabricRouting).
  */
 
 if (!defined('NBDEXPORT_ROOT')) {
@@ -517,8 +517,10 @@ function nbd_thunderboltnet_present() {
     || is_dir('/boot/config/plugins/ThunderboltNet');
 }
 
-function nbd_unraidfrr_present() {
-  return is_dir('/usr/local/emhttp/plugins/UnraidFRR')
+function nbd_fabricrouting_present() {
+  return is_dir('/usr/local/emhttp/plugins/FabricRouting')
+    || is_dir('/boot/config/plugins/FabricRouting')
+    || is_dir('/usr/local/emhttp/plugins/UnraidFRR')
     || is_dir('/boot/config/plugins/UnraidFRR');
 }
 
@@ -1128,7 +1130,7 @@ function nbd_status() {
     'jobs' => nbd_jobs_state(),
     'bind_ips' => nbd_list_bind_ips(),
     'thunderboltnet' => nbd_thunderboltnet_present(),
-    'unraidfrr' => nbd_unraidfrr_present(),
+    'fabricrouting' => nbd_fabricrouting_present(),
   ];
 }
 

@@ -6,7 +6,7 @@
   Versioning — Unraid plugin updates use strcmp() (lexicographic), NOT version_compare.
   No hyphens. Bump only this entity; asset ?v= uses it.
 
-  Rules (ibigsnet fleet — StorageGuard / Thunderbolt Net / UnraidFRR / NBD Export):
+  Rules (ibigsnet fleet — StorageGuard / Thunderbolt Net / FabricRouting / NBD Export):
     YYYY.MM.DD       first release that calendar day
     YYYY.MM.DDaa     2nd same day, then ab, ac, ... az, ba, bb, ...
   Two-letter only after the bare date — never single a–z
@@ -16,9 +16,9 @@
   if raw CDN poisons bare main/nbdexport.plg.
 
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
-  /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA pages).
+  /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.13ah">
+<!ENTITY version "2026.08.13ai">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -40,6 +40,7 @@
 
 <CHANGES>
 ###&version;
+- Companion rename: **Fabric Routing** / **FabricRouting** (was UnraidFRR).
 - CA: PluginURL matches `.plg` entity exactly (no `?v=` query) so appfeed can list/update NBD Export.
 - Docs/code comments: example IPs generic (no personal lab addresses).
 - Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
@@ -122,18 +123,18 @@
 - Safety: Destructive mode (default Off) like Unassigned Devices — blocks writable and array/mounted/flash exports; UI confirms; image jobs refuse /dev output.
 
 ###2026.08.11ab
-- UI: layout unified with UnraidFRR/Thunderbolt Net (dl/dt/dd, inline_help, companion strip, status table, Apply/Done).
+- UI: layout unified with FabricRouting/Thunderbolt Net (dl/dt/dd, inline_help, companion strip, status table, Apply/Done).
 
 ###2026.08.11aa
 - Docs/UI: Unraid product min 6.12 vs qemu tools (not kernel); clearer Status missing-tool text.
 
 ###2026.08.11
 - Initial public release: Network Services → NBD, RO qemu-nbd export, image job (nbd:// → qcow2/raw), bind IP picker (Thunderbolt first), docs (when to use, vs NFS/SMB, security).
-- Soft companions: Thunderbolt Net (prefer TB bind), UnraidFRR (docs only). Clean uninstall stops exports; does not touch network.cfg.
+- Soft companions: Thunderbolt Net (prefer TB bind), FabricRouting (docs only). Clean uninstall stops exports; does not touch network.cfg.
 </CHANGES>
 
 <!--
-  NbdExport is intentionally separate from ThunderboltNet / UnraidFRR:
+  NbdExport is intentionally separate from ThunderboltNet / FabricRouting:
   no PHP requires across plugins. NBD is not controlled by network-extra.
 -->
 
@@ -259,8 +260,8 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 <URL>&raw;/docs/integration-thunderboltnet.md?v=&version;</URL>
 </FILE>
 
-<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-unraidfrr.md">
-<URL>&raw;/docs/integration-unraidfrr.md?v=&version;</URL>
+<FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/integration-fabricrouting.md">
+<URL>&raw;/docs/integration-fabricrouting.md?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NbdExport/docs/settings-reference.md">
@@ -374,7 +375,7 @@ else
   echo "NbdExport: emhttp plugin paths clear"
 fi
 echo "NbdExport: removed."
-echo "NbdExport: did not modify network.cfg, Thunderbolt Net, or UnraidFRR."
+echo "NbdExport: did not modify network.cfg, Thunderbolt Net, or FabricRouting."
 echo "NbdExport: user image files under /mnt/ were left untouched."
 echo "NbdExport: hard-refresh the browser."
 ]]></INLINE>

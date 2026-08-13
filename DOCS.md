@@ -17,7 +17,7 @@
 **Optional companions**
 
 - [Thunderbolt Net](https://github.com/ibigsnet/ThunderboltNet) — fast host-to-host underlay; prefer binding NBD to a Thunderbolt IP  
-- [Fabric Routing (FRR)](https://github.com/ibigsnet/UnraidFRR) / UnraidFRR — multi-hop routing only; NBD uses ordinary TCP  
+- [Fabric Routing (FRR)](https://github.com/ibigsnet/FabricRouting)  / Fabric Routing — multi-hop routing only; NBD uses ordinary TCP  
 
 Neither is required. This plugin does **not** PHP-require them.
 
@@ -160,7 +160,7 @@ Image files under `/mnt/` are never part of this export.
 1. Optional: **Export config** if you want settings/presets later.  
 2. **Plugins** → NBD Export → **Remove**.  
 3. Stops hosts, clears run state, deletes emhttp + flash plugin config.  
-4. Does **not** touch `network.cfg`, Thunderbolt Net, UnraidFRR, qcow2 under `/mnt/`, or export JSON under `/boot/config/nbdexport-config-*.json`.
+4. Does **not** touch `network.cfg`, Thunderbolt Net, Fabric Routing, qcow2 under `/mnt/`, or export JSON under `/boot/config/nbdexport-config-*.json`.
 
 ---
 
@@ -175,7 +175,7 @@ Image files under `/mnt/` are never part of this export.
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, read-only |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
-| [docs/integration-unraidfrr.md](docs/integration-unraidfrr.md) | Fabric Routing / multi-hop (optional) |
+| [docs/integration-fabricrouting.md](docs/integration-fabricrouting.md) | Fabric Routing / multi-hop (optional) |
 | [docs/settings-reference.md](docs/settings-reference.md) | Every control by tab |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common failures |
 
@@ -183,4 +183,4 @@ Image files under `/mnt/` are never part of this export.
 
 ## Versioning
 
-Unraid plugin updates use **lexicographic** `strcmp`: `YYYY.MM.DD`, then `aa`, `ab`, … same day. **No hyphens.** Same rules as Storage Guard, Thunderbolt Net, and UnraidFRR.
+Unraid plugin updates use **lexicographic** `strcmp`: `YYYY.MM.DD`, then `aa`, `ab`, … same day. **No hyphens.** Same rules as Storage Guard, Thunderbolt Net, and Fabric Routing.

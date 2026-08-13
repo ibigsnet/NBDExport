@@ -2,7 +2,7 @@
 
 ## Version strings (plugin / Unraid)
 
-Unraid plugin updates use **lexicographic `strcmp()`**, not PHP `version_compare()`. Rules (same as Storage Guard / Thunderbolt Net / UnraidFRR):
+Unraid plugin updates use **lexicographic `strcmp()`**, not PHP `version_compare()`. Rules (same as Storage Guard / Thunderbolt Net / FabricRouting):
 
 | Form | Meaning |
 |------|---------|
@@ -21,7 +21,7 @@ Unraid plugin updates use **lexicographic `strcmp()`**, not PHP `version_compare
 | Do | Don’t |
 |----|--------|
 | `/Settings/NetworkSettings` + `ibigsGotoNetTab('Thunderbolt')` | `/Settings/ThunderboltNet` |
-| `/Settings/NetworkSettings` + `ibigsGotoNetTab('Fabric Routing')` | `/Settings/UnraidFRR` |
+| `/Settings/NetworkSettings` + `ibigsGotoNetTab('Fabric Routing')` | `/Settings/FabricRouting` |
 
 Canonical JS: **`ibigsGotoNetTab(needle, event)`** (aliases: `nbdGotoNetTab`, `tbnGotoNetTab`, `frrGotoNetTab`).  
 NBD itself lives under **Network Services** (`/Settings/NbdExport`) — that path is correct for opening NBD, not a Network Settings tab.
@@ -50,7 +50,7 @@ Keep **`install.plg` and `nbdexport.plg` identical** on every ship. CA `PluginUR
 
 ### 2026.08.11ab
 
-- Settings page layout aligned with UnraidFRR / Thunderbolt Net (forms, help panels, companion strip).
+- Settings page layout aligned with FabricRouting / Thunderbolt Net (forms, help panels, companion strip).
 
 ### 2026.08.11aa
 
