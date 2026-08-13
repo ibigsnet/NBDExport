@@ -7,11 +7,12 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.13ab">
+<!ENTITY version "2026.08.13ac">
 <!ENTITY launch "Settings/NbdExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/refs/heads/main/nbdexport.plg">
+<!-- ?v= busts raw CDN if a prior empty blob was cached on the bare path -->
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg?v=2026.08.13ac">
 <!ENTITY github "ibigsnet/NbdExport">
-<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/refs/heads/main">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
 <!ENTITY configdir "/boot/config/plugins/NbdExport">
 ]>
@@ -30,10 +31,13 @@
 <CHANGES>
 ###&version;
 - UI: companion links open **Network Settings** then the **Thunderbolt** / **Fabric Routing** tab (nbdGotoNetTab), not standalone `/Settings/ThunderboltNet` or `/Settings/UnraidFRR`.
-- Install URL: use `refs/heads/main` raw path (avoids a poisoned empty `main/nbdexport.plg` CDN cache).
+- Install: `pluginURL` includes `?v=` so raw CDN cannot serve a stale empty `nbdexport.plg`.
+
+###2026.08.13ab
+- Companion tab links; restore DOCS after empty-file mishap.
 
 ###2026.08.13aa
-- Same companion tab-link fix; plg body restored after empty-file mishap.
+- Companion tab-link fix; plg body restored.
 
 ###2026.08.13
 - (superseded) companion tab-link fix.
