@@ -6,7 +6,7 @@ Versioning: Unraid `strcmp` — `YYYY.MM.DD` then `aa`, `ab`, … No hyphens.
 
 ```text
 # Latest
-https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg?v=2026.08.13ac
+https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg
 ```
 
 ## History
