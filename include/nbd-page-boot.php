@@ -333,14 +333,54 @@ function nbd_page_footer($show_cli = false) {
     <strong>Companions</strong> —
 <?php if (!empty($tbn)): ?>
     Thunderbolt Net — prefer a TB bind IP
-    (<a href="/Settings/ThunderboltNet">Network Settings → Thunderbolt</a>).
+    (<a href="/Settings/NetworkSettings" onclick="return nbdGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).
 <?php else: ?>
     Optional <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
     for a private underlay.
 <?php endif; ?>
-    Fabric Routing (FRR): <?= !empty($frr) ? 'installed (optional multi-hop only)' : 'not needed for NBD' ?>.
+<?php if (!empty($frr)): ?>
+    Fabric Routing (FRR): installed
+    (<a href="/Settings/NetworkSettings" onclick="return nbdGotoNetTab('Fabric Routing', event)">Network Settings → Fabric Routing</a>;
+    optional multi-hop only).
+<?php else: ?>
+    Fabric Routing (FRR): not needed for NBD.
+<?php endif; ?>
     <span class="nbd-muted"> NBD binds its own IP:port.</span>
   </div>
+<script>
+/* Leave Network Services → NBD for Network Settings strip, then activate tab.
+   Never deep-link /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA pages). */
+(function () {
+  if (typeof window.nbdGotoNetTab === 'function') return;
+  function nbdFindTabButton(needle) {
+    var tabs = document.querySelectorAll('.tabs [role="tab"], .tabs a, #menu a, .nav-item');
+    var want = (needle || '').toLowerCase();
+    if (!want) return null;
+    for (var i = 0; i < tabs.length; i++) {
+      var t = (tabs[i].textContent || tabs[i].innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (t.indexOf(want) !== -1) return tabs[i];
+    }
+    return null;
+  }
+  window.nbdGotoNetTab = function (needle, evt) {
+    if (typeof window.tbnGotoNetTab === 'function') {
+      return window.tbnGotoNetTab(needle, evt);
+    }
+    if (evt && evt.preventDefault) evt.preventDefault();
+    var tab = nbdFindTabButton(needle);
+    if (tab) {
+      tab.click();
+      try { tab.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+      return false;
+    }
+    /* Cross-menu (Network Services → Network Settings): remember tab; TBN/FRR
+       pages load inside the Network Settings xmenu and apply tbnWantTab. */
+    try { sessionStorage.setItem('tbnWantTab', needle); } catch (e2) {}
+    window.location.href = '/Settings/NetworkSettings';
+    return false;
+  };
+})();
+</script>
 <?php if ($show_cli): ?>
   <details class="nbd-cli-box">
     <summary>CLI reference (same path the UI wraps)</summary>
