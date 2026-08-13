@@ -3,14 +3,24 @@
 <!ENTITY name "NbdExport">
 <!ENTITY author "RifleJock">
 <!--
-  Versioning — Unraid plugin updates use strcmp() (lexicographic).
-  YYYY.MM.DD then aa, ab, … same day. No hyphens.
-  Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
+  Versioning — Unraid plugin updates use strcmp() (lexicographic), NOT version_compare.
+  No hyphens. Bump only this entity; asset ?v= uses it.
+
+  Rules (ibigsnet fleet — StorageGuard / Thunderbolt Net / UnraidFRR / NBD Export):
+    YYYY.MM.DD       first release that calendar day
+    YYYY.MM.DDaa     2nd same day, then ab, ac, ... az, ba, bb, ...
+  Two-letter only after the bare date — never single a–z
+  (strcmp treats "aa" as older than "z").
+
+  Keep install.plg identical to this file. Latest PluginURL may use install.plg
+  if raw CDN poisons bare main/nbdexport.plg.
+
+  UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
+  /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA pages).
 -->
-<!ENTITY version "2026.08.13ad">
+<!ENTITY version "2026.08.13ae">
 <!ENTITY launch "Settings/NbdExport">
-<!-- ?v= busts raw CDN if a prior empty blob was cached on the bare path -->
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg?v=2026.08.13ad">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
 <!ENTITY github "ibigsnet/NbdExport">
 <!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
@@ -30,11 +40,14 @@
 
 <CHANGES>
 ###&version;
-- UI: companion links open **Network Settings** then the **Thunderbolt** / **Fabric Routing** tab (nbdGotoNetTab), not standalone `/Settings/ThunderboltNet` or `/Settings/UnraidFRR`.
-- Install: Latest URL is `install.plg` (same body as `nbdexport.plg`) — bare `main/nbdexport.plg` had a poisoned empty raw CDN cache.
+- Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
+- Install: Latest remains `install.plg` (must stay identical to `nbdexport.plg`).
+
+###2026.08.13ad
+- Companion Network Settings tab links; `install.plg` as Latest after empty CDN on bare `nbdexport.plg`.
 
 ###2026.08.13ac
-- Companion tab links; pluginURL `?v=` attempt (CDN still sticky on empty path).
+- Companion tab links; pluginURL `?v=` attempt.
 
 ###2026.08.13ab
 - Companion tab links; restore DOCS after empty-file mishap.

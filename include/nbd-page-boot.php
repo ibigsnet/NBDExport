@@ -333,14 +333,14 @@ function nbd_page_footer($show_cli = false) {
     <strong>Companions</strong> —
 <?php if (!empty($tbn)): ?>
     Thunderbolt Net — prefer a TB bind IP
-    (<a href="/Settings/NetworkSettings" onclick="return nbdGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).
+    (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).
 <?php else: ?>
     Optional <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
     for a private underlay.
 <?php endif; ?>
 <?php if (!empty($frr)): ?>
     Fabric Routing (FRR): installed
-    (<a href="/Settings/NetworkSettings" onclick="return nbdGotoNetTab('Fabric Routing', event)">Network Settings → Fabric Routing</a>;
+    (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Fabric Routing', event)">Network Settings → Fabric Routing</a>;
     optional multi-hop only).
 <?php else: ?>
     Fabric Routing (FRR): not needed for NBD.
@@ -348,11 +348,14 @@ function nbd_page_footer($show_cli = false) {
     <span class="nbd-muted"> NBD binds its own IP:port.</span>
   </div>
 <script>
-/* Leave Network Services → NBD for Network Settings strip, then activate tab.
-   Never deep-link /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA pages). */
-(function () {
-  if (typeof window.nbdGotoNetTab === 'function') return;
-  function nbdFindTabButton(needle) {
+/* Fleet standard: Network Settings sibling tabs (ibigsGotoNetTab).
+   Never deep-link /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA). */
+(function (global) {
+  'use strict';
+  var WANT = 'ibigsWantTab';
+  var WANT_LEGACY = 'tbnWantTab';
+  var NET = '/Settings/NetworkSettings';
+  function findTab(needle) {
     var tabs = document.querySelectorAll('.tabs [role="tab"], .tabs a, #menu a, .nav-item');
     var want = (needle || '').toLowerCase();
     if (!want) return null;
@@ -362,24 +365,51 @@ function nbd_page_footer($show_cli = false) {
     }
     return null;
   }
-  window.nbdGotoNetTab = function (needle, evt) {
-    if (typeof window.tbnGotoNetTab === 'function') {
-      return window.tbnGotoNetTab(needle, evt);
-    }
+  function setWant(n) {
+    try { sessionStorage.setItem(WANT, n); sessionStorage.setItem(WANT_LEGACY, n); } catch (e) {}
+  }
+  function getWant() {
+    try { return sessionStorage.getItem(WANT) || sessionStorage.getItem(WANT_LEGACY); } catch (e) { return null; }
+  }
+  function clearWant() {
+    try { sessionStorage.removeItem(WANT); sessionStorage.removeItem(WANT_LEGACY); } catch (e) {}
+  }
+  function gotoNetTab(needle, evt) {
     if (evt && evt.preventDefault) evt.preventDefault();
-    var tab = nbdFindTabButton(needle);
+    var tab = findTab(needle);
     if (tab) {
       tab.click();
       try { tab.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
       return false;
     }
-    /* Cross-menu (Network Services → Network Settings): remember tab; TBN/FRR
-       pages load inside the Network Settings xmenu and apply tbnWantTab. */
-    try { sessionStorage.setItem('tbnWantTab', needle); } catch (e2) {}
-    window.location.href = '/Settings/NetworkSettings';
+    setWant(needle);
+    global.location.href = NET;
     return false;
-  };
-})();
+  }
+  function applyWanted() {
+    var want = getWant();
+    if (!want) return;
+    var tab = findTab(want);
+    if (!tab) return;
+    clearWant();
+    setTimeout(function () { tab.click(); }, 50);
+  }
+  if (typeof global.ibigsGotoNetTab !== 'function') {
+    global.ibigsGotoNetTab = gotoNetTab;
+  }
+  global.nbdGotoNetTab = function (n, e) { return global.ibigsGotoNetTab(n, e); };
+  if (typeof global.tbnGotoNetTab !== 'function') {
+    global.tbnGotoNetTab = function (n, e) { return global.ibigsGotoNetTab(n, e); };
+  }
+  if (typeof global.frrGotoNetTab !== 'function') {
+    global.frrGotoNetTab = function (n, e) { return global.ibigsGotoNetTab(n, e); };
+  }
+  function onReady() { applyWanted(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady);
+  else onReady();
+  setTimeout(applyWanted, 200);
+  setTimeout(applyWanted, 600);
+})(window);
 </script>
 <?php if ($show_cli): ?>
   <details class="nbd-cli-box">

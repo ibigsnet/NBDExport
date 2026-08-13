@@ -1,13 +1,42 @@
 # Releases
 
-Versioning: Unraid `strcmp` — `YYYY.MM.DD` then `aa`, `ab`, … No hyphens.
+## Version strings (plugin / Unraid)
+
+Unraid plugin updates use **lexicographic `strcmp()`**, not PHP `version_compare()`. Rules (same as Storage Guard / Thunderbolt Net / UnraidFRR):
+
+| Form | Meaning |
+|------|---------|
+| `YYYY.MM.DD` | First ship that calendar day |
+| `YYYY.MM.DDaa` | 2nd ship same day, then `ab` … `az`, `ba`, `bb`, … |
+
+**Hard rules:**
+
+- No hyphens.  
+- After the bare date, **two-letter** suffixes only — never single `a`–`z`.  
+- Bump only `<!ENTITY version "…">` in `nbdexport.plg` / `install.plg` (keep both identical).  
+- Add a `###&version;` block under `<CHANGES>` in the same ship.
+
+### Cross-plugin UI links (fleet standard)
+
+| Do | Don’t |
+|----|--------|
+| `/Settings/NetworkSettings` + `ibigsGotoNetTab('Thunderbolt')` | `/Settings/ThunderboltNet` |
+| `/Settings/NetworkSettings` + `ibigsGotoNetTab('Fabric Routing')` | `/Settings/UnraidFRR` |
+
+Canonical JS: **`ibigsGotoNetTab(needle, event)`** (aliases: `nbdGotoNetTab`, `tbnGotoNetTab`, `frrGotoNetTab`).  
+NBD itself lives under **Network Services** (`/Settings/NbdExport`) — that path is correct for opening NBD, not a Network Settings tab.
 
 ## Install URLs
 
 ```text
-# Latest
+# Latest (preferred — install.plg mirrors nbdexport.plg)
 https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg
+
+# Same body (if raw CDN is healthy)
+https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg
 ```
+
+Keep **`install.plg` and `nbdexport.plg` identical** on every ship. CA `PluginURL` should track Latest (`install.plg`).
 
 ## History
 
