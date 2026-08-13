@@ -18,11 +18,11 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.13aj">
+<!ENTITY version "2026.08.14aa">
 <!ENTITY launch "Settings/NbdExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg">
 <!ENTITY github "ibigsnet/NbdExport">
-<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/stable">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
 <!ENTITY configdir "/boot/config/plugins/NbdExport">
 ]>
@@ -36,7 +36,7 @@
   min="6.12.0"
   support="https://github.com/&github;/issues"
   project="https://github.com/&github;"
-  readme="https://raw.githubusercontent.com/&github;/main/README.md">
+  readme="https://raw.githubusercontent.com/&github;/stable/README.md">
 
 <CHANGES>
 ###&version;
@@ -46,6 +46,11 @@
 - Docs/code comments: example IPs generic (no personal lab addresses).
 - Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
 - Install: `install.plg?v=` cache-bust on PluginURL (keep body identical to `nbdexport.plg`).
+
+###2026.08.14aa
+- **License:** GNU GPLv3 or later (copyright ibigs, LLC; Author: RifleJock).
+- **Release channel:** PluginURL + raw sources on branch `stable` (install.plg remains Latest URL).
+- SECURITY.md: RO default, no bind-all, destructive off, managed-pid uninstall.
 
 ###2026.08.13ae
 - Fleet standard ibigsGotoNetTab (same as af).

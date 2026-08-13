@@ -30,7 +30,7 @@ NBD itself lives under **Network Services** (`/Settings/NbdExport`) — that pat
 
 | Track | URL |
 |-------|-----|
-| **Latest (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg` |
+| **Latest (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg` |
 | **Recommended freeze** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable-recommended-2026.08.13aj/install.plg` |
 | **Pinned version tag** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/vVERSION/install.plg` |
 

@@ -6,7 +6,7 @@
 |--|--|
 | **UI** | **Settings → Network Services → NBD** (tabs: Status · Host · Pull · Settings) |
 | **Install (CA)** | Apps → search **NBD Export** |
-| **Install (raw)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg` |
+| **Install (raw)** | `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg` |
 | **Support** | [GitHub Issues](https://github.com/ibigsnet/NbdExport/issues) |
 | **Source** | [github.com/ibigsnet/NbdExport](https://github.com/ibigsnet/NbdExport) |
 | **Support development** | [Patreon](https://www.patreon.com/cw/IBIGSNet) · [PayPal](https://www.paypal.com/paypalme/RifleJock) |
@@ -97,7 +97,7 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 ### Option B — raw `.plg` URL
 
 1. **Plugins → Install Plugin**.  
-2. Paste: `https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg`  
+2. Paste: `https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg`  
 3. Hard-refresh → **Network Services → NBD**.
 
 Requires **Unraid product 6.12+** (plugin `min=` / CA MinVer — not a Linux kernel version).  
