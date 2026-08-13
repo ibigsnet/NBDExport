@@ -18,11 +18,11 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14aa">
+<!ENTITY version "2026.08.14ab">
 <!ENTITY launch "Settings/NbdExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/stable/install.plg">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
 <!ENTITY github "ibigsnet/NbdExport">
-<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/stable">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
 <!ENTITY configdir "/boot/config/plugins/NbdExport">
 ]>
@@ -46,6 +46,10 @@
 - Docs/code comments: example IPs generic (no personal lab addresses).
 - Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
 - Install: `install.plg?v=` cache-bust on PluginURL (keep body identical to `nbdexport.plg`).
+
+###2026.08.14ab
+- **Lab channel:** On branch `main`, PluginURL + raw FILE sources point at `main` (lab uninstall/reinstall testing).
+- Branch `stable` remains the CA/production pin (see RELEASE-CHANNEL.md). Ship by merging to stable and rewriting entities to stable.
 
 ###2026.08.14aa
 - **License:** GNU GPLv3 or later (copyright ibigs, LLC; Author: RifleJock).
