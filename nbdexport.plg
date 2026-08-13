@@ -7,7 +7,7 @@
   YYYY.MM.DD then aa, ab, … same day. No hyphens.
   Same rules as StorageGuard / ThunderboltNet / UnraidFRR.
 -->
-<!ENTITY version "2026.08.13">
+<!ENTITY version "2026.08.13aa">
 <!ENTITY launch "Settings/NbdExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/nbdexport.plg">
 <!ENTITY github "ibigsnet/NbdExport">
@@ -30,6 +30,9 @@
 <CHANGES>
 ###&version;
 - UI: companion links open **Network Settings** then the **Thunderbolt** / **Fabric Routing** tab (nbdGotoNetTab), not standalone `/Settings/ThunderboltNet` or `/Settings/UnraidFRR`.
+
+###2026.08.13
+- (superseded by 13aa) same companion tab-link fix; ensure full plg on main.
 
 ###2026.08.11bm
 - UI: drop redundant hosted-disks lead line; empty state is enough.
