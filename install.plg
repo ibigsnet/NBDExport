@@ -18,9 +18,9 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/UnraidFRR (standalone CA pages).
 -->
-<!ENTITY version "2026.08.13ae">
+<!ENTITY version "2026.08.13af">
 <!ENTITY launch "Settings/NbdExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NbdExport/main/install.plg?v=2026.08.13af">
 <!ENTITY github "ibigsnet/NbdExport">
 <!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NbdExport/main">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NbdExport">
@@ -41,7 +41,10 @@
 <CHANGES>
 ###&version;
 - Fleet standard: companion links use **`ibigsGotoNetTab`** (aliases `nbdGotoNetTab` / …); RELEASES versioning + UI link table aligned with TBN/FRR.
-- Install: Latest remains `install.plg` (must stay identical to `nbdexport.plg`).
+- Install: `install.plg?v=` cache-bust on PluginURL (keep body identical to `nbdexport.plg`).
+
+###2026.08.13ae
+- Fleet standard ibigsGotoNetTab (same as af).
 
 ###2026.08.13ad
 - Companion Network Settings tab links; `install.plg` as Latest after empty CDN on bare `nbdexport.plg`.
