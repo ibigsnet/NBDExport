@@ -478,5 +478,8 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
   </p>
 <?php endif; ?>
 </div>
-  <?php
+<?php
+  // Auto-refresh when Host/Pull goes terminal (all tabs, including Status)
+  @include __DIR__ . '/nbd-live-watch.php';
 }
+

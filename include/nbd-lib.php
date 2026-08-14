@@ -400,6 +400,11 @@ function nbd_job_ui_status(array $j) {
   if ($fin && !$ok) {
     return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'See log tail'];
   }
+  // Process gone without a finish marker still means the job ended (usually error).
+  // Prefer Failed over Idle so the UI does not look like "never started".
+  if (!$alive && !empty($j['pid'])) {
+    return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'Process exited — see log tail'];
+  }
   return ['key' => 'idle', 'label' => 'Idle', 'class' => 'nbd-badge-stale', 'hint' => 'Not running'];
 }
 
