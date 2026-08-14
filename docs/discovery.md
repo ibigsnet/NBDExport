@@ -72,7 +72,7 @@ Payload does **not** include array data, passwords, or full disk contents — on
 | Scan targets | Private IPv4 ranges only |
 | Beacon answers | Private client IPs only |
 | NBD itself | Still **no** protocol auth — isolation is **bind IP** + RO default |
-| Token (optional later) | Shared secret on beacon/scan — not required for v1 lab use |
+| Token (optional later) | Shared secret on beacon/scan — not required for basic LAN use |
 | Cloud | None |
 
 Treat open Host + writable export as sensitive even on LAN. Prefer Thunderbolt / isolated copper / VLAN.
@@ -82,10 +82,10 @@ Treat open Host + writable export as sensitive even on LAN. Prefer Thunderbolt /
 ## Setup (two Unraid hosts)
 
 1. Install **NBD Export** on both.  
-2. **NIROG (host):** Host tab → export disk, bind `192.168.1.3` (or lab IP), port `10809`.  
+2. **Host:** Host tab → export disk, bind a private IP, port `10809` (or next free port).  
 3. Beacon starts automatically when the export is up.  
-4. **HoloX3D (scanner):** Pull tab → **Scan network** → select peer → **Use** → Pull or copy URL for Attach/VM.  
-5. Ensure L3 reachability (Wi‑Fi, copper `192.168.254.x`, etc.).
+4. **Scanner:** Pull tab → **Scan network** → select peer → **Use** → Pull or copy URL for Attach/VM.  
+5. Ensure L3 reachability between the two machines.
 
 ---
 

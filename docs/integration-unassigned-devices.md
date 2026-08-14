@@ -1,81 +1,45 @@
 # Unassigned Devices integration (opt-in)
 
-**Where:** Unraid **Main → Unassigned Devices** tab  
-(URL like `http://tower/Main/UnassignedDevices` — the same place you see Dev 1 / Dev 2 disks, **not** UD Settings.)
+**Where:** Unraid **Main → Unassigned Devices**  
+(not Unassigned Devices Settings)
 
-**Default: Off.** When enabled, NBD Export overlays status on that page only (best-effort DOM; UD owns the page).
+**Default: Off.** When enabled, NBD Export shows Host status on that page. The overlay is best-effort: Unassigned Devices owns the page markup and may change without notice.
 
-### 1) Disk row badge (Identification column)
+## Disk row badge
 
-On a disk that is currently **Hosted**:
-
-`Samsung_… (nvme1n1)` **`NBD RO`** or **`NBD RW`**
+On a disk that is currently Hosted, the Identification cell can show:
 
 | Badge | Meaning |
 |-------|---------|
-| **NBD RO** | Hosted **read-only** (green pill) |
-| **NBD RW** | Hosted **writable** (red pill) |
+| **NBD RO** | Hosted read-only |
+| **NBD RW** | Hosted writable |
 
-Click → **Settings → Network Services → NBD**. Tooltip includes `nbd://…`.
+Click opens **Settings → Network Services → NBD**. Tooltip includes `nbd://…` when known. Badges appear only while a Host is active (no permanent empty slot on other disks).
 
-### 2) NBD Hosts panel (under SMB / NFS / ISO)
+## NBD Hosts panel
 
-Below the **SMB Shares | NFS Shares | ISO File Shares** block (Shares switch area), a section:
+Below **SMB Shares | NFS Shares | ISO File Shares** (Shares area):
 
-**NBD Hosts (this Unraid · not SMB/NFS mounts)**
+**NBD Hosts (this Unraid)** — local Host exports, not remote mounts.
 
-| Mode | Device | Clients use | Label | |
-|------|--------|-------------|-------|--|
-| NBD RO / **NBD RW** | `/dev/…` | `nbd://…` | optional | Open NBD |
-
-These are **local Host exports**, not remote mounts. They are listed next to the share area so they are easy to find when the Shares view is on; the disk-row badge stays visible on the Unassigned Disks table either way.
-
----
+| Mode | Device | Clients use | Label |
+|------|--------|-------------|-------|
+| NBD RO / NBD RW | `/dev/…` | `nbd://…` | optional |
 
 ## How to enable
 
-1. Install **Unassigned Devices** (community plugin) if you use it.  
+1. Install the Unassigned Devices plugin if needed.  
 2. **Settings → Network Services → NBD → Settings**  
 3. **Unassigned Devices badges** → **Yes** → **Apply**  
-4. Hard-refresh the browser (**Ctrl+Shift+R**).  
-5. Host a disk, then open **Main → Unassigned Devices** (Main section of the WebUI).
+4. Refresh the browser, Host a disk, open **Main → Unassigned Devices**.
 
-Turn back to **No** anytime. Uninstall removes the soft page hook.
+Set back to **No** anytime. Plugin uninstall removes the page hook.
 
----
+## Limitations
 
-## What this is (and is not)
-
-| Is | Is not |
-|----|--------|
-| Opt-in config flag (`ud_status_overlay`) | On by default |
-| Small lettering next to the serial/device column | A new UD column API |
-| Best-effort **DOM overlay** after UD paints/refreshes | A formal integration contract with Limetech/UD |
-| Status only (RO/RW + link to NBD) | Mount / share / preclear / start-stop Host from UD |
-| Private to your WebUI session (status JSON uses the logged-in session) | Network discovery or extra listeners |
-
-### Important caveat
-
-**Unassigned Devices owns Main → Unassigned Devices.** That page’s HTML, AJAX refresh, and class names can change on UD updates without notice. This overlay may stop matching rows until NBD Export is updated. That is expected for third-party page manipulation — not a supported UD feature.
-
-If badges disappear after a UD update, status remains correct under **Network Services → NBD**. You can disable the option and report the UD version on the forum if you care about re-tuning selectors.
-
----
-
-## Implementation notes (reviewers)
-
-| Piece | Role |
-|-------|------|
-| `ud_status_overlay` in `NBDExport.cfg` | Opt-in (default `no`) |
-| Soft include in Unraid `HeadInlineJS.php` | Only loads JS on Unassigned Devices URI when opt-in |
-| `include/nbd-ud-head.php` | Gate: opt-in + UD installed + URI |
-| `include/nbd-ud-overlay.js` | MutationObserver + poll; injects `.nbd-ud-badge` |
-| `include/nbd-ud-status.php` | JSON list of live Host exports |
-| Plugin remove | Strips HeadInlineJS marker lines |
-
-No Unassigned Devices PHP is patched. No preclear-style hardcode inside UD.
-
----
+- Not a formal Unassigned Devices API; no mount/share/preclear controls are added.  
+- If Unassigned Devices changes its HTML/AJAX layout, badges may need a plugin update. Host status remains correct under **Network Services → NBD**.  
+- Status JSON is only for the logged-in WebUI session.
 
 ## Related
 

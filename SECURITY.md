@@ -153,7 +153,7 @@ Step-by-step: [docs/hosting-safety.md](docs/hosting-safety.md).
 | **Scan** | Authenticated WebUI only (Pull tab). Probes **private** IPv4 subnets for NBD ports and peer beacons. |
 | **Beacon** | Lightweight HTTP while Host exports exist. Rejects non-private clients (`403`). |
 | **Cloud** | None |
-| **Token** | Not required for v1 lab use; optional hardening later |
+| **Token** | Not required for basic LAN use; optional hardening later |
 
 Scan does not open Host. Beacon does not stream disk data. Still: on an untrusted LAN, stop Host (and thus the beacon) when idle.
 

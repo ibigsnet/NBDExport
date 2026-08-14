@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14aw">
+<!ENTITY version "2026.08.14ax">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,9 @@
 
 <CHANGES>
 ###&version;
+- **Docs:** public README/docs hygiene — no lab hostnames; private notes stay local.
+
+###2026.08.14aw
 - **Pull:** warn (does not block) when output extension mismatches format
   (e.g. qcow2 + <code>.img</code>, raw + <code>.qcow2</code>); live hint + confirm.
 
@@ -101,8 +104,7 @@
 
 ###2026.08.14aj
 - **Scan fix:** private <strong>routes</strong> (not only local iface prefixes), optional
-  <code>scan_extra_subnets</code>, and remembered peer IPs so e.g. Holo on
-  <code>192.168.254.0/24</code> can still find hosts on <code>192.168.1.0/24</code>.
+  <code>scan_extra_subnets</code>, and remembered peer IPs for cross-subnet discovery.
 
 ###2026.08.14ai
 - **Discovery:** Pull tab <strong>Scan network</strong> — private LAN probe for NBD ports (10809+) and

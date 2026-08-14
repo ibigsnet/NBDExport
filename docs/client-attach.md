@@ -21,7 +21,7 @@ Live attach is **latency-sensitive** and **disconnect-sensitive**. Prefer privat
 ## Architecture
 
 ```text
-NIROG (Host)                    HoloX3D (Client)
+Host Unraid                     Client (VM host / second Unraid)
 ┌─────────────────┐             ┌──────────────────────────┐
 │ /dev/nvme1n1    │  nbd://     │ QEMU/libvirt  ──nbd──►   │
 │ qemu-nbd :10809 │◄────────────│   VM disk = remote blocks│
@@ -58,10 +58,10 @@ Or QEMU CLI style:
 
 ### Writable host (destructive)
 
-If NIROG exported **read-write**:
+If the Host exported **read-write**:
 
 - Only **one** writer should own the filesystem (the VM).  
-- Do **not** mount the same disk on NIROG, and do **not** open a second client RW.  
+- Do **not** mount the same disk on the Host Unraid, and do **not** open a second client RW.  
 - Prefer **read-only** host for imaging and for “look but don’t touch” VMs.
 
 ---
