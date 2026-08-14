@@ -6,6 +6,8 @@
 - [qemu-nbd / qemu-img missing](#qemu-nbd-qemu-img-missing)
 - [Host fails immediately](#host-fails-immediately)
 - [Peer cannot connect](#peer-cannot-connect)
+- [RO Host: write fails (expected messages)](#ro-host-write-fails-expected-messages)
+- [RO Host still allows writes?](#ro-host-still-allows-writes)
 - [Pull job stuck / failed](#pull-job-stuck-failed)
 - [Slow throughput](#slow-throughput)
 - [Blank first tab / old “section 3” docs](#blank-first-tab-old-section-3-docs)
@@ -31,6 +33,32 @@ Enable/install VM-related components so `qemu-nbd` and `qemu-img` appear under `
 - Host stopped or crashed  
 
 Probe: `qemu-img info nbd://IP:PORT`
+
+## RO Host: write fails (expected messages)
+
+When the Host tab has **Read-only = Yes**, the server uses `qemu-nbd --read-only`. Clients may still **read**; **writes must fail**.
+
+Observed with **qemu-io** / **qemu-img** (other clients may phrase errors differently):
+
+| What you do | Typical client message |
+|-------------|------------------------|
+| Read with `qemu-io -r` | Succeeds |
+| Write with `qemu-io -r … write …` | `Block node is read-only` |
+| Open for write (no `-r`) then write | `Could not open image: Permission denied` |
+| `qemu-img info` / convert **from** RO URL | Succeeds (read path only) |
+
+On a **writable** Host (Read-only = No), the same `qemu-io write` path should succeed — only use that on disks you accept modifying.
+
+More context: [security-and-bind.md — What “read-only” protects](security-and-bind.md#what-read-only-protects).
+
+## RO Host still allows writes?
+
+If a client can **modify** sectors on a Host you believe is read-only:
+
+1. Confirm the **port** — you may be on a second export that is writable (multi-disk / multi-port).  
+2. On the Host Unraid, Status / hosted list: mode must show **Read-only**, not **Writable**.  
+3. Re-open Host with Read-only **Yes** (re-export).  
+4. Confirm you are not writing to a **local** path or a different `nbd://` URL.
 
 ## Pull job stuck / failed
 

@@ -14,6 +14,7 @@ NBD is effectively **raw disk over TCP**. Treat Host like temporarily plugging a
 - [Recommended isolation](#recommended-isolation)
 - [What “read-only” protects](#what-read-only-protects)
 - [Writable host](#writable-host)
+- [Spot-check RO vs RW (optional)](#spot-check-ro-vs-rw-optional)
 - [Discovery / Scan](#discovery--scan)
 - [What the plugin never does](#what-the-plugin-never-does)
 
@@ -71,19 +72,54 @@ The Host tab lists candidate IPs with Thunderbolt private addresses preferred.
 
 ## What “read-only” protects
 
-The peer cannot write through NBD. It does **not**:
+The peer cannot write through NBD. The Host runs `qemu-nbd --read-only`. Clients that try to write should fail; the exact **message depends on the client**.
+
+### What clients typically report (RO Host)
+
+Verified with **qemu-img** / **qemu-io** against a plugin Host (Read-only **Yes**), private bind, e.g. `nbd://HOST:10810`:
+
+| Client action | Typical result |
+|---------------|----------------|
+| `qemu-img info nbd://…` | **Succeeds** — size/format visible |
+| `qemu-io -r -f raw nbd://… -c 'read …'` | **Succeeds** — reads allowed |
+| `qemu-io -r … -c 'write …'` | **Fails** — e.g. `Block node is read-only` |
+| `qemu-io` **without** `-r` (open for write) | **Fails at open** — e.g. `Could not open image: Permission denied` |
+| `qemu-img convert` **from** RO `nbd://` (Pull / imaging) | **Succeeds** — convert only **reads** the source |
+
+So RO is not “invisible” — it is **readable, not writable**. Open-for-write and write I/O are rejected; the string may be **Permission denied**, **read-only**, or an I/O error depending on tool and flags.
+
+### What read-only does *not* do
 
 - Encrypt traffic on the wire  
-- Hide the disk from anyone who can connect  
+- Hide the disk from anyone who can connect (they can still **read** every sector)  
 - Freeze local writers on the source host — unmount or quiesce when you need a consistent image  
+- Authenticate the peer — isolation is still bind IP + network path  
 
 ## Writable host
 
 Allowed only if Read-only = **No** and Destructive mode = **Yes**, with explicit confirmations.
 
-Use only for lab experiments you fully control. A mistaken write can destroy a boot disk, VM image, or archive.
+On a **writable** Host, clients that open `nbd://…` for write can **read and write** (e.g. `qemu-io` `write` succeeds). Prefer RO unless the peer must modify the disk in place.
 
 **Red in the UI means elevated risk** — same mental model as Unassigned Devices destructive actions. Prefer RO.
+
+### Spot-check RO vs RW (optional)
+
+From a second machine that can reach the bind IP:
+
+```bash
+# Read-only export (expect info + read OK; write fails)
+qemu-img info nbd://HOST:RO_PORT
+qemu-io -r -f raw nbd://HOST:RO_PORT -c 'read -v 0 16'
+qemu-io -f raw nbd://HOST:RO_PORT -c 'write -P 0xaa 0 512'
+# → open or write error (Permission denied / Block node is read-only)
+
+# Writable export (expect write OK — only on a disk you accept changing)
+qemu-img info nbd://HOST:RW_PORT
+qemu-io -f raw nbd://HOST:RW_PORT -c 'write -P 0x00 OFFSET 512'
+```
+
+Use a **safe offset** (or a disposable disk) for any real write test. See [troubleshooting.md](troubleshooting.md#ro-host-still-allows-writes).
 
 ## Discovery / Scan
 

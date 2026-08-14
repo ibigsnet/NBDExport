@@ -64,6 +64,17 @@ If the Host exported **read-write**:
 - Do **not** mount the same disk on the Host Unraid, and do **not** open a second client RW.  
 - Prefer **read-only** host for imaging and for “look but don’t touch” VMs.
 
+### Read-only host (client view)
+
+If the Host exported **read-only**, clients can **read** but not **write**. With qemu tools this often shows as:
+
+| Attempt | Typical message |
+|---------|-----------------|
+| Write while opened read-only (`qemu-io -r`) | `Block node is read-only` |
+| Open for write (no `-r`) | `Could not open image: Permission denied` |
+
+`qemu-img info` and `qemu-img convert` **from** a RO `nbd://` still work (they only read). Full table: [security-and-bind.md](security-and-bind.md#what-read-only-protects).
+
 ---
 
 ## Option B — Kernel `nbd-client` → `/dev/nbdN`
