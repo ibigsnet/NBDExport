@@ -252,7 +252,7 @@ function nbd_page_header() {
 
   <div class="nbd-chrome-hosted">
     <h3>Disks currently hosted on the network
-      <span class="nbd-muted" style="font-weight:500;font-size:0.88em">
+      <span class="nbd-muted" style="font-weight:500;font-size:0.88em" id="nbd-live-chrome-counts">
         · <?= (int)$n ?> live<?= $nj ? ' · ' . (int)$nj . ' pull job(s)' : '' ?>
       </span>
     </h3>
@@ -311,10 +311,13 @@ function nbd_page_header() {
 <?php foreach ($exports as $e):
   $ust = nbd_export_ui_status($e);
   $ro = !empty($e['read_only']);
+  $eid = htmlspecialchars($e['id'] ?? '');
 ?>
-        <tr>
+        <tr data-nbd-export-id="<?= $eid ?>">
           <td>
-            <span class="nbd-badge <?= htmlspecialchars($ust['class']) ?>" title="<?= htmlspecialchars($ust['hint']) ?>"><?= htmlspecialchars($ust['label']) ?></span>
+            <span class="nbd-badge <?= htmlspecialchars($ust['class']) ?> nbd-live-export-badge"
+              data-nbd-key="<?= htmlspecialchars($ust['key'] ?? '') ?>"
+              title="<?= htmlspecialchars($ust['hint']) ?>"><?= htmlspecialchars($ust['label']) ?></span>
           </td>
           <td><code><?= htmlspecialchars($e['device'] ?? '') ?></code></td>
           <td><code><?= htmlspecialchars($e['url'] ?? (($e['bind'] ?? '') . ':' . ($e['port'] ?? ''))) ?></code></td>
@@ -322,12 +325,12 @@ function nbd_page_header() {
             ? '<span class="nbd-badge nbd-badge-ok">Read-only</span>'
             : '<span class="nbd-badge nbd-badge-rw">Writable</span>' ?></td>
           <td><?= htmlspecialchars($e['label'] ?? '') ?></td>
-          <td>
-            <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+          <td class="nbd-live-export-actions">
+            <form method="POST" action="/update.php" target="progressFrame" style="display:inline" class="nbd-live-stop-form">
               <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
               <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="export_stop">
-              <input type="hidden" name="export_id" value="<?= htmlspecialchars($e['id'] ?? '') ?>">
+              <input type="hidden" name="export_id" value="<?= $eid ?>">
               <input type="submit" name="#apply" value="Stop">
             </form>
           </td>

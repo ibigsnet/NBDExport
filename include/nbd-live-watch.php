@@ -1,7 +1,8 @@
 <?php
 /**
- * Auto-refresh NBD tabs when Host/Pull state ends (failed, done, stopped/stale).
- * Included from nbd_page_footer so every tab (including Status) gets it.
+ * Live status poller: updates badges in place (no full page reload on
+ * Active→Idle/Failed). Stop/Cancel forms stay usable.
+ * Included from nbd_page_footer on every NBD tab.
  */
 if (defined('NBDEXPORT_LIVE_WATCH')) {
   return;
@@ -21,12 +22,13 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   var URL = '/plugins/NBDExport/include/nbd-live-status.php';
   var POLL_ACTIVE_MS = 1500;
   var POLL_IDLE_MS = 8000;
-  // Server-rendered snapshot at page paint — critical to detect jobs that finish
-  // before the first XHR (otherwise baseline becomes "idle" and we never reload).
   var baseline = <?= json_encode($nbd_live_baseline, JSON_UNESCAPED_SLASHES) ?> || null;
   var timer = null;
-  var reloading = false;
   var fails = 0;
+
+  var BADGE_CLASSES = [
+    'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw'
+  ];
 
   function mapById(list) {
     var m = {};
@@ -50,72 +52,138 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     return false;
   }
 
-  function shouldReload(prev, next) {
-    if (!prev || !next) return false;
-    var pe = mapById(prev.exports);
-    var ne = mapById(next.exports);
-    var pj = mapById(prev.jobs);
-    var nj = mapById(next.jobs);
-    var id, a, b;
-
-    for (id in pe) {
-      if (!Object.prototype.hasOwnProperty.call(pe, id)) continue;
-      a = pe[id];
-      b = ne[id];
-      if (!b) {
-        if (a.key === 'listening' || a.key === 'process_up') return true;
-        continue;
-      }
-      if ((a.key === 'listening' || a.key === 'process_up') &&
-          b.key !== 'listening' && b.key !== 'process_up') {
-        return true;
-      }
+  function setBadge(el, item) {
+    if (!el || !item) return;
+    var prev = el.getAttribute('data-nbd-key') || '';
+    if (prev === item.key && el.textContent === item.label) {
+      // Still refresh size/log even if key same
+      return false;
     }
-    for (id in ne) {
-      if (!Object.prototype.hasOwnProperty.call(ne, id)) continue;
-      if (!pe[id] && (ne[id].key === 'listening' || ne[id].key === 'process_up')) {
-        return true;
-      }
-    }
-
-    for (id in pj) {
-      if (!Object.prototype.hasOwnProperty.call(pj, id)) continue;
-      a = pj[id];
-      b = nj[id];
-      if (!b) {
-        // Job state file gone after finish/stop
-        if (a.key === 'running' || a.key === 'done' || a.key === 'failed') return true;
-        continue;
-      }
-      // Any status change after page paint (running→failed/done/idle, idle→failed, …)
-      if (a.key !== b.key) return true;
-      if (!!a.ok !== !!b.ok && (b.key === 'done' || b.key === 'failed')) return true;
-    }
-    for (id in nj) {
-      if (!Object.prototype.hasOwnProperty.call(nj, id)) continue;
-      if (!pj[id]) return true; // new job appeared
-    }
-    return false;
+    BADGE_CLASSES.forEach(function (c) { el.classList.remove(c); });
+    el.classList.add('nbd-badge');
+    if (item.class) el.classList.add(item.class);
+    el.textContent = item.label || item.key || '';
+    el.title = item.hint || '';
+    el.setAttribute('data-nbd-key', item.key || '');
+    return true;
   }
 
-  function reloadSoon(reason) {
-    if (reloading) return;
-    reloading = true;
-    try {
-      if (window.console && console.info) {
-        console.info('NBD Export: reloading — ' + reason);
+  function applyExport(item) {
+    var row = document.querySelector('tr[data-nbd-export-id="' + cssEscape(item.id) + '"]');
+    if (!row) return;
+    var badge = row.querySelector('.nbd-live-export-badge');
+    if (badge) {
+      if (!badge.classList.contains('nbd-live-export-badge')) badge.classList.add('nbd-live-export-badge');
+      setBadge(badge, item);
+    }
+    var form = row.querySelector('.nbd-live-stop-form');
+    if (form) {
+      var live = item.key === 'listening' || item.key === 'process_up';
+      form.style.display = live ? 'inline' : 'none';
+    }
+  }
+
+  function applyJob(item) {
+    var row = document.querySelector('tr[data-nbd-job-id="' + cssEscape(item.id) + '"]');
+    if (!row) return;
+    var badge = row.querySelector('.nbd-live-job-badge');
+    if (badge) setBadge(badge, item);
+    var size = row.querySelector('.nbd-live-job-size');
+    if (size && item.output_size_h) size.textContent = item.output_size_h;
+    var form = row.querySelector('.nbd-live-job-stop-form');
+    if (form) {
+      form.style.display = item.alive || item.key === 'running' ? 'inline' : 'none';
+    }
+    var logRow = document.querySelector('tr[data-nbd-job-log="' + cssEscape(item.id) + '"]');
+    if (logRow && item.log_tail != null) {
+      var pre = logRow.querySelector('.nbd-live-job-log, pre.nbd-log');
+      if (pre && item.log_tail !== '') {
+        pre.textContent = item.log_tail;
       }
-    } catch (e) { /* ignore */ }
-    setTimeout(function () {
-      // cache-bust so Unraid doesn't serve a stale tab shell
-      var u = window.location.href.replace(/([?&])_nbd=\d+/, '$1').replace(/[?&]$/, '');
-      var sep = u.indexOf('?') >= 0 ? '&' : '?';
-      window.location.replace(u + sep + '_nbd=' + Date.now());
-    }, 250);
+    }
+  }
+
+  function cssEscape(s) {
+    // Simple attr selector escape for our ids (alphanumeric + - . _)
+    return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  function updateChromeCounts(snap) {
+    var el = document.getElementById('nbd-live-chrome-counts');
+    if (!el || !snap) return;
+    var ne = typeof snap.live_exports === 'number' ? snap.live_exports : (snap.exports || []).length;
+    var nj = typeof snap.live_jobs === 'number'
+      ? snap.live_jobs
+      : (snap.jobs || []).filter(function (j) { return j.key === 'running'; }).length;
+    var t = ' · ' + ne + ' live';
+    if (nj) t += ' · ' + nj + ' pull job(s)';
+    el.textContent = t;
+  }
+
+  /**
+   * Patch badges/controls in place. Returns true if anything meaningful changed.
+   * Does NOT reload the page — keeps Stop/Cancel forms and user focus.
+   */
+  function applySnapshot(snap) {
+    if (!snap) return false;
+    var changed = false;
+    var prevE = mapById((baseline && baseline.exports) || []);
+    var prevJ = mapById((baseline && baseline.jobs) || []);
+
+    (snap.exports || []).forEach(function (ex) {
+      var p = prevE[ex.id];
+      if (!p || p.key !== ex.key || p.alive !== ex.alive || p.listening !== ex.listening) {
+        changed = true;
+      }
+      applyExport(ex);
+    });
+    // Exports that vanished from snapshot — mark stopped in UI if row remains
+    Object.keys(prevE).forEach(function (id) {
+      if (mapById(snap.exports)[id]) return;
+      var row = document.querySelector('tr[data-nbd-export-id="' + cssEscape(id) + '"]');
+      if (!row) return;
+      changed = true;
+      var badge = row.querySelector('.nbd-live-export-badge');
+      if (badge) {
+        setBadge(badge, {
+          key: 'stale',
+          label: 'Stopped / stale',
+          class: 'nbd-badge-stale',
+          hint: 'No longer listening'
+        });
+      }
+      var form = row.querySelector('.nbd-live-stop-form');
+      if (form) form.style.display = 'none';
+    });
+
+    (snap.jobs || []).forEach(function (job) {
+      var p = prevJ[job.id];
+      if (!p || p.key !== job.key || p.output_size !== job.output_size || !!p.ok !== !!job.ok) {
+        changed = true;
+      }
+      applyJob(job);
+    });
+    Object.keys(prevJ).forEach(function (id) {
+      if (mapById(snap.jobs)[id]) return;
+      changed = true;
+      var badge = document.querySelector('tr[data-nbd-job-id="' + cssEscape(id) + '"] .nbd-live-job-badge');
+      if (badge) {
+        setBadge(badge, {
+          key: 'idle',
+          label: 'Idle',
+          class: 'nbd-badge-stale',
+          hint: 'Job state cleared'
+        });
+      }
+      var form = document.querySelector('tr[data-nbd-job-id="' + cssEscape(id) + '"] .nbd-live-job-stop-form');
+      if (form) form.style.display = 'none';
+    });
+
+    updateChromeCounts(snap);
+    return changed;
   }
 
   function poll() {
-    if (reloading) return;
     fetch(URL + '?_=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
         if (!r.ok) throw new Error('http ' + r.status);
@@ -127,20 +195,12 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
           schedule(hasActive(baseline));
           return;
         }
-        // Always compare to paint-time baseline first
-        if (shouldReload(baseline, data)) {
-          reloadSoon('state ' + JSON.stringify({
-            from: { e: (baseline.exports || []).map(function (x) { return x.key; }), j: (baseline.jobs || []).map(function (x) { return x.key; }) },
-            to: { e: (data.exports || []).map(function (x) { return x.key; }), j: (data.jobs || []).map(function (x) { return x.key; }) }
-          }));
-          return;
-        }
+        applySnapshot(data);
         baseline = data;
         schedule(hasActive(data));
       })
       .catch(function () {
         fails++;
-        // Keep trying quickly if we believed something was active at paint
         schedule(fails < 8 || hasActive(baseline));
       });
   }
@@ -150,18 +210,17 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     timer = setTimeout(poll, active ? POLL_ACTIVE_MS : POLL_IDLE_MS);
   }
 
-  // After Host/Pull POST to progressFrame, poll hard
+  // After Host/Pull POST, poll soon so Stop / Start reflect without full reload
   document.addEventListener('submit', function (ev) {
     var f = ev.target;
     if (!f || !f.querySelector) return;
     if (!f.querySelector('[name="nbd_action"]')) return;
     setTimeout(function () {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(poll, 400);
-    }, 300);
+      timer = setTimeout(poll, 500);
+    }, 400);
   }, true);
 
-  // First poll immediately (baseline already from PHP)
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { poll(); });
   } else {

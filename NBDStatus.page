@@ -68,32 +68,31 @@ nbd_page_styles();
 <?php foreach ($jobs as $j):
   $jst = nbd_job_ui_status($j);
   $alive = !empty($j['alive']);
+  $jid = htmlspecialchars($j['id'] ?? '');
 ?>
-          <tr>
-            <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?>" title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
+          <tr data-nbd-job-id="<?= $jid ?>">
+            <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
+              data-nbd-key="<?= htmlspecialchars($jst['key'] ?? '') ?>"
+              title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
             <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
             <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
-            <td><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
-            <td>
-<?php if ($alive): ?>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
+            <td class="nbd-live-job-size"><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
+            <td class="nbd-live-job-actions">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $alive ? 'inline' : 'none' ?>" class="nbd-live-job-stop-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_stop">
-                <input type="hidden" name="job_id" value="<?= htmlspecialchars($j['id'] ?? '') ?>">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
                 <input type="submit" name="#apply" value="Stop">
               </form>
-<?php endif; ?>
             </td>
           </tr>
-<?php if (!empty($j['log'])):
-  $tail = nbd_log_tail($j['log'], 6);
-  if ($tail !== ''):
-?>
-          <tr>
-            <td colspan="5"><pre class="nbd-log"><?= htmlspecialchars($tail) ?></pre></td>
+          <tr data-nbd-job-log="<?= $jid ?>">
+            <td colspan="5"><pre class="nbd-log nbd-live-job-log"><?php
+  $tail = !empty($j['log']) ? nbd_log_tail($j['log'], 6) : '';
+  echo htmlspecialchars($tail);
+?></pre></td>
           </tr>
-<?php endif; endif; ?>
 <?php endforeach; ?>
         </tbody>
       </table>

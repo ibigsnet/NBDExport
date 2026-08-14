@@ -1192,45 +1192,69 @@ function nbd_jobs_state() {
 }
 
 /**
- * Compact live snapshot for WebUI polling (auto-refresh on terminal transitions).
- * @return array{exports:array,jobs:array,watch:bool}
+ * Compact live snapshot for WebUI polling (in-place badge updates).
+ * @return array{exports:array,jobs:array,watch:bool,live_exports:int,live_jobs:int}
  */
 function nbd_live_snapshot() {
   $exports = [];
   $watch = false;
+  $live_exports = 0;
   foreach (nbd_exports_state() as $e) {
     $st = nbd_export_ui_status($e);
     $key = $st['key'] ?? 'down';
+    $alive = !empty($e['alive']) || !empty($e['listening']);
+    if ($alive) {
+      $live_exports++;
+    }
     $exports[] = [
       'id' => (string)($e['id'] ?? ''),
       'key' => $key,
+      'label' => (string)($st['label'] ?? $key),
+      'class' => (string)($st['class'] ?? 'nbd-badge-stale'),
+      'hint' => (string)($st['hint'] ?? ''),
       'alive' => !empty($e['alive']),
       'listening' => !empty($e['listening']),
+      'read_only' => !empty($e['read_only']),
+      'device' => (string)($e['device'] ?? ''),
+      'url' => (string)($e['url'] ?? ''),
     ];
     if ($key === 'listening' || $key === 'process_up') {
       $watch = true;
     }
   }
   $jobs = [];
+  $live_jobs = 0;
   foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
+    if ($key === 'running') {
+      $live_jobs++;
+      $watch = true;
+    }
+    $log_tail = '';
+    if (!empty($j['log']) && is_file($j['log']) && ($key === 'failed' || $key === 'done' || $key === 'running')) {
+      $log_tail = nbd_log_tail($j['log'], 6);
+    }
     $jobs[] = [
       'id' => (string)($j['id'] ?? ''),
       'key' => $key,
+      'label' => (string)($st['label'] ?? $key),
+      'class' => (string)($st['class'] ?? 'nbd-badge-stale'),
+      'hint' => (string)($st['hint'] ?? ''),
       'alive' => !empty($j['alive']),
       'finished' => !empty($j['finished']),
       'ok' => !empty($j['ok']),
       'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
+      'output_size_h' => (string)($j['output_size_h'] ?? '—'),
+      'log_tail' => $log_tail,
     ];
-    if ($key === 'running') {
-      $watch = true;
-    }
   }
   return [
     'exports' => $exports,
     'jobs' => $jobs,
     'watch' => $watch,
+    'live_exports' => $live_exports,
+    'live_jobs' => $live_jobs,
     'ts' => time(),
   ];
 }
