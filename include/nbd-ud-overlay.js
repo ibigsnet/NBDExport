@@ -1,10 +1,9 @@
 /**
  * NBD Export — Unassigned Devices (Main → Unassigned Devices) overlay.
  *
- * Opt-in only. Best-effort DOM on a page we do not control:
- *  1) Small RO/RW badge on the disk Identification cell for hosted devices
- *  2) "NBD Hosts" panel under the SMB | NFS | ISO shares block (not a mount type —
- *     local Host exports from this Unraid)
+ * Opt-in. Best-effort DOM (UD owns the page):
+ *  1) Fixed-width RO/RW slot on disk Identification cells (no table reflow/flicker)
+ *  2) Stable "NBD Hosts" panel under SMB | NFS | ISO shares
  */
 (function () {
   'use strict';
@@ -12,32 +11,47 @@
   window.__nbdUdOverlay = true;
 
   var STATUS_URL = '/plugins/NBDExport/include/nbd-ud-status.php';
-  var POLL_MS = 5000;
+  var POLL_MS = 6000;
   var exportsList = [];
+  var lastExportSig = '';
   var styleId = 'nbd-ud-overlay-style';
   var panelId = 'nbd-ud-hosts-panel';
+  var painting = false;
 
   function ensureStyle() {
     if (document.getElementById(styleId)) return;
     var s = document.createElement('style');
     s.id = styleId;
+    // Fixed width = RO/RW swap and empty/full never shift columns.
+    // Width sized for "NBD RW" (widest label).
     s.textContent =
-      /* Disk-row badge (Identification column) */
-      '.nbd-ud-badge{display:inline-block;margin-left:0.5em;padding:0.1em 0.45em;' +
-      'font-size:0.85em;font-weight:700;letter-spacing:0.03em;vertical-align:middle;' +
-      'white-space:nowrap;border-radius:3px;line-height:1.35}' +
-      '.nbd-ud-badge-ro{color:#1a5c32;background:rgba(61,139,90,0.22);border:1px solid rgba(61,139,90,0.45)}' +
-      '.nbd-ud-badge-rw{color:#fff;background:#b33;border:1px solid #822}' +
-      '.nbd-ud-badge a{color:inherit;text-decoration:none}' +
-      '.nbd-ud-badge a:hover{text-decoration:underline}' +
-      /* Hosts panel under shares */
+      '.nbd-ud-slot{' +
+      'display:inline-block;box-sizing:border-box;' +
+      'width:4.75em;min-width:4.75em;max-width:4.75em;' +
+      'margin-left:0.45em;vertical-align:middle;' +
+      'text-align:center;line-height:1.35;' +
+      'font-size:0.82em;font-weight:700;letter-spacing:0.02em;' +
+      'white-space:nowrap;border-radius:3px;padding:0.08em 0;' +
+      'border:1px solid transparent' +
+      '}' +
+      '.nbd-ud-slot.is-empty{' +
+      'visibility:hidden;border-color:transparent;background:transparent;color:transparent' +
+      '}' +
+      '.nbd-ud-slot.is-ro{' +
+      'visibility:visible;color:#1a5c32;' +
+      'background:rgba(61,139,90,0.22);border-color:rgba(61,139,90,0.45)' +
+      '}' +
+      '.nbd-ud-slot.is-rw{' +
+      'visibility:visible;color:#fff;background:#b33;border-color:#822' +
+      '}' +
+      '.nbd-ud-slot a{color:inherit;text-decoration:none;display:block}' +
+      '.nbd-ud-slot a:hover{text-decoration:underline}' +
       '#' + panelId + '{margin:1.1em 0 0.5em}' +
       '#' + panelId + ' .nbd-ud-hosts-title{font-weight:600}' +
       '#' + panelId + ' .nbd-ud-hosts-note{font-size:0.9em;opacity:0.85;margin:0.25em 0 0.45em}' +
       '#' + panelId + ' table.nbd-ud-hosts-table{width:100%}' +
       '#' + panelId + ' .nbd-ud-mode-ro{color:#1a5c32;font-weight:700}' +
-      '#' + panelId + ' .nbd-ud-mode-rw{color:#c00;font-weight:700}' +
-      '#' + panelId + '.nbd-ud-empty{display:none}';
+      '#' + panelId + ' .nbd-ud-mode-rw{color:#c00;font-weight:700}';
     (document.head || document.documentElement).appendChild(s);
   }
 
@@ -54,6 +68,12 @@
     m = base.match(/^([a-z]+)\d+$/);
     if (m) return m[1];
     return '';
+  }
+
+  function exportSig(list) {
+    return (list || []).map(function (ex) {
+      return ex.device + ':' + (ex.read_only ? 'ro' : 'rw') + ':' + (ex.url || '');
+    }).sort().join('|');
   }
 
   function loadExports(cb) {
@@ -100,91 +120,126 @@
     xhr.send();
   }
 
-  function makeBadge(ex) {
+  /** Disk rows only (have hdd= on whole-disk toggle), not partition sub-rows. */
+  function isDiskRow(tr) {
+    return !!(tr && tr.querySelector && tr.querySelector('[hdd]'));
+  }
+
+  function rowDevice(tr) {
+    var hddEl = tr.querySelector('[hdd]');
+    if (hddEl) return String(hddEl.getAttribute('hdd') || '');
+    var btn = tr.querySelector('button[device]');
+    if (btn) return basename(btn.getAttribute('device') || '');
+    return '';
+  }
+
+  function rowMatchesDevice(tr, device) {
+    if (!tr || !device) return false;
+    var d = rowDevice(tr);
+    if (d === device) return true;
+    var text = (tr.textContent || '').replace(/\s+/g, ' ');
+    if (text.indexOf('(' + device + ')') !== -1) return true;
+    return false;
+  }
+
+  function ensureSlot(identTd) {
+    var slot = identTd.querySelector('.nbd-ud-slot');
+    if (slot) return slot;
+    slot = document.createElement('span');
+    slot.className = 'nbd-ud-slot is-empty';
+    slot.setAttribute('aria-hidden', 'true');
+    // Invisible width template (same as widest real label)
+    slot.innerHTML = '<a href="/Settings/NBDExport">NBD RW</a>';
+    identTd.appendChild(slot);
+    return slot;
+  }
+
+  function setSlot(slot, ex) {
+    if (!slot) return;
+    if (!ex) {
+      if (slot.getAttribute('data-nbd-state') === 'empty') return;
+      slot.className = 'nbd-ud-slot is-empty';
+      slot.setAttribute('data-nbd-state', 'empty');
+      slot.setAttribute('aria-hidden', 'true');
+      slot.removeAttribute('data-nbd-dev');
+      slot.title = '';
+      var a0 = slot.querySelector('a');
+      if (a0) {
+        a0.textContent = 'NBD RW'; // keep width template
+        a0.removeAttribute('title');
+      }
+      return;
+    }
     var ro = !!ex.read_only;
-    var span = document.createElement('span');
-    span.className = 'nbd-ud-badge ' + (ro ? 'nbd-ud-badge-ro' : 'nbd-ud-badge-rw');
-    span.setAttribute('data-nbd-dev', ex.device);
     var mode = ro ? 'RO' : 'RW';
+    var state = ro ? 'ro' : 'rw';
     var title = 'NBD Export Host · ' + mode +
       (ex.url ? ' · ' + ex.url : '') +
       (ex.label ? ' · ' + ex.label : '') +
       ' — Settings → Network Services → NBD';
-    span.title = title;
-    var a = document.createElement('a');
+    // Skip DOM write if unchanged (stops flicker)
+    if (slot.getAttribute('data-nbd-state') === state &&
+        slot.getAttribute('data-nbd-dev') === ex.device) {
+      return;
+    }
+    slot.className = 'nbd-ud-slot is-' + state;
+    slot.setAttribute('data-nbd-state', state);
+    slot.setAttribute('data-nbd-dev', ex.device);
+    slot.setAttribute('aria-hidden', 'false');
+    slot.title = title;
+    var a = slot.querySelector('a');
+    if (!a) {
+      a = document.createElement('a');
+      a.href = '/Settings/NBDExport';
+      slot.appendChild(a);
+    }
     a.href = '/Settings/NBDExport';
     a.textContent = 'NBD ' + mode;
     a.title = title;
-    span.appendChild(a);
-    return span;
   }
 
-  function clearDiskBadges(root) {
-    var list = (root || document).querySelectorAll('.nbd-ud-badge');
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].parentNode) list[i].parentNode.removeChild(list[i]);
-    }
-  }
-
-  /** Match a hosted device to a UD disk row. */
-  function rowMatchesDevice(tr, device) {
-    if (!tr || !device) return false;
-    // Strongest: hdd='nvme1n1' on toggle control
-    var hddEl = tr.querySelector('[hdd]');
-    if (hddEl) {
-      var h = String(hddEl.getAttribute('hdd') || '');
-      if (h === device) return true;
-    }
-    // Mount button device='/dev/nvme1n1'
-    var btn = tr.querySelector('button[device], [device^="/dev/"]');
-    if (btn) {
-      var d = basename(btn.getAttribute('device') || '');
-      if (d === device) return true;
-    }
-    var text = (tr.textContent || '').replace(/\s+/g, ' ');
-    if (text.indexOf('(' + device + ')') !== -1) return true;
-    if (text.indexOf('/dev/' + device) !== -1) return true;
-    return false;
-  }
-
+  /**
+   * Ensure every disk row has a fixed-width slot; fill hosted ones.
+   * Never removes slots (prevents column shift). Never clears then re-adds.
+   */
   function annotateDiskRows() {
     var tbody = document.getElementById('disk-table-body');
     if (!tbody) return;
-    clearDiskBadges(tbody);
 
     var byDev = {};
     exportsList.forEach(function (ex) { byDev[ex.device] = ex; });
-    var keys = Object.keys(byDev);
-    if (!keys.length) return;
+    // Also index parent for partition exports
+    exportsList.forEach(function (ex) {
+      var p = parentDisk(ex.device);
+      if (p && !byDev[p]) byDev[p] = ex;
+    });
 
     var rows = tbody.querySelectorAll('tr');
     for (var i = 0; i < rows.length; i++) {
       var tr = rows[i];
-      var hit = null;
-      for (var k = 0; k < keys.length; k++) {
-        var dev = keys[k];
-        if (rowMatchesDevice(tr, dev)) {
-          hit = byDev[dev];
-          break;
-        }
-        // partition export → parent disk row
-        var parent = parentDisk(dev);
-        if (parent && rowMatchesDevice(tr, parent)) {
-          hit = byDev[dev];
-          break;
+      if (!isDiskRow(tr)) continue;
+      var tds = tr.children;
+      var ident = tds.length > 1 ? tds[1] : tds[0];
+      if (!ident) continue;
+
+      var slot = ensureSlot(ident);
+      var dev = rowDevice(tr);
+      var hit = dev ? byDev[dev] : null;
+      if (!hit) {
+        // fallback match
+        var keys = Object.keys(byDev);
+        for (var k = 0; k < keys.length; k++) {
+          if (rowMatchesDevice(tr, keys[k])) {
+            hit = byDev[keys[k]];
+            break;
+          }
         }
       }
-      if (!hit) continue;
-      // Identification column = 2nd td (Device | Identification | …)
-      var tds = tr.children;
-      var target = tds.length > 1 ? tds[1] : tds[0];
-      if (!target || target.querySelector('.nbd-ud-badge')) continue;
-      target.appendChild(makeBadge(hit));
+      setSlot(slot, hit || null);
     }
   }
 
   function findSharesBlock() {
-    // UD: .show-shares contains SMB | NFS | ISO title + remotes table
     var show = document.querySelector('.show-shares');
     if (show) return show;
     var remotes = document.getElementById('remotes-table-body');
@@ -201,7 +256,6 @@
 
     var host = findSharesBlock();
     if (!host) {
-      // Fallback: after unassigned disks table
       var disks = document.getElementById('disk-table-body');
       host = disks ? disks.closest('table') : null;
       if (host) host = host.parentNode;
@@ -228,7 +282,6 @@
       '<tbody id="nbd-ud-hosts-body"></tbody>' +
       '</table>';
 
-    // Place after remotes-buttons if present, else after shares block content
     var buttons = document.getElementById('remotes-buttons');
     if (buttons && buttons.parentNode) {
       if (buttons.nextSibling) {
@@ -248,18 +301,16 @@
     var body = document.getElementById('nbd-ud-hosts-body');
     if (!body) return;
 
+    var sig = exportSig(exportsList);
+    if (body.getAttribute('data-nbd-sig') === sig) return;
+    body.setAttribute('data-nbd-sig', sig);
+
     if (!exportsList.length) {
-      panel.classList.add('nbd-ud-empty');
-      body.innerHTML =
-        '<tr><td colspan="5" class="nbd-muted" style="opacity:0.75">' +
-        'No NBD hosts on this server right now.' +
-        '</td></tr>';
-      // Keep section visible but subtle when empty? Hide to reduce noise.
       panel.style.display = 'none';
+      body.innerHTML = '';
       return;
     }
 
-    panel.classList.remove('nbd-ud-empty');
     panel.style.display = '';
     var html = '';
     exportsList.forEach(function (ex) {
@@ -286,41 +337,56 @@
   }
 
   function isUdMainPage() {
-    // Disk table is the definitive signal for Main → Unassigned Devices
     if (document.getElementById('disk-table-body')) return true;
     if (document.getElementById('usb_devices_list')) return true;
     var path = (location.pathname || '') + (location.hash || '');
     if (/UnassignedDevices/i.test(path)) return true;
-    // Title / heading sometimes present before tbody fills
-    var t = document.body ? (document.body.innerText || '') : '';
-    if (t.indexOf('Unassigned Disk') !== -1 && t.indexOf('Identification') !== -1) return true;
     return false;
   }
 
-  function paint() {
-    if (!isUdMainPage()) return;
-    ensureStyle();
-    annotateDiskRows();
-    renderHostsPanel();
+  function paint(force) {
+    if (!isUdMainPage() || painting) return;
+    painting = true;
+    try {
+      ensureStyle();
+      annotateDiskRows();
+      renderHostsPanel();
+    } finally {
+      painting = false;
+    }
   }
 
   function refresh() {
     loadExports(function (list) {
+      var sig = exportSig(list);
+      var same = (sig === lastExportSig);
       exportsList = list;
-      paint();
+      lastExportSig = sig;
+      // Always re-slot after UD AJAX may have wiped slots; skip panel rewrite if same
+      paint(!same);
     });
   }
 
   function watch() {
     var root = document.getElementById('disk-table-body') ||
       document.getElementById('usb_devices_list') ||
-      document.querySelector('.show-shares') ||
       document.body;
     if (!root || typeof MutationObserver === 'undefined') return;
     var t = null;
-    var mo = new MutationObserver(function () {
+    var mo = new MutationObserver(function (mutations) {
+      // Ignore our own slot updates
+      var ours = true;
+      for (var i = 0; i < mutations.length; i++) {
+        var m = mutations[i];
+        if (m.target && m.target.classList && m.target.classList.contains('nbd-ud-slot')) continue;
+        if (m.target && m.target.closest && m.target.closest('.nbd-ud-slot, #' + panelId)) continue;
+        ours = false;
+        break;
+      }
+      if (ours) return;
       if (t) clearTimeout(t);
-      t = setTimeout(paint, 150);
+      // Debounce: UD rewrites the whole tbody; wait until quiet, then re-attach slots
+      t = setTimeout(function () { paint(true); }, 280);
     });
     mo.observe(root, { childList: true, subtree: true });
   }
