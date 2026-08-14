@@ -34,8 +34,8 @@ Every tab shows a shared header: **disks currently hosted** (and an orange banne
 | Enable NBD Export | Yes | **No** + Apply stops all hosts |
 | Default read-only | Yes | Prefill for new Host listeners |
 | Default port | 10809 | 1024–65535; multi-disk uses other free ports |
-| Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth |
-| Destructive mode | No | Only for writable host or hosting array/cache/pool, mounted, or boot disks. See [destructive-mode.md](destructive-mode.md). Host tab still confirms the device. |
+| Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth — see [security-and-bind.md](security-and-bind.md) |
+| Destructive mode | No | Only for writable host or hosting array/cache/pool, mounted, or boot disks. See [destructive-mode.md](destructive-mode.md). Host tab still confirms the device. Host checklist: [hosting-safety.md](hosting-safety.md). |
 | Export config | — | Download JSON or write `/boot/config/nbdexport-config-*.json` (outside plugin dir). Uninstall wipes plugin flash state. |
 | Import config | — | Path under `/boot/config/` or `/mnt/` only |
 
