@@ -93,18 +93,29 @@ Many thin laptops, gaming tablets, and mini-PCs have **only one internal NVMe sl
 
 **Public pattern (prepare offline → swap once):**
 
-1. **Build the system as a disk image on Unraid** — for example install Linux/Windows in an Unraid **VM** to a **qcow2** (or raw `.img`) under `/mnt/user/domains/`, *or* Host + Pull an existing machine’s disk into an image first.  
+1. **Build the system as a disk image on Unraid** — for example install Linux/Windows in an Unraid **VM** to a **qcow2** (or raw `.img`) under `/mnt/user/domains/`, *or* Host + Pull an existing machine’s disk into an image first (see reverse order below).  
 2. When the **new empty NVMe** arrives, put it in a **USB/Thunderbolt enclosure**, dock, or any Linux/Unraid box that has a free slot — not inside the one-slot device yet.  
 3. **Write the image to that physical NVMe** with `qemu-img convert` (qcow2/raw → device), e.g.  
    `qemu-img convert -p -f qcow2 -O raw /mnt/user/domains/ready.qcow2 /dev/nvmeXn1`  
    (triple-check the target device). Prefer a private/fast path if the image file and the dock are on different machines; Host/Pull or file copy both work depending on layout.  
-4. Power down, **install the prepared 2 TB into the one-slot device**, boot. Keep the old 1 TB as a spare or archive it with another Host → Pull if you still need a bit-level copy.
+4. Power down, **install the prepared 2 TB into the one-slot device**, boot.  
+   - Keep the old **1 TB** as a spare, or  
+   - **Archive it to Unraid first** (bit-level) with Host → Pull / `qemu-img convert` from the physical disk to a **qcow2** (or raw) — same tools as step 3, **opposite direction** (device → file).  
+   - That “pull the factory drive into an image” path is the natural first half of the story when you are **migrating the existing OS**, not building a fresh VM: do the archive **before** you open the chassis for the final swap if you still need a recovery copy of the 1 TB layout. Full Host/Pull walkthroughs: [how-to-use — Scenario A](how-to-use.md#scenario-a-peer-has-the-disk-unraid-saves-a-qcow2) (peer holds the disk), [Scenario C](how-to-use.md#scenario-c--both-ends-are-unraid-plug-the-nvme-where-its-easy-store-the-qcow2-where-theres-room) (easy plug + roomy Unraid), and cold archives [Scenario E](how-to-use.md#scenario-e--cold-physical-disk-archive-on-unraid-qcow2--btrfs-snapshots).
+
+**Reverse order (clone the 1 TB first, then grow onto 2 TB):**
+
+Often better when the laptop already has the OS you want to keep:
+
+1. Get the **current 1 TB** into a **qcow2 on Unraid** (Host read-only from a live USB / second machine / dock, then Pull — or `qemu-img convert` from the block device once the disk is visible to Unraid).  
+2. Optionally use that qcow2 as a **VM** disk, grow partitions offline, or treat it as the “ready” image for step 3 of the public pattern.  
+3. Convert that image onto the **new 2 TB** in a dock (`qemu-img convert … -O raw /dev/nvmeXn1`), expand the partition table/filesystem on the larger media if needed, then swap the 2 TB into the one-slot device.  
+
+Same idea either direction: **image lives on Unraid; physical write (or first read) happens where a free slot or dock exists.**
 
 **Why NBD fits this story:** the hard part is not “share a folder of installers” — it is **moving whole bootable disks** (partition tables, ESP, OS) between *machines that have a free slot or a dock* and *images on Unraid*. NBD is one way to get physical ↔ image without sneakernet when the disk is plugged in where it is easy. SMB/NFS still win for copying ISO installers or a documents folder.
 
-**Simpler variant:** skip the VM — Host the current internal disk read-only (live USB or another host if the OS cannot export itself), Pull to Unraid, later convert that image onto the larger drive in a dock, then swap. Same idea: **image lives on the NAS; physical write happens where the new media is plugged in.**
-
-Avoid the long path of “install over live NBD into a remote qcow2, then later copy again to hardware” unless you enjoy extra steps. Prefer **image on Unraid → one convert onto the new physical disk in a dock → install once**.
+Avoid the long path of “install over live NBD into a remote qcow2, then later copy again to hardware” unless you enjoy extra steps. Prefer **image on Unraid → one convert onto the new physical disk in a dock → install once** (or **physical 1 TB → qcow2 first**, then that same convert onto 2 TB).
 
 ---
 
