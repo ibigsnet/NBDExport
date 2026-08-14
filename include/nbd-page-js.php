@@ -60,6 +60,88 @@ if (!isset($presets) || !is_array($presets)) {
     return true;
   };
 
+  window.nbdScanNetwork = function () {
+    var btn = document.getElementById('nbd_scan_btn');
+    var st = document.getElementById('nbd_scan_status');
+    var box = document.getElementById('nbd_scan_results');
+    if (st) st.textContent = 'Scanning private LANs for NBD ports (10809+) and peer beacons (10808)…';
+    if (box) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+    }
+    if (btn) btn.disabled = true;
+    var url = '/plugins/NBDExport/include/nbd-scan.php?probe_info=1&_=' + Date.now();
+    fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (btn) btn.disabled = false;
+        if (!data || !data.ok) {
+          if (st) st.textContent = (data && data.error) ? data.error : 'Scan failed';
+          return;
+        }
+        var n = (data.hits && data.hits.length) || 0;
+        if (st) {
+          st.textContent = 'Scan finished in ' + (data.seconds || '?') + 's — '
+            + n + ' host(s) on ' + ((data.subnets && data.subnets.join(', ')) || 'private LANs');
+        }
+        if (!box) return;
+        if (!n) {
+          box.style.display = 'block';
+          box.innerHTML = '<p class="nbd-muted">No NBD listeners or NBD Export beacons found. '
+            + 'On the peer: Host tab → start export (beacon listens on TCP <strong>10808</strong> while exports are up). '
+            + 'Check bind IP is reachable from this Unraid.</p>';
+          return;
+        }
+        var html = '<table class="tablesorter" style="width:auto;min-width:32em">'
+          + '<thead><tr>'
+          + '<th>Host</th><th>Kind</th><th>Export</th><th>RO</th><th>Size</th><th></th>'
+          + '</tr></thead><tbody>';
+        data.hits.forEach(function (h) {
+          var hostLabel = (h.hostname ? h.hostname + ' · ' : '') + h.ip
+            + (h.version ? ' <span class="nbd-muted">v' + h.version + '</span>' : '');
+          var kind = h.kind === 'peer'
+            ? '<span class="nbd-badge-ok">NBD Export peer</span>'
+            : '<span class="nbd-badge-info">NBD port open</span>';
+          var exs = h.exports || [];
+          if (!exs.length) {
+            html += '<tr><td>' + hostLabel + '</td><td>' + kind + '</td><td colspan="3" class="nbd-muted">beacon only / no exports</td><td></td></tr>';
+            return;
+          }
+          exs.forEach(function (ex, idx) {
+            var ro = ex.read_only === true ? 'RO' : (ex.read_only === false ? '<span class="nbd-bad">RW</span>' : '—');
+            var size = (ex.info && ex.info.virtual_size_h) ? ex.info.virtual_size_h : '—';
+            var lab = [ex.label, ex.device_name].filter(Boolean).join(' · ') || ex.url;
+            var esc = (ex.url || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            html += '<tr>'
+              + (idx === 0 ? '<td rowspan="' + exs.length + '">' + hostLabel + '</td><td rowspan="' + exs.length + '">' + kind + '</td>' : '')
+              + '<td><code>' + esc + '</code>'
+              + (lab && lab !== ex.url ? '<br><span class="nbd-muted">' + lab.replace(/</g, '') + '</span>' : '')
+              + '</td><td>' + ro + '</td><td>' + size + '</td>'
+              + '<td><input type="button" value="Use" onclick="nbdScanUseUrl(\'' + esc.replace(/'/g, "\\'") + '\')"></td>'
+              + '</tr>';
+          });
+        });
+        html += '</tbody></table>'
+          + '<p class="nbd-muted" style="margin-top:0.5em">Live VM disk on <code>nbd://</code> is Attach (not Pull) — see client-attach docs. '
+          + 'Writable peers need care (single writer).</p>';
+        box.innerHTML = html;
+        box.style.display = 'block';
+      })
+      .catch(function (e) {
+        if (btn) btn.disabled = false;
+        if (st) st.textContent = 'Scan error: ' + (e && e.message ? e.message : 'network');
+      });
+  };
+  window.nbdScanUseUrl = function (u) {
+    var el = document.getElementById('nbd_url');
+    if (el) {
+      el.value = u;
+      el.focus();
+    }
+    var st = document.getElementById('nbd_scan_status');
+    if (st) st.textContent = 'Filled NBD URL — set output path and Pull, or use Attach/VM patterns from docs.';
+  };
+
   window.nbdConfirmDestructiveSave = function (form) {
     if (!form) return true;
     var sel = form.querySelector('[name="destructive_mode"]');

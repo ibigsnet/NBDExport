@@ -925,6 +925,7 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
   ];
   @file_put_contents($statefile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
   nbd_write_companion_marker();
+  nbd_beacon_ensure();
   return ['ok' => true, 'id' => $id, 'url' => $state['url']];
 }
 
@@ -953,6 +954,19 @@ function nbd_export_stop($id) {
   }
   @unlink($pidfile);
   @unlink($statefile);
+  // Drop beacon when nothing left listening
+  $still = false;
+  foreach (nbd_exports_state() as $e) {
+    if (!empty($e['alive']) || !empty($e['listening'])) {
+      $still = true;
+      break;
+    }
+  }
+  if (!$still) {
+    nbd_beacon_stop();
+  } else {
+    nbd_beacon_ensure();
+  }
   return ['ok' => true];
 }
 
@@ -962,6 +976,7 @@ function nbd_stop_all_exports() {
       nbd_export_stop($e['id']);
     }
   }
+  nbd_beacon_stop();
   // sweep leftover pid/json
   foreach (glob(NBDEXPORT_RUN . '/*') ?: [] as $f) {
     @unlink($f);
@@ -1141,4 +1156,410 @@ function nbd_log_tail($path, $lines = 40) {
   $out = [];
   @exec('tail -n ' . (int)$lines . ' ' . escapeshellarg($path) . ' 2>/dev/null', $out);
   return implode("\n", $out);
+}
+
+/* ── Discovery / beacon / LAN scan (see docs/discovery.md) ─────────────── */
+
+/** Default TCP port for peer plugin beacon (HTTP JSON). NBD data stays on 10809+. */
+function nbd_beacon_port() {
+  return 10808;
+}
+
+function nbd_beacon_pidfile() {
+  return NBDEXPORT_RUN . '/beacon-http.pid';
+}
+
+function nbd_beacon_logfile() {
+  return NBDEXPORT_LOG . '/beacon-http.log';
+}
+
+/**
+ * JSON payload for peer scanners (no secrets, no block data).
+ */
+function nbd_beacon_payload() {
+  $exports = [];
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['alive']) && empty($e['listening'])) {
+      continue;
+    }
+    $dev = (string)($e['device'] ?? '');
+    $exports[] = [
+      'id' => (string)($e['id'] ?? ''),
+      'url' => (string)($e['url'] ?? ''),
+      'bind' => (string)($e['bind'] ?? ''),
+      'port' => (int)($e['port'] ?? 0),
+      'read_only' => !empty($e['read_only']),
+      'label' => (string)($e['label'] ?? ''),
+      'device_name' => preg_replace('#^/dev/#', '', $dev),
+      'listening' => !empty($e['listening']),
+    ];
+  }
+  $host = trim((string)@file_get_contents('/etc/hostname'));
+  if ($host === '') {
+    $host = gethostname() ?: 'unraid';
+  }
+  return [
+    'plugin' => 'NBDExport',
+    'product' => 'NBD Export',
+    'version' => nbd_plugin_version(),
+    'hostname' => $host,
+    'beacon_port' => nbd_beacon_port(),
+    'exports' => $exports,
+    'ts' => time(),
+  ];
+}
+
+/**
+ * Ensure lightweight beacon HTTP is running while any managed export is up.
+ * Uses php -S (no Unraid login) so peers can discover without root passwords.
+ */
+function nbd_beacon_ensure() {
+  nbd_ensure_runtime_dirs();
+  $alive_exports = 0;
+  foreach (nbd_exports_state() as $e) {
+    if (!empty($e['alive']) || !empty($e['listening'])) {
+      $alive_exports++;
+    }
+  }
+  if ($alive_exports < 1) {
+    nbd_beacon_stop();
+    return ['ok' => true, 'running' => false, 'reason' => 'no active exports'];
+  }
+
+  $pidfile = nbd_beacon_pidfile();
+  $pid = is_file($pidfile) ? (int)@file_get_contents($pidfile) : 0;
+  if ($pid > 0 && @file_exists('/proc/' . $pid)) {
+    return ['ok' => true, 'running' => true, 'pid' => $pid];
+  }
+
+  $router = NBDEXPORT_ROOT . '/include/nbd-beacon-server.php';
+  if (!is_file($router)) {
+    $router = dirname(__DIR__) . '/include/nbd-beacon-server.php';
+  }
+  if (!is_file($router)) {
+    return ['ok' => false, 'error' => 'beacon server script missing'];
+  }
+
+  $php = trim((string)@shell_exec('command -v php 2>/dev/null'));
+  if ($php === '' || !is_executable($php)) {
+    $php = '/usr/bin/php';
+  }
+  if (!is_executable($php)) {
+    return ['ok' => false, 'error' => 'php not found for beacon'];
+  }
+
+  $port = nbd_beacon_port();
+  $log = nbd_beacon_logfile();
+  // Bind all interfaces; server script rejects non-private clients.
+  $cmd = 'setsid nohup ' . escapeshellarg($php) . ' -S 0.0.0.0:' . (int)$port
+    . ' ' . escapeshellarg($router)
+    . ' >>' . escapeshellarg($log) . ' 2>&1 & echo $! >' . escapeshellarg($pidfile);
+  exec($cmd);
+  usleep(200000);
+  $pid = is_file($pidfile) ? (int)@file_get_contents($pidfile) : 0;
+  return [
+    'ok' => $pid > 0 && @file_exists('/proc/' . $pid),
+    'running' => $pid > 0 && @file_exists('/proc/' . $pid),
+    'pid' => $pid,
+    'port' => $port,
+  ];
+}
+
+function nbd_beacon_stop() {
+  $pidfile = nbd_beacon_pidfile();
+  $pid = is_file($pidfile) ? (int)@file_get_contents($pidfile) : 0;
+  if ($pid > 0 && @file_exists('/proc/' . $pid)) {
+    @posix_kill($pid, 15);
+    usleep(150000);
+    if (@file_exists('/proc/' . $pid)) {
+      @posix_kill($pid, 9);
+    }
+  }
+  @unlink($pidfile);
+  return ['ok' => true];
+}
+
+/**
+ * Private /24 networks from local interfaces (for scan).
+ * @return string[] list of "a.b.c.0/24"
+ */
+function nbd_scan_subnets() {
+  $nets = [];
+  $out = [];
+  @exec('ip -4 -o addr show scope global 2>/dev/null', $out);
+  foreach ($out as $line) {
+    if (!preg_match('/inet\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/', $line, $m)) {
+      continue;
+    }
+    $ip = $m[1];
+    $pref = (int)$m[2];
+    if (!nbd_is_private_ipv4($ip)) {
+      continue;
+    }
+    // Only scan reasonable LAN sizes (/24–/22); skip huge prefixes
+    if ($pref < 22 || $pref > 30) {
+      // still include as /24 of host
+      $pref = 24;
+    }
+    $long = ip2long($ip);
+    $mask = -1 << (32 - $pref);
+    $net = long2ip($long & $mask);
+    // Normalize scan grid to /24 chunks for pref 22–24
+    if ($pref <= 24) {
+      $base = ip2long($net);
+      $count = 1 << (24 - $pref);
+      for ($i = 0; $i < $count && $i < 4; $i++) { // cap 4×/24
+        $nets[] = long2ip($base + ($i * 256)) . '/24';
+      }
+    } else {
+      $nets[] = $net . '/' . $pref;
+    }
+  }
+  $nets = array_values(array_unique($nets));
+  sort($nets);
+  return $nets;
+}
+
+/**
+ * TCP connect probe.
+ */
+function nbd_tcp_open($ip, $port, $timeout_s = 0.2) {
+  $errno = 0;
+  $errstr = '';
+  $fp = @fsockopen($ip, (int)$port, $errno, $errstr, (float)$timeout_s);
+  if (is_resource($fp)) {
+    fclose($fp);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fetch peer beacon JSON if present.
+ */
+function nbd_fetch_beacon($ip, $port = null, $timeout_s = 0.35) {
+  $port = $port === null ? nbd_beacon_port() : (int)$port;
+  $url = 'http://' . $ip . ':' . $port . '/';
+  $ctx = stream_context_create([
+    'http' => [
+      'method' => 'GET',
+      'timeout' => $timeout_s,
+      'header' => "Accept: application/json\r\nUser-Agent: NBDExport-scan\r\n",
+      'ignore_errors' => true,
+    ],
+  ]);
+  $raw = @file_get_contents($url, false, $ctx);
+  if (!is_string($raw) || $raw === '') {
+    return null;
+  }
+  $j = @json_decode($raw, true);
+  if (!is_array($j) || ($j['plugin'] ?? '') !== 'NBDExport') {
+    return null;
+  }
+  return $j;
+}
+
+/**
+ * Optional qemu-img info for an NBD URL (size/format).
+ */
+function nbd_probe_nbd_info($url) {
+  $tools = nbd_detect_tools();
+  $img = $tools['qemu_img'] ?? '';
+  if ($img === '') {
+    return null;
+  }
+  $cmd = 'timeout 2 ' . escapeshellarg($img) . ' info --output=json '
+    . escapeshellarg($url) . ' 2>/dev/null';
+  $raw = @shell_exec($cmd);
+  if (!is_string($raw) || $raw === '') {
+    return null;
+  }
+  $j = @json_decode($raw, true);
+  if (!is_array($j)) {
+    return null;
+  }
+  return [
+    'format' => (string)($j['format'] ?? ''),
+    'virtual_size' => isset($j['virtual-size']) ? (int)$j['virtual-size'] : 0,
+    'virtual_size_h' => isset($j['virtual-size']) ? nbd_format_bytes((int)$j['virtual-size']) : '',
+  ];
+}
+
+/**
+ * Parallel TCP probes via bash /dev/tcp (much faster than serial fsockopen).
+ * @return string[] "ip:port" open endpoints
+ */
+function nbd_scan_tcp_parallel(array $ips, array $ports, $timeout_s = 0.15, $jobs = 64) {
+  if (!$ips || !$ports) {
+    return [];
+  }
+  $timeout_s = max(0.05, min(1.0, (float)$timeout_s));
+  $jobs = max(8, min(128, (int)$jobs));
+  $list = '';
+  foreach ($ips as $ip) {
+    foreach ($ports as $port) {
+      $list .= $ip . ' ' . (int)$port . "\n";
+    }
+  }
+  $tmp = NBDEXPORT_RUN . '/scan-targets.' . getmypid() . '.txt';
+  @file_put_contents($tmp, $list);
+  $script = 'while read -r ip port; do '
+    . '(timeout ' . escapeshellarg((string)$timeout_s) . ' bash -c "echo >/dev/tcp/$ip/$port" 2>/dev/null '
+    . '&& echo "$ip:$port") & '
+    . 'while [ "$(jobs -r | wc -l)" -ge ' . (int)$jobs . ' ]; do sleep 0.02; done; '
+    . 'done < ' . escapeshellarg($tmp) . '; wait';
+  $out = [];
+  @exec('bash -c ' . escapeshellarg($script) . ' 2>/dev/null', $out);
+  @unlink($tmp);
+  $open = [];
+  foreach ($out as $line) {
+    $line = trim($line);
+    if (preg_match('/^(\d+\.\d+\.\d+\.\d+):(\d+)$/', $line, $m)) {
+      $open[] = $m[1] . ':' . $m[2];
+    }
+  }
+  return array_values(array_unique($open));
+}
+
+/**
+ * Scan private LANs for NBD ports + optional plugin beacons.
+ *
+ * @param int[]|null $nbd_ports
+ * @return array{ok:bool,subnets:string[],hits:array,seconds:float,error?:string}
+ */
+function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
+  $t0 = microtime(true);
+  nbd_ensure_runtime_dirs();
+  if ($nbd_ports === null || !$nbd_ports) {
+    $cfg = nbd_load_cfg();
+    $base = (int)($cfg['default_port'] ?? 10809);
+    if ($base < 1024 || $base > 65000) {
+      $base = 10809;
+    }
+    $nbd_ports = [$base];
+    for ($p = $base + 1; $p <= $base + 3 && $p < 65535; $p++) {
+      $nbd_ports[] = $p;
+    }
+  }
+  $nbd_ports = array_values(array_unique(array_map('intval', $nbd_ports)));
+  $beacon_port = nbd_beacon_port();
+  $probe_ports = array_values(array_unique(array_merge($nbd_ports, [$beacon_port])));
+
+  $subnets = nbd_scan_subnets();
+  if (!$subnets) {
+    return ['ok' => false, 'error' => 'No private IPv4 subnets to scan', 'subnets' => [], 'hits' => [], 'seconds' => 0];
+  }
+
+  $self_ips = [];
+  foreach (nbd_list_bind_ips() as $row) {
+    if (!empty($row['ip'])) {
+      $self_ips[$row['ip']] = true;
+    }
+  }
+
+  $ips = [];
+  foreach ($subnets as $cidr) {
+    if (!preg_match('#^(\d+\.\d+\.\d+)\.0/24$#', $cidr, $m)) {
+      continue;
+    }
+    $prefix = $m[1];
+    for ($i = 1; $i <= 254; $i++) {
+      $ip = $prefix . '.' . $i;
+      if (isset($self_ips[$ip])) {
+        continue;
+      }
+      $ips[] = $ip;
+    }
+  }
+  $ips = array_values(array_unique($ips));
+
+  $open = nbd_scan_tcp_parallel($ips, $probe_ports, 0.15, 80);
+  $by_ip = [];
+  foreach ($open as $ep) {
+    list($ip, $port) = explode(':', $ep, 2);
+    $port = (int)$port;
+    if (!isset($by_ip[$ip])) {
+      $by_ip[$ip] = ['nbd' => [], 'beacon' => false];
+    }
+    if ($port === $beacon_port) {
+      $by_ip[$ip]['beacon'] = true;
+    } elseif (in_array($port, $nbd_ports, true)) {
+      $by_ip[$ip]['nbd'][] = $port;
+    }
+  }
+
+  $hits = [];
+  foreach ($by_ip as $ip => $info) {
+    $beacon = null;
+    if (!empty($info['beacon'])) {
+      $beacon = nbd_fetch_beacon($ip, $beacon_port, 0.4);
+    }
+    // Also try beacon if only NBD open (server might listen beacon on same host)
+    if (!$beacon && !empty($info['nbd'])) {
+      $beacon = nbd_fetch_beacon($ip, $beacon_port, 0.25);
+    }
+
+    $exports = [];
+    if (is_array($beacon) && !empty($beacon['exports']) && is_array($beacon['exports'])) {
+      foreach ($beacon['exports'] as $ex) {
+        $url = (string)($ex['url'] ?? '');
+        if ($url === '' && !empty($ex['port'])) {
+          $bind = (string)($ex['bind'] ?? $ip);
+          $url = 'nbd://' . $bind . ':' . (int)$ex['port'];
+        }
+        $inf = ($probe_info && $url !== '') ? nbd_probe_nbd_info($url) : null;
+        $exports[] = [
+          'url' => $url,
+          'port' => (int)($ex['port'] ?? 0),
+          'read_only' => array_key_exists('read_only', $ex) ? !empty($ex['read_only']) : null,
+          'label' => (string)($ex['label'] ?? ''),
+          'device_name' => (string)($ex['device_name'] ?? ''),
+          'info' => $inf,
+        ];
+      }
+    } else {
+      foreach ($info['nbd'] as $port) {
+        $url = 'nbd://' . $ip . ':' . $port;
+        $inf = $probe_info ? nbd_probe_nbd_info($url) : null;
+        $exports[] = [
+          'url' => $url,
+          'port' => $port,
+          'read_only' => null,
+          'label' => '',
+          'device_name' => '',
+          'info' => $inf,
+        ];
+      }
+    }
+
+    if (!$exports && !is_array($beacon)) {
+      continue;
+    }
+
+    $hits[] = [
+      'ip' => $ip,
+      'kind' => is_array($beacon) ? 'peer' : 'nbd_open',
+      'hostname' => is_array($beacon) ? (string)($beacon['hostname'] ?? '') : '',
+      'version' => is_array($beacon) ? (string)($beacon['version'] ?? '') : '',
+      'plugin' => is_array($beacon) ? (string)($beacon['plugin'] ?? '') : '',
+      'beacon' => is_array($beacon),
+      'exports' => $exports,
+    ];
+  }
+
+  usort($hits, function ($a, $b) {
+    if (($a['kind'] === 'peer') !== ($b['kind'] === 'peer')) {
+      return ($a['kind'] === 'peer') ? -1 : 1;
+    }
+    return strcmp($a['ip'], $b['ip']);
+  });
+
+  return [
+    'ok' => true,
+    'subnets' => $subnets,
+    'nbd_ports' => $nbd_ports,
+    'beacon_port' => $beacon_port,
+    'hits' => $hits,
+    'seconds' => round(microtime(true) - $t0, 2),
+  ];
 }

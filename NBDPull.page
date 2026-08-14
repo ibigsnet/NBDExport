@@ -36,11 +36,18 @@ nbd_page_styles();
         <dt>NBD URL:</dt>
         <dd>
           <input type="text" name="nbd_url" id="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
+          <input type="button" value="Scan network" id="nbd_scan_btn" onclick="nbdScanNetwork()" title="Find NBD listeners / NBD Export peers on private LANs">
         </dd>
       </dl>
       <blockquote class="inline_help">
         Must already be hosted (Host tab on peer Unraid, or any qemu-nbd listener).
+        <strong>Scan network</strong> probes private subnets for port <strong>10809+</strong> and peer beacons on <strong>10808</strong>
+        (same plugin). See <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/discovery.md" target="_blank" rel="noopener">discovery.md</a>.
+        Live VM use of <code>nbd://</code> is <strong>Attach</strong>, not Pull —
+        <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/client-attach.md" target="_blank" rel="noopener">client-attach.md</a>.
       </blockquote>
+      <div id="nbd_scan_status" class="nbd-muted" style="margin:0.35em 0"></div>
+      <div id="nbd_scan_results" style="display:none;margin:0.5em 0 1em;overflow-x:auto"></div>
 
       <dl>
         <dt>Output path:</dt>

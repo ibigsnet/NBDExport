@@ -12,7 +12,9 @@ Read in this order for a new install:
 | 6 | [security-and-bind.md](security-and-bind.md) | Read-only, bind IP, isolation |
 | 7 | [imaging-workflow.md](imaging-workflow.md) | CLI convert + restore |
 | 8 | [settings-reference.md](settings-reference.md) | Controls by tab |
-| 9 | [troubleshooting.md](troubleshooting.md) | Failures |
+| 9 | [discovery.md](discovery.md) | **Scan network** / peer beacon (multi-Unraid) |
+| 10 | [client-attach.md](client-attach.md) | Live `nbd://` for VMs / nbd-client (vs Pull image) |
+| 11 | [troubleshooting.md](troubleshooting.md) | Failures |
 
 ### Integrations (optional)
 

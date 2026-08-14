@@ -58,6 +58,8 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | **Host** | Start/stop `qemu-nbd` on a device, bind IP, and port (default **read-only**) |
 | **Bind picker** | Host IPv4 addresses; **Thunderbolt** first when present |
 | **Pull** | Background `qemu-img convert` from `nbd://host:port` to a path under `/mnt/` |
+| **Scan** | Pull tab — private LAN discovery of NBD ports + peer beacons ([discovery.md](docs/discovery.md)) |
+| **Attach / Client** | Live use of `nbd://` (VM disk / nbd-client) — docs today ([client-attach.md](docs/client-attach.md)) |
 | **UI chrome** | Every tab: live hosted disks + orange Destructive banner when ON |
 | **Multi-disk host** | Yes — multiple listeners; each needs its own port |
 | **Safety** | No default `0.0.0.0`; array/mounted/flash flagged; Enable=No stops hosts |

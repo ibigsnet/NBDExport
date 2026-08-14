@@ -20,6 +20,16 @@ Copyright (c) 2026 ibigs, LLC · Author: RifleJock · License: GPL-3.0-or-later
 
 NBD has no built-in auth — treat bind IP as the primary isolation control. Prefer Thunderbolt or private LAN IPs.
 
+### Discovery (Scan / beacon)
+
+| Piece | Behavior |
+|-------|----------|
+| **Scan** | Runs from the logged-in WebUI (Pull tab). Probes **private** subnets only for NBD ports and peer beacons. |
+| **Beacon** | Optional lightweight HTTP on **TCP 10808** while Host exports are up. Answers **private clients only** with hostname/version/export list (no disk contents). Not behind Unraid login so peers can detect the plugin. |
+| **Cloud** | None — LAN only |
+
+Disable Host / stop exports when the LAN is untrusted. Writable exports remain high risk even with RO beacon metadata.
+
 ## Uninstall
 
 - Stops **managed** exports/jobs only (pid files under `/var/run/nbdexport` — not global `pkill qemu-nbd`).
