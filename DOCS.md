@@ -134,14 +134,21 @@ Full scenarios: [docs/how-to-use.md](docs/how-to-use.md) (including **both Unrai
 
 ## Security
 
-NBD is effectively **raw disk over TCP**.
+NBD is effectively **raw disk over TCP**. Basic qemu-nbd has **no password** — isolation is the access control.
 
-- Prefer **read-only**  
-- Bind to a **specific private IP** (Thunderbolt or LAN) — not the Internet  
-- Do not host array/cache/pool disks without understanding the risk  
-- Isolation is the access control model for basic qemu-nbd  
+| Rule of thumb | |
+|---------------|--|
+| Prefer **read-only** Host | Default On |
+| Bind a **specific private IP** | Thunderbolt first when present — not the Internet |
+| **Stop** when the job ends | Do not leave Host up “for later” |
+| Everyday source | Unassigned, unmounted disk; Destructive **Off** |
 
-When Destructive is required: [docs/destructive-mode.md](docs/destructive-mode.md) · Isolation: [docs/security-and-bind.md](docs/security-and-bind.md).
+| Doc | Audience |
+|-----|----------|
+| [SECURITY.md](SECURITY.md) | **CA review**, threat model, defaults, uninstall |
+| [docs/hosting-safety.md](docs/hosting-safety.md) | Operator checklist every Host job |
+| [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, RO vs RW |
+| [docs/destructive-mode.md](docs/destructive-mode.md) | When Destructive mode is required |
 
 ---
 
@@ -176,6 +183,8 @@ Image files under `/mnt/` are never part of this export.
 | [docs/nbd-vs-nfs-smb.md](docs/nbd-vs-nfs-smb.md) | Files vs disks decision table |
 | [docs/destructive-mode.md](docs/destructive-mode.md) | **When** to enable Destructive mode |
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, read-only |
+| [docs/hosting-safety.md](docs/hosting-safety.md) | Host checklist (publish safely) |
+| [SECURITY.md](SECURITY.md) | Threat model + CA review notes |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
 | [docs/integration-fabricrouting.md](docs/integration-fabricrouting.md) | Fabric Routing / multi-hop (optional) |

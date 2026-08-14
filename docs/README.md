@@ -10,11 +10,13 @@ Read in this order for a new install:
 | 4 | [nbd-vs-nfs-smb.md](nbd-vs-nfs-smb.md) | Files vs disks |
 | 5 | [destructive-mode.md](destructive-mode.md) | **When** to enable Destructive mode |
 | 6 | [security-and-bind.md](security-and-bind.md) | Read-only, bind IP, isolation |
-| 7 | [imaging-workflow.md](imaging-workflow.md) | CLI convert + restore |
-| 8 | [settings-reference.md](settings-reference.md) | Controls by tab |
-| 9 | [discovery.md](discovery.md) | **Scan network** / peer beacon (multi-Unraid) |
-| 10 | [client-attach.md](client-attach.md) | Live `nbd://` for VMs / nbd-client (vs Pull image) |
-| 11 | [troubleshooting.md](troubleshooting.md) | Failures |
+| 7 | [hosting-safety.md](hosting-safety.md) | **Host checklist** every time you publish a disk |
+| 8 | [../SECURITY.md](../SECURITY.md) | Threat model + **CA review** notes |
+| 9 | [imaging-workflow.md](imaging-workflow.md) | CLI convert + restore |
+| 10 | [settings-reference.md](settings-reference.md) | Controls by tab |
+| 11 | [discovery.md](discovery.md) | **Scan network** / peer beacon (multi-Unraid) |
+| 12 | [client-attach.md](client-attach.md) | Live `nbd://` for VMs / nbd-client (vs Pull image) |
+| 13 | [troubleshooting.md](troubleshooting.md) | Failures |
 
 ### Integrations (optional)
 

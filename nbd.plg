@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ak">
+<!ENTITY version "2026.08.14al">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,10 @@
 
 <CHANGES>
 ###&version;
+- **Security docs:** expanded <code>SECURITY.md</code> (CA review / threat model),
+  <code>docs/hosting-safety.md</code> Host checklist, bind isolation guide.
+
+###2026.08.14ak
 - **UI:** host export blue badge is <strong>Active</strong> (was “Starting…”) so a live
   process is not mistaken for still waiting to begin.
 
@@ -288,6 +292,14 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/DOCS.md">
 <URL>&raw;/DOCS.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/SECURITY.md">
+<URL>&raw;/SECURITY.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/hosting-safety.md">
+<URL>&raw;/docs/hosting-safety.md?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/how-to-use.md">
