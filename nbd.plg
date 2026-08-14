@@ -65,8 +65,7 @@
   emergency stop button stacked under the text (not inline).
 
 ###2026.08.14ar
-- **Fix:** auto-refresh on Pull fail / Host stop — paint-time baseline + Status tab
-  watcher (was missing). qemu-img deaths show <strong>Failed</strong> not Idle.
+- **Fix:** auto-refresh on Pull fail / Host stop — server snapshot + Status tab watcher (was missing). qemu-img deaths show <strong>Failed</strong> not Idle.
 
 ###2026.08.14aq
 - **UD overlay:** reliable Main → Unassigned Devices integration — disk-row
