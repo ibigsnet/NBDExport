@@ -17,13 +17,19 @@ try {
   switch ($action) {
     case 'save_cfg':
       $cfg = nbd_load_cfg();
-      foreach (['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+      foreach ([
+        'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
+        'rehydrate_on_start', 'ud_status_overlay',
+      ] as $k) {
         if (isset($_POST[$k])) {
           $cfg[$k] = trim((string)$_POST[$k]);
         }
       }
       // Normalize yes/no
-      foreach (['enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+      foreach ([
+        'enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode',
+        'rehydrate_on_start', 'ud_status_overlay',
+      ] as $k) {
         if (isset($cfg[$k])) {
           $cfg[$k] = ($cfg[$k] === 'yes') ? 'yes' : 'no';
         }
@@ -33,9 +39,16 @@ try {
       }
       nbd_write_cfg($cfg);
       nbd_write_companion_marker();
+      // Soft head hook so opt-in badges can load on Main → Unassigned Devices
+      if (($cfg['ud_status_overlay'] ?? 'no') === 'yes') {
+        nbd_ud_overlay_inject();
+      }
       $msg = 'NBD Export: settings saved.';
       if (($cfg['destructive_mode'] ?? 'no') === 'yes') {
         $msg .= ' WARNING: Destructive mode is ON (writable / array-cache-pool / mounted / boot hosts allowed).';
+      }
+      if (($cfg['ud_status_overlay'] ?? 'no') === 'yes') {
+        $msg .= ' Unassigned Devices status badges: ON (best-effort overlay).';
       }
       nbd_flash($msg);
       break;

@@ -22,6 +22,8 @@ $def_ro = (($cfg['default_read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no';
 $def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
 $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$ud_overlay = (($cfg['ud_status_overlay'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$ud_plugin_present = is_dir('/usr/local/emhttp/plugins/unassigned.devices');
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['fabricrouting']);
 $mem = nbd_memory_load();

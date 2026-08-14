@@ -63,6 +63,7 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | **UI chrome** | Every tab: live hosted disks + orange Destructive banner when ON |
 | **Multi-disk host** | Yes — multiple listeners; each needs its own port |
 | **Safety** | No default `0.0.0.0`; array/mounted/flash flagged; Enable=No stops hosts |
+| **UD badges (opt-in)** | Optional small **NBD RO/RW** lettering on Main → Unassigned Devices — off by default |
 
 ### Product defaults
 
@@ -184,6 +185,7 @@ Image files under `/mnt/` are never part of this export.
 | [docs/destructive-mode.md](docs/destructive-mode.md) | **When** to enable Destructive mode |
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, read-only |
 | [docs/hosting-safety.md](docs/hosting-safety.md) | Host checklist (publish safely) |
+| [docs/integration-unassigned-devices.md](docs/integration-unassigned-devices.md) | Opt-in UD status badges |
 | [SECURITY.md](SECURITY.md) | Threat model + CA review notes |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |

@@ -87,7 +87,7 @@ Read-only does **not** freeze local writers on the source Unraid host. Quiesce o
 | Install unrelated packages at boot | Tools are Unraid VM stack (`qemu-nbd` / `qemu-img`) |
 | Require Thunderbolt Net or Fabric Routing | Soft companions only |
 | Phone home / analytics / ads | No external calls for “license check” or telemetry |
-| Inject into Unraid Core UI by default | No Main-page free-bar hacks; Host status lives under **Network Services → NBD** |
+| Inject into Unraid Core UI by default | Host status lives under **Network Services → NBD**. Optional **opt-in** soft hook for small badges on Main → Unassigned Devices (third-party page; default **Off**) — [docs/integration-unassigned-devices.md](docs/integration-unassigned-devices.md) |
 
 ---
 
@@ -101,6 +101,7 @@ Read-only does **not** freeze local writers on the source Unraid host. Quiesce o
 | `allow_bind_all` | **no** | Blocks bind `0.0.0.0` until explicitly allowed |
 | `destructive_mode` | **no** | Blocks RW host and array/mounted/boot sources |
 | `rehydrate_on_start` | **no** | No surprise re-export after reboot / array start |
+| `ud_status_overlay` | **no** | No DOM badges on Unassigned Devices until the user opts in |
 
 Source of truth: [`default.cfg`](default.cfg). Live flash: `/boot/config/plugins/NBDExport/NBDExport.cfg`.
 

@@ -91,6 +91,31 @@ nbd_page_styles();
         Turn back to No when finished.
       </blockquote>
 
+      <dl>
+        <dt>Unassigned Devices badges:</dt>
+        <dd>
+          <select name="ud_status_overlay" id="nbd_ud_status_overlay"<?= $ud_plugin_present ? '' : ' disabled' ?>>
+            <?= mk_option($ud_overlay, 'no', 'No (default)') ?>
+            <?= mk_option($ud_overlay, 'yes', 'Yes — show NBD RO / NBD RW on Main → Unassigned Devices') ?>
+          </select>
+<?php if (!$ud_plugin_present): ?>
+          <span class="nbd-muted"> — Unassigned Devices plugin not installed</span>
+<?php endif; ?>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        <strong>Opt-in only.</strong> When Yes, disks that are actively Hosted by NBD Export get small
+        lettering on <strong>Main → Unassigned Devices</strong>:
+        <span style="color:#3d8b5a;font-size:0.9em;font-weight:600">NBD RO</span>
+        or <span style="color:#c00;font-size:0.9em;font-weight:700">NBD RW</span>
+        (clickable → NBD settings).<br><br>
+        This is a <strong>best-effort DOM overlay</strong> on a page owned by the Unassigned Devices
+        plugin — not a formal API. UD layout/AJAX can change and break the badges until we adapt.
+        No mount/share controls are added. Leave <strong>No</strong> if you prefer NBD status only
+        under Network Services → NBD.
+        <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/integration-unassigned-devices.md" target="_blank" rel="noopener">Details ↗</a>
+      </blockquote>
+
       <p class="nbd-actions">
         <input type="submit" name="#apply" value="Apply" onclick="return nbdConfirmDestructiveSave(this.form)">
         <input type="button" value="Done" onclick="done()">

@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14al">
+<!ENTITY version "2026.08.14am">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,12 @@
 
 <CHANGES>
 ###&version;
+- **Opt-in Unassigned Devices badges:** Settings → show small <strong>NBD RO</strong> /
+  <strong>NBD RW</strong> lettering on Main → Unassigned Devices for hosted disks.
+  Default Off. Best-effort DOM overlay (UD owns that page). See
+  <code>docs/integration-unassigned-devices.md</code>.
+
+###2026.08.14al
 - **Security docs:** expanded <code>SECURITY.md</code> (CA review / threat model),
   <code>docs/hosting-safety.md</code> Host checklist, bind isolation guide.
 
@@ -262,8 +268,24 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 <URL>&raw;/include/nbd-scan.php?v=&version;</URL>
 </FILE>
 
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php">
+<URL>&raw;/include/nbd-ud-head.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-status.php">
+<URL>&raw;/include/nbd-ud-status.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-overlay.js">
+<URL>&raw;/include/nbd-ud-overlay.js?v=&version;</URL>
+</FILE>
+
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/discovery.md">
 <URL>&raw;/docs/discovery.md?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/integration-unassigned-devices.md">
+<URL>&raw;/docs/integration-unassigned-devices.md?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/docs/client-attach.md">
@@ -379,7 +401,7 @@ if [ -d /usr/local/emhttp/plugins ]; then
   # Many plugins register via /boot/config/plugins/*/event or plg FILE — emhttp event/started is enough if plugin manager links it
   :
 fi
-php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker();' 2>/dev/null || true
+php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); nbd_ud_overlay_inject();' 2>/dev/null || true
 echo "NBD Export: install complete."
 echo "NBD Export: Settings → Network Services → NBD"
 echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."
@@ -389,6 +411,20 @@ echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."
 <FILE Run="/bin/bash" Method="remove">
 <INLINE><![CDATA[
 echo "NBD Export: removing plugin (full cleanup)..."
+
+# 0) Soft head hook for opt-in Unassigned Devices badges
+if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_ud_overlay_uninject();' 2>/dev/null || true
+fi
+for f in \
+  /usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php \
+  /usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php \
+  /usr/local/emhttp/webGui/include/HeadInclude.php \
+  /usr/local/emhttp/plugins/dynamix/include/HeadInclude.php
+do
+  [ -f "$f" ] || continue
+  sed -i '/NBDExport UD overlay/d' "$f" 2>/dev/null || true
+done
 
 # 1) Stop managed listeners/jobs only (via state files — not global pkill qemu-nbd)
 if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then

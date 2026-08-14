@@ -37,6 +37,8 @@ function nbd_load_cfg() {
     'rehydrate_on_start' => 'no',
     // Optional comma list of private CIDRs to always scan (e.g. "192.168.1.0/24")
     'scan_extra_subnets' => '',
+    // Opt-in: small NBD RO/RW badges on Main → Unassigned Devices (DOM overlay; UD owns that page)
+    'ud_status_overlay' => 'no',
   ];
   $path = nbd_cfg_path();
   if (!is_file($path) && is_file(nbd_default_cfg_path())) {
@@ -68,7 +70,10 @@ function nbd_write_cfg(array $cfg) {
   if (!is_dir(NBDEXPORT_CFG_DIR)) {
     @mkdir(NBDEXPORT_CFG_DIR, 0755, true);
   }
-  $keys = ['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start', 'scan_extra_subnets'];
+  $keys = [
+    'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
+    'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+  ];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
     $v = isset($cfg[$k]) ? (string)$cfg[$k] : '';
@@ -262,12 +267,18 @@ function nbd_config_import_bundle(array $bundle, $settings = true, $memory = tru
   $parts = [];
   if ($settings && isset($bundle['settings']) && is_array($bundle['settings'])) {
     $cfg = nbd_load_cfg();
-    foreach (['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+    foreach ([
+      'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
+      'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+    ] as $k) {
       if (array_key_exists($k, $bundle['settings'])) {
         $cfg[$k] = (string)$bundle['settings'][$k];
       }
     }
-    foreach (['enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'] as $k) {
+    foreach ([
+      'enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode',
+      'rehydrate_on_start', 'ud_status_overlay',
+    ] as $k) {
       $cfg[$k] = (($cfg[$k] ?? 'no') === 'yes') ? 'yes' : 'no';
     }
     if (!nbd_write_cfg($cfg)) {
@@ -798,6 +809,69 @@ function nbd_destructive_mode_on(array $cfg = null) {
     $cfg = nbd_load_cfg();
   }
   return (($cfg['destructive_mode'] ?? 'no') === 'yes');
+}
+
+/**
+ * Soft-inject opt-in Unassigned Devices overlay hook into Unraid HeadInlineJS.
+ * The include is a no-op unless ud_status_overlay=yes and the user is on UD.
+ * Marker comments make uninstall reliable (same idea as Storage Guard inject).
+ */
+function nbd_ud_overlay_inject() {
+  $marker = 'NBDExport UD overlay';
+  $line = '<?php @include \'/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php\'; /* ' . $marker . ' */ ?>';
+  $candidates = [
+    '/usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php',
+    '/usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php',
+  ];
+  $ok = false;
+  foreach ($candidates as $path) {
+    if (!is_file($path) || !is_writable($path)) {
+      continue;
+    }
+    $raw = @file_get_contents($path);
+    if (!is_string($raw)) {
+      continue;
+    }
+    if (strpos($raw, $marker) !== false) {
+      $ok = true;
+      continue;
+    }
+    $raw = rtrim($raw) . "\n" . $line . "\n";
+    if (@file_put_contents($path, $raw) !== false) {
+      $ok = true;
+    }
+  }
+  return $ok;
+}
+
+/** Remove UD overlay inject markers from Unraid layout files. */
+function nbd_ud_overlay_uninject() {
+  $marker = 'NBDExport UD overlay';
+  $candidates = [
+    '/usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php',
+    '/usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php',
+    '/usr/local/emhttp/webGui/include/HeadInclude.php',
+    '/usr/local/emhttp/plugins/dynamix/include/HeadInclude.php',
+  ];
+  foreach ($candidates as $path) {
+    if (!is_file($path) || !is_writable($path)) {
+      continue;
+    }
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || strpos($raw, $marker) === false) {
+      continue;
+    }
+    $lines = preg_split('/\r\n|\r|\n/', $raw);
+    $out = [];
+    foreach ($lines as $ln) {
+      if (strpos($ln, $marker) !== false) {
+        continue;
+      }
+      $out[] = $ln;
+    }
+    @file_put_contents($path, implode("\n", $out) . (substr($raw, -1) === "\n" ? "\n" : ''));
+  }
+  return true;
 }
 
 /**

@@ -22,6 +22,7 @@ Read in this order for a new install:
 
 | Doc | Topic |
 |-----|--------|
+| [integration-unassigned-devices.md](integration-unassigned-devices.md) | Opt-in **NBD RO/RW** badges on Main → Unassigned Devices |
 | [integration-thunderboltnet.md](integration-thunderboltnet.md) | Thunderbolt underlay |
 | [integration-fabricrouting.md](integration-fabricrouting.md) | Fabric Routing / multi-hop |
 
