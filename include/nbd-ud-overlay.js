@@ -46,9 +46,32 @@
   }
 
   function loadExports(cb) {
+    // Prefer fetch + same-origin credentials (matches other NBD WebUI calls)
+    var url = STATUS_URL + '?_=' + Date.now();
+    if (typeof fetch === 'function') {
+      fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('status ' + r.status);
+          return r.json();
+        })
+        .then(function (j) {
+          var map = {};
+          if (j && j.enabled && j.exports) {
+            j.exports.forEach(function (ex) {
+              var d = basename(ex.device || ex.path || '');
+              if (!d) return;
+              map[d] = ex;
+            });
+          }
+          cb(map);
+        })
+        .catch(function () { cb({}); });
+      return;
+    }
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', STATUS_URL + '?_=' + Date.now(), true);
+    xhr.open('GET', url, true);
     xhr.timeout = 5000;
+    xhr.withCredentials = true;
     xhr.onload = function () {
       var map = {};
       try {
@@ -132,18 +155,25 @@
       }
     }
 
-    var seen = {};
+    // Object keys stringify elements to the same "[object HTMLTableRowElement]" —
+    // only the first row would ever be annotated. Use a WeakSet instead.
+    var seen = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+    var seenList = [];
     rows.forEach(function (tr) {
-      if (!tr || seen[tr]) return;
-      seen[tr] = true;
+      if (!tr || tr.nodeType !== 1) return;
+      if (seen) {
+        if (seen.has(tr)) return;
+        seen.add(tr);
+      } else {
+        if (seenList.indexOf(tr) !== -1) return;
+        seenList.push(tr);
+      }
       var text = (tr.textContent || '').replace(/\s+/g, ' ');
       var hit = null;
-      var hitDev = '';
       keys.forEach(function (dev) {
         if (hit) return;
         if (cellMatches(text, dev)) {
           hit = exportsByDev[dev];
-          hitDev = dev;
         }
       });
       // Partition export: also tag parent disk row if only partition is hosted
@@ -153,12 +183,11 @@
           var parent = parentDisk(dev);
           if (parent && cellMatches(text, parent)) {
             hit = exportsByDev[dev];
-            hitDev = parent;
           }
         });
       }
       if (!hit) return;
-      // Prefer serial column (usually 2nd td) for badge placement
+      // Prefer Identification / serial column (2nd td in UD table)
       var tds = tr.querySelectorAll('td');
       var target = tds.length > 1 ? tds[1] : (tds[0] || tr);
       if (target.querySelector('.nbd-ud-badge')) return;

@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14am">
+<!ENTITY version "2026.08.14an">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,11 @@
 
 <CHANGES>
 ###&version;
+- **Fix:** Unassigned Devices badges only annotated the first disk row (JS row-dedupe bug);
+  <strong>NBD RO</strong>/<strong>NBD RW</strong> now appear on the correct hosted device
+  (e.g. Dev 2 / nvme1n1).
+
+###2026.08.14am
 - **Opt-in Unassigned Devices badges:** Settings → show small <strong>NBD RO</strong> /
   <strong>NBD RW</strong> lettering on Main → Unassigned Devices for hosted disks.
   Default Off. Best-effort DOM overlay (UD owns that page). See
