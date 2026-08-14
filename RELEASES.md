@@ -24,6 +24,14 @@ Unraid plugin updates use lexicographic `strcmp()` (not PHP `version_compare`).
 Canonical JS: **`ibigsGotoNetTab(needle, event)`** (aliases: `nbdGotoNetTab`, `tbnGotoNetTab`, `frrGotoNetTab`).  
 NBD itself lives under **Network Services** (`/Settings/NBDExport`) — that path is correct for opening NBD, not a Network Settings tab.
 
+## Support
+
+| | |
+|--|--|
+| **Unraid forum (support)** | https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/ |
+| **GitHub** | https://github.com/ibigsnet/NBDExport |
+| **CA Support** | Same forum URL in [unraid-templates `plugins/nbd.xml`](https://github.com/ibigsnet/unraid-templates/blob/main/plugins/nbd.xml) |
+
 ## Install URLs
 
 | Track | URL |

@@ -42,5 +42,6 @@ NBD has no built-in auth — treat bind IP as the primary isolation control. Pre
 
 ## Contact
 
-- Support: GitHub issues (forum thread when published)
+- Support (Unraid forum): https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/
+- GitHub issues: https://github.com/ibigsnet/NBDExport/issues
 - Project: https://github.com/ibigsnet/NBDExport

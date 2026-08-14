@@ -19,11 +19,12 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ag">
+<!ENTITY version "2026.08.14ah">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
 <!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NBDExport/main">
+<!ENTITY forum "https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NBDExport">
 <!ENTITY configdir "/boot/config/plugins/NBDExport">
 ]>
@@ -35,12 +36,16 @@
   pluginURL="&pluginURL;"
   icon="database"
   min="6.12.0"
-  support="https://github.com/&github;/issues"
+  support="&forum;"
   project="https://github.com/&github;"
   readme="https://raw.githubusercontent.com/&github;/stable/README.md">
 
 <CHANGES>
 ###&version;
+- **Support:** Unraid forum topic is the primary support URL (Plugins / CA Support).
+- **Fix:** ship non-empty <code>DOCS.md</code> (empty blob on main caused <code>plugin install</code> zero-length failure).
+
+###2026.08.14ag
 - **Rename:** product **NBD Export**, plugin id **NBDExport**, PluginURL `nbd.plg` (was NbdExport / install.plg).
 - UI menu title stays **NBD** under Network Services. CA Name: NBD Export.
 - Migrate flash/emhttp from legacy `NbdExport` paths on install; remove old plg basenames.
