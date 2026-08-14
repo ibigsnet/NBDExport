@@ -21,7 +21,7 @@ This document is for **operators**, **Community Applications reviewers**, and **
 | Idle install is quiet | No Host listener until the user starts one; no cloud / telemetry / phone-home |
 | Network surface is explicit | Only what the user starts: `qemu-nbd` on a chosen IP:port; optional discovery beacon only while Host exports are up |
 | Privileged but scoped | Root (Unraid plugin model). Starts `qemu-nbd` / `qemu-img`. Does **not** edit `network.cfg`, array membership, or reformat disks |
-| Server-side gates | Destructive / RW / array-mounted / boot rules enforced in PHP even if the UI is bypassed |
+| Server-side gates | Destructive / RW / array-mounted / boot rules enforced for **new** Hosts; live exports keep running until Stop. Emergency: **Stop all writable hosts** / **Stop all hosted disks** / Enable=No |
 | Clean uninstall | Stops **managed** processes only (pid files under `/var/run/nbdexport`); removes plugin tree; leaves user images under `/mnt/` |
 | Supply chain | CA PluginURL → GitHub **`stable`**; development on **`main`** |
 

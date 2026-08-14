@@ -64,8 +64,36 @@ Turn Destructive mode **On** only for one of these four Host situations:
 ## After a special job
 
 1. Finish work on the Host (and any Pull or peer client)  
-2. **Stop** any host still listening  
-3. **Destructive mode = No** → **Apply**
+2. **Stop** any host still listening (or use the emergency buttons below)  
+3. Optionally **Destructive mode = No** → **Apply** (hides the elevated Host options)
+
+### Important: Destructive Off does **not** stop live hosts
+
+Destructive mode is a **gate for starting** Hosts, not a kill switch for ones already up.
+
+| Action | Effect on a **writable** host already Listening |
+|--------|--------------------------------------------------|
+| Destructive **Off** → Apply | Host **keeps** listening writable |
+| Destructive **On** again | Still listening (no change) |
+| **Stop** on that row | Stops that host |
+| **Stop all writable hosts** | Stops every RW host; RO stays up |
+| **Stop all hosted disks** | Stops every host |
+| **Enable NBD Export = No** → Apply | Stops **all** hosts |
+
+So you can: turn Destructive **On** → Host writable → turn Destructive **Off** (UI locked down again) → leave the writable export running until you intentionally stop it. That is intentional.
+
+**Caveat:** with Destructive Off, the WebUI will not let you *start* another writable (or array/mounted/boot) host — but anything already Listening remains exposed until stopped. Watch the red banner and **Writable** badges on every NBD tab.
+
+### Emergency shutoff switches
+
+On every NBD tab, while hosts are up:
+
+| Control | Stops |
+|---------|--------|
+| **Stop all writable hosts** (red) | Only **writable** exports — security kill-switch for RW |
+| **Stop all hosted disks** | **All** Hosts (RO and RW) |
+
+Nuclear: **Enable NBD Export = No** → Apply (same as stop all, plus blocks new Hosts until re-enabled).
 
 ---
 

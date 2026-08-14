@@ -261,13 +261,35 @@ function nbd_page_header() {
       None hosted. Use the <strong>Host</strong> tab to publish a disk or partition
       (one free port per disk).
     </div>
-<?php else: ?>
+<?php else:
+  $n_writable = 0;
+  foreach ($exports as $_e) {
+    if (empty($_e['read_only'])) {
+      $n_writable++;
+    }
+  }
+?>
     <div class="nbd-status-legend" style="margin:0.35em 0 0.45em">
       <span><span class="nbd-badge nbd-badge-ok">Listening</span></span>
       <span><span class="nbd-badge nbd-badge-info">Active</span></span>
       <span><span class="nbd-badge nbd-badge-stale">Stopped</span></span>
       <span><span class="nbd-badge nbd-badge-rw">Writable</span></span>
     </div>
+<?php if ($n_writable > 0): ?>
+    <div class="nbd-destructive-banner" role="alert" style="margin:0.35em 0 0.55em;border-color:rgba(200,60,60,0.55);background:rgba(200,60,60,0.14);color:#b33">
+      <strong><?= (int)$n_writable ?> writable</strong> host<?= $n_writable === 1 ? '' : 's' ?> listening —
+      peers can write the selected disk(s). Turning Destructive mode <strong>Off</strong> does
+      <em>not</em> stop them (only blocks starting new ones).
+      <form method="POST" action="/update.php" target="progressFrame" style="display:inline;margin-left:0.5em"
+        onsubmit="return confirm('Emergency stop: halt ALL writable NBD hosts now?\n\nRead-only hosts stay up.');">
+        <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+        <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+        <input type="hidden" name="nbd_action" value="export_stop_writables">
+        <input type="submit" name="#apply" value="Stop all writable hosts"
+          style="color:#fff;background:#a33;border-color:#822;font-weight:700">
+      </form>
+    </div>
+<?php endif; ?>
     <table class="nbd-data tablesorter">
       <thead>
         <tr>
@@ -307,14 +329,28 @@ function nbd_page_header() {
 <?php endforeach; ?>
       </tbody>
     </table>
-<?php if ($n > 1): ?>
-    <form method="POST" action="/update.php" target="progressFrame" style="margin-top:0.35em">
-      <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-      <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-      <input type="hidden" name="nbd_action" value="export_stop_all">
-      <input type="submit" name="#apply" value="Stop all hosted disks">
-    </form>
+    <div style="margin-top:0.4em;display:flex;flex-wrap:wrap;gap:0.45em;align-items:center">
+<?php if ($n >= 1): ?>
+      <form method="POST" action="/update.php" target="progressFrame" style="display:inline"
+        onsubmit="return confirm('Stop ALL hosted disks (read-only and writable)?');">
+        <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+        <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+        <input type="hidden" name="nbd_action" value="export_stop_all">
+        <input type="submit" name="#apply" value="Stop all hosted disks">
+      </form>
 <?php endif; ?>
+<?php if ($n_writable > 0): ?>
+      <form method="POST" action="/update.php" target="progressFrame" style="display:inline"
+        onsubmit="return confirm('Emergency stop: halt ALL writable NBD hosts now?\n\nRead-only hosts stay up.');">
+        <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+        <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+        <input type="hidden" name="nbd_action" value="export_stop_writables">
+        <input type="submit" name="#apply" value="Stop all writable hosts"
+          style="color:#fff;background:#a33;border-color:#822;font-weight:700"
+          title="Security emergency: kill writable exports only">
+      </form>
+<?php endif; ?>
+    </div>
 <?php endif; ?>
   </div>
 </div>

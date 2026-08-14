@@ -44,8 +44,16 @@ try {
         nbd_ud_overlay_inject();
       }
       $msg = 'NBD Export: settings saved.';
+      // Destructive Off only blocks *new* Hosts — live writable/risky exports keep
+      // running until Stop / Stop all writable / Stop all / Enable=No.
       if (($cfg['destructive_mode'] ?? 'no') === 'yes') {
         $msg .= ' WARNING: Destructive mode is ON (writable / array-cache-pool / mounted / boot hosts allowed).';
+      } else {
+        $nw = nbd_count_writable_exports();
+        if ($nw > 0) {
+          $msg .= ' Note: Destructive is Off, but ' . $nw
+            . ' writable host(s) still listening — use Stop all writable hosts if unintended.';
+        }
       }
       if (($cfg['ud_status_overlay'] ?? 'no') === 'yes') {
         $msg .= ' Unassigned Devices status badges: ON (best-effort overlay).';
@@ -78,6 +86,14 @@ try {
     case 'export_stop_all':
       nbd_stop_all_exports();
       nbd_flash('NBD Export: all exports stopped.');
+      break;
+
+    case 'export_stop_writables':
+      $r = nbd_stop_writable_exports();
+      $n = (int)($r['count'] ?? 0);
+      nbd_flash($n
+        ? ('NBD Export: emergency stop — halted ' . $n . ' writable host(s).')
+        : 'NBD Export: no writable hosts were listening.');
       break;
 
     case 'image_start':

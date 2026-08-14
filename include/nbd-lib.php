@@ -1059,6 +1059,88 @@ function nbd_stop_all_exports() {
   }
 }
 
+/**
+ * Emergency / policy: stop every managed Host that is writable (not read-only).
+ * @return array{ok:bool,stopped:string[],count:int}
+ */
+function nbd_stop_writable_exports() {
+  $stopped = [];
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['id'])) {
+      continue;
+    }
+    // Default unknown to writable for safety (legacy state without flag)
+    $ro = array_key_exists('read_only', $e) ? !empty($e['read_only']) : false;
+    if ($ro) {
+      continue;
+    }
+    nbd_export_stop($e['id']);
+    $stopped[] = (string)$e['id'];
+  }
+  return ['ok' => true, 'stopped' => $stopped, 'count' => count($stopped)];
+}
+
+/**
+ * Stop live Hosts that would be refused if started under current cfg
+ * (e.g. Destructive just turned Off while a writable or array host is still up).
+ *
+ * @return array{ok:bool,stopped:string[],reasons:array<string,string>,count:int}
+ */
+function nbd_stop_exports_disallowed_by_cfg(array $cfg = null) {
+  if ($cfg === null) {
+    $cfg = nbd_load_cfg();
+  }
+  $destructive = nbd_destructive_mode_on($cfg);
+  $stopped = [];
+  $reasons = [];
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['id'])) {
+      continue;
+    }
+    $id = (string)$e['id'];
+    $ro = array_key_exists('read_only', $e) ? !empty($e['read_only']) : false;
+    $dev = (string)($e['device'] ?? '');
+    $why = '';
+    if (!$ro) {
+      if (!$destructive) {
+        $why = 'writable (Destructive mode Off)';
+      }
+    } elseif ($dev !== '') {
+      $risk = nbd_device_risk($dev);
+      if (!empty($risk['risky']) && !$destructive) {
+        $why = 'in-use/critical source without Destructive mode (' . ($risk['summary'] ?? 'risky') . ')';
+      }
+    }
+    if ($why === '') {
+      continue;
+    }
+    nbd_export_stop($id);
+    $stopped[] = $id;
+    $reasons[$id] = $why;
+  }
+  return [
+    'ok' => true,
+    'stopped' => $stopped,
+    'reasons' => $reasons,
+    'count' => count($stopped),
+  ];
+}
+
+/** Count live writable Host exports (for UI emergency control). */
+function nbd_count_writable_exports() {
+  $n = 0;
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['alive']) && empty($e['listening'])) {
+      continue;
+    }
+    $ro = array_key_exists('read_only', $e) ? !empty($e['read_only']) : false;
+    if (!$ro) {
+      $n++;
+    }
+  }
+  return $n;
+}
+
 function nbd_jobs_state() {
   nbd_ensure_runtime_dirs();
   $list = [];

@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ao">
+<!ENTITY version "2026.08.14ap">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,11 @@
 
 <CHANGES>
 ###&version;
+- **Security UX:** emergency <strong>Stop all writable hosts</strong> (and Stop all) on every tab
+  while RW is listening. Destructive Off still allows already-running writable Hosts
+  (documented caveat); settings flash warns if RW is still up.
+
+###2026.08.14ao
 - **UI:** auto-refresh NBD pages when a Host goes Stopped/stale or a Pull job finishes /
   fails (including qemu-img errors that used to look “Idle”). Polls live status while
   exports/jobs are active.

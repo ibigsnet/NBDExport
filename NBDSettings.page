@@ -88,7 +88,9 @@ nbd_page_styles();
         <strong>Unraid boot</strong> disk (usually USB flash; whatever holds <code>/boot</code>).
         Pull never needs this. Full list:
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">when to enable Destructive mode ↗</a>.
-        Turn back to No when finished.
+        Turn back to No when finished — that only blocks <em>starting</em> new elevated Hosts;
+        any <strong>writable</strong> (or other) export already Listening <strong>stays up</strong>
+        until you Stop it, use <strong>Stop all writable hosts</strong>, or disable the plugin.
       </blockquote>
 
       <dl>

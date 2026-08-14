@@ -31,7 +31,7 @@ You need Destructive mode **only** for those Host cases. Everyday **read-only** 
 Server-side enforcement refuses blocked combinations even if the UI is bypassed.  
 Pull jobs **never** write to `/dev/…` block devices (file under `/mnt/` only).
 
-When Destructive mode is ON, every NBD tab shows an **orange banner**. Turn it **back to No** when you finish a special job.
+When Destructive mode is ON, every NBD tab shows an **orange banner**. You may turn it **back to No** after starting a special Host — that only blocks *new* elevated Hosts; **live writable exports keep listening** until you Stop them (or use **Stop all writable hosts**). See [destructive-mode.md](destructive-mode.md).
 
 ## Rules
 
