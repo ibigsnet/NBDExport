@@ -35,6 +35,8 @@ function nbd_load_cfg() {
     'allow_bind_all' => 'no',
     'destructive_mode' => 'no',
     'rehydrate_on_start' => 'no',
+    // Optional comma list of private CIDRs to always scan (e.g. "192.168.1.0/24")
+    'scan_extra_subnets' => '',
   ];
   $path = nbd_cfg_path();
   if (!is_file($path) && is_file(nbd_default_cfg_path())) {
@@ -66,7 +68,7 @@ function nbd_write_cfg(array $cfg) {
   if (!is_dir(NBDEXPORT_CFG_DIR)) {
     @mkdir(NBDEXPORT_CFG_DIR, 0755, true);
   }
-  $keys = ['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start'];
+  $keys = ['enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode', 'rehydrate_on_start', 'scan_extra_subnets'];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
     $v = isset($cfg[$k]) ? (string)$cfg[$k] : '';
@@ -1280,44 +1282,122 @@ function nbd_beacon_stop() {
 }
 
 /**
- * Private /24 networks from local interfaces (for scan).
+ * Private /24 networks to scan: local interfaces + private routes (e.g. LAN via gateway).
  * @return string[] list of "a.b.c.0/24"
  */
 function nbd_scan_subnets() {
   $nets = [];
+  $add = function ($ip, $pref) use (&$nets) {
+    if (!nbd_is_private_ipv4($ip)) {
+      return;
+    }
+    $pref = (int)$pref;
+    if ($pref < 22 || $pref > 30) {
+      $pref = 24;
+    }
+    $long = ip2long($ip);
+    if ($long === false) {
+      return;
+    }
+    $mask = -1 << (32 - min(24, $pref));
+    // Always scan as /24 grids (cap how many for wider prefixes)
+    $net_long = $long & (-1 << (32 - $pref));
+    if ($pref < 24) {
+      $count = min(4, 1 << (24 - $pref));
+      $base = $net_long;
+      for ($i = 0; $i < $count; $i++) {
+        $nets[] = long2ip($base + ($i * 256)) . '/24';
+      }
+    } else {
+      $nets[] = long2ip($long & (-1 << 8)) . '/24';
+    }
+  };
+
   $out = [];
   @exec('ip -4 -o addr show scope global 2>/dev/null', $out);
   foreach ($out as $line) {
     if (!preg_match('/inet\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/', $line, $m)) {
       continue;
     }
-    $ip = $m[1];
-    $pref = (int)$m[2];
-    if (!nbd_is_private_ipv4($ip)) {
-      continue;
-    }
-    // Only scan reasonable LAN sizes (/24–/22); skip huge prefixes
-    if ($pref < 22 || $pref > 30) {
-      // still include as /24 of host
-      $pref = 24;
-    }
-    $long = ip2long($ip);
-    $mask = -1 << (32 - $pref);
-    $net = long2ip($long & $mask);
-    // Normalize scan grid to /24 chunks for pref 22–24
-    if ($pref <= 24) {
-      $base = ip2long($net);
-      $count = 1 << (24 - $pref);
-      for ($i = 0; $i < $count && $i < 4; $i++) { // cap 4×/24
-        $nets[] = long2ip($base + ($i * 256)) . '/24';
+    $add($m[1], (int)$m[2]);
+  }
+
+  // Routes: "192.168.1.0/24 via …" (covers LAN via gateway when not on that iface)
+  $routes = [];
+  @exec('ip -4 route show 2>/dev/null', $routes);
+  foreach ($routes as $line) {
+    if (preg_match('/^(\d+\.\d+\.\d+\.\d+)\/(\d+)\s/', $line, $m)) {
+      $pref = (int)$m[2];
+      if ($pref < 22 || $pref > 24) {
+        continue; // skip default and huge aggregates
       }
-    } else {
-      $nets[] = $net . '/' . $pref;
+      $add($m[1], $pref);
     }
   }
+
+  // Optional cfg: scan_extra_subnets="192.168.1.0/24,10.0.0.0/24"
+  $cfg = nbd_load_cfg();
+  $extra = trim((string)($cfg['scan_extra_subnets'] ?? ''));
+  if ($extra !== '') {
+    foreach (preg_split('/[\s,;]+/', $extra) as $cidr) {
+      if ($cidr === '') {
+        continue;
+      }
+      if (preg_match('#^(\d+\.\d+\.\d+\.\d+)/(\d+)$#', $cidr, $m)) {
+        $add($m[1], (int)$m[2]);
+      } elseif (preg_match('#^(\d+\.\d+\.\d+\.\d+)$#', $cidr, $m)) {
+        $add($m[1], 24);
+      }
+    }
+  }
+
   $nets = array_values(array_unique($nets));
   sort($nets);
   return $nets;
+}
+
+/**
+ * Last successful scan peer IPs (always re-probed even if subnet list changed).
+ * @return string[]
+ */
+function nbd_scan_known_peers() {
+  $path = NBDEXPORT_CFG_DIR . '/scan-peers.json';
+  if (!is_file($path)) {
+    return [];
+  }
+  $j = @json_decode((string)@file_get_contents($path), true);
+  if (!is_array($j) || empty($j['ips']) || !is_array($j['ips'])) {
+    return [];
+  }
+  $out = [];
+  foreach ($j['ips'] as $ip) {
+    $ip = trim((string)$ip);
+    if (preg_match('/^\d+\.\d+\.\d+\.\d+$/', $ip) && nbd_is_private_ipv4($ip)) {
+      $out[] = $ip;
+    }
+  }
+  return array_values(array_unique($out));
+}
+
+/**
+ * Remember peer IPs that answered Scan (cap 32).
+ */
+function nbd_scan_remember_peers(array $ips) {
+  nbd_ensure_runtime_dirs();
+  $prev = nbd_scan_known_peers();
+  $merged = [];
+  foreach (array_merge($ips, $prev) as $ip) {
+    $ip = trim((string)$ip);
+    if (preg_match('/^\d+\.\d+\.\d+\.\d+$/', $ip) && nbd_is_private_ipv4($ip)) {
+      $merged[$ip] = true;
+    }
+  }
+  $list = array_slice(array_keys($merged), 0, 32);
+  $path = NBDEXPORT_CFG_DIR . '/scan-peers.json';
+  @file_put_contents($path, json_encode([
+    'updated' => gmdate('c'),
+    'ips' => $list,
+  ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
 }
 
 /**
@@ -1471,6 +1551,12 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
       $ips[] = $ip;
     }
   }
+  // Always re-probe remembered peers (even if not on a scanned /24)
+  foreach (nbd_scan_known_peers() as $ip) {
+    if (!isset($self_ips[$ip])) {
+      $ips[] = $ip;
+    }
+  }
   $ips = array_values(array_unique($ips));
 
   $open = nbd_scan_tcp_parallel($ips, $probe_ports, 0.15, 80);
@@ -1553,6 +1639,12 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
     }
     return strcmp($a['ip'], $b['ip']);
   });
+
+  if ($hits) {
+    nbd_scan_remember_peers(array_map(function ($h) {
+      return $h['ip'] ?? '';
+    }, $hits));
+  }
 
   return [
     'ok' => true,

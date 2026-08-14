@@ -24,7 +24,11 @@ Find **NBD listeners** and optional **NBD Export peer beacons** on your **privat
 
 ## What Scan does
 
-1. Collect **private IPv4** subnets from this host’s interfaces (e.g. `192.168.1.0/24`, `192.168.254.0/24`).  
+1. Collect **private IPv4** targets from:
+   - Local interface prefixes (e.g. `192.168.254.0/24`)
+   - Private **routes** (e.g. `192.168.1.0/24 via …` when the peer LAN is not on a local NIC)
+   - Optional **`scan_extra_subnets`** in `NBDExport.cfg` (comma-separated CIDRs)
+   - **Remembered peer IPs** from prior successful scans (`scan-peers.json` on flash)
 2. Probe each host for:
    - **NBD TCP** ports (default **10809**, plus a short range if configured).  
    - **Beacon HTTP** on port **10808** (plugin JSON when advertise is running).  
@@ -34,6 +38,14 @@ Find **NBD listeners** and optional **NBD Export peer beacons** on your **privat
 4. UI: pick a row → **Use** fills the Pull **NBD URL** field.
 
 Scan is **best-effort** and bounded (timeouts, max hosts per subnet) so the WebUI does not hang.
+
+### Cross-LAN tip
+
+If the scanner only has a fabric IP (e.g. `192.168.254.4`) and reaches the export host via **NAT/default gateway**, there may be **no** `192.168.1.0/24` route entry. Either:
+
+- add a route: `ip route add 192.168.1.0/24 via <gateway>`, or  
+- set `scan_extra_subnets="192.168.1.0/24"` in `/boot/config/plugins/NBDExport/NBDExport.cfg`, or  
+- paste the peer once (after first hit, Scan re-probes remembered peers).
 
 ---
 
