@@ -58,6 +58,7 @@ nbd_page_styles();
       <blockquote class="inline_help">
         File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
         Placeholder uses Unraid’s VM share (<code>/mnt/user/domains/</code>); cache is fine for speed.
+        Match the extension to the format: <strong>.qcow2</strong> for qcow2, <strong>.img</strong> or <strong>.raw</strong> for raw.
       </blockquote>
 
       <dl>
@@ -70,8 +71,11 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>qcow2</strong> is sparse-friendly. Job survives closing the browser.
+        <strong>qcow2</strong> is sparse-friendly (use a <code>.qcow2</code> name).
+        <strong>raw</strong> is a full byte image (often <code>.img</code> or <code>.raw</code>).
+        Job survives closing the browser. A mismatched extension is only a naming warning — qemu still writes the format you pick.
       </blockquote>
+      <p id="nbd_ext_hint" class="nbd-ext-hint" style="display:none;margin:0.35em 0 0.6em;padding:0.45em 0.65em;border-radius:4px;font-size:0.92em;line-height:1.35"></p>
 
       <div class="nbd-actions">
         <input type="submit" name="#apply" value="Pull remote disk → file on Unraid"

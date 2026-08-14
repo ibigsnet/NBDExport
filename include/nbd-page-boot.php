@@ -215,6 +215,16 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-chrome-footer .nbd-companion {
   margin: 0.55em 0 0;
 }
+.nbd-wrap .nbd-ext-hint.nbd-ext-warn {
+  border: 1px solid rgba(200, 120, 40, 0.55);
+  background: rgba(230, 160, 60, 0.15);
+  color: inherit;
+}
+.nbd-wrap .nbd-ext-hint.nbd-ext-info {
+  border: 1px solid rgba(100, 140, 180, 0.45);
+  background: rgba(100, 140, 180, 0.12);
+  color: inherit;
+}
 .nbd-wrap .nbd-tab-body {
   margin-top: 0.35em;
 }

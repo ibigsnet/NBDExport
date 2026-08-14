@@ -229,9 +229,110 @@ if (!isset($presets) || !is_array($presets)) {
     return true;
   };
 
+  /**
+   * Best-practice filename extension vs Pull format (warning only — never blocks).
+   * Returns { level: 'ok'|'warn'|'hint', message, suggest }
+   */
+  window.nbdCheckOutputExtension = function (path, format) {
+    path = String(path || '').trim();
+    format = String(format || 'qcow2').toLowerCase();
+    var base = path.split('/').pop() || '';
+    var dot = base.lastIndexOf('.');
+    var ext = (dot > 0) ? base.slice(dot + 1).toLowerCase() : '';
+    // strip query-ish junk
+    ext = ext.replace(/[^a-z0-9]/g, '');
+
+    var qcowExt = { qcow2: 1, qcow: 1, qc2: 1 };
+    var rawExt = { img: 1, raw: 1, dd: 1, bin: 1 };
+
+    if (format === 'qcow2') {
+      if (ext === '') {
+        return {
+          level: 'hint',
+          message: 'No file extension — for qcow2, prefer a name ending in .qcow2 (e.g. disk.qcow2).',
+          suggest: path + (path.slice(-1) === '/' ? 'disk.qcow2' : '.qcow2')
+        };
+      }
+      if (qcowExt[ext]) {
+        return { level: 'ok', message: '', suggest: '' };
+      }
+      if (rawExt[ext]) {
+        return {
+          level: 'warn',
+          message: 'Format is qcow2 but the path ends in .' + ext + '. '
+            + 'Best practice: use .qcow2 for qcow2 images (e.g. …/name.qcow2). '
+            + 'The file will still be qcow2 inside — the extension only confuses tools and humans.',
+          suggest: path.replace(/\.[^.\/]+$/, '.qcow2')
+        };
+      }
+      return {
+        level: 'warn',
+        message: 'Format is qcow2 but the path ends in .' + ext + '. '
+          + 'Usual extension is .qcow2. Wrong extensions do not change the real format.',
+        suggest: path.replace(/\.[^.\/]+$/, '.qcow2')
+      };
+    }
+
+    if (format === 'raw') {
+      if (ext === '') {
+        return {
+          level: 'hint',
+          message: 'No file extension — for raw, .img or .raw is common (e.g. disk.img).',
+          suggest: path + (path.slice(-1) === '/' ? 'disk.img' : '.img')
+        };
+      }
+      if (rawExt[ext]) {
+        return { level: 'ok', message: '', suggest: '' };
+      }
+      if (qcowExt[ext]) {
+        return {
+          level: 'warn',
+          message: 'Format is raw but the path ends in .' + ext + ' (qcow2-style). '
+            + 'Best practice: use .img or .raw for raw images. '
+            + 'A .qcow2 name on a raw file will confuse qemu / VM managers.',
+          suggest: path.replace(/\.[^.\/]+$/, '.img')
+        };
+      }
+      return {
+        level: 'warn',
+        message: 'Format is raw but the path ends in .' + ext + '. '
+          + 'Usual extensions are .img or .raw.',
+        suggest: path.replace(/\.[^.\/]+$/, '.img')
+      };
+    }
+
+    return { level: 'ok', message: '', suggest: '' };
+  };
+
+  window.nbdUpdateExtHint = function () {
+    var hint = document.getElementById('nbd_ext_hint');
+    var out = document.getElementById('nbd_image_out');
+    var fmt = document.getElementById('nbd_format');
+    if (!hint || !out || !fmt) return;
+    var path = String(out.value || '').trim();
+    if (!path) {
+      hint.style.display = 'none';
+      hint.textContent = '';
+      return;
+    }
+    var r = window.nbdCheckOutputExtension(path, fmt.value);
+    if (r.level === 'ok' || !r.message) {
+      hint.style.display = 'none';
+      hint.textContent = '';
+      return;
+    }
+    hint.style.display = 'block';
+    hint.className = r.level === 'warn' ? 'nbd-ext-hint nbd-ext-warn' : 'nbd-ext-hint nbd-ext-info';
+    var t = r.message;
+    if (r.suggest) t += ' Suggested: ' + r.suggest;
+    hint.textContent = t;
+  };
+
   window.nbdConfirmImage = function (form) {
     var out = form.querySelector('#nbd_image_out');
+    var fmtEl = form.querySelector('#nbd_format') || document.getElementById('nbd_format');
     var path = out ? String(out.value || '').trim() : '';
+    var format = fmtEl ? String(fmtEl.value || 'qcow2') : 'qcow2';
     if (!path) {
       window.alert('Enter an output path under /mnt/…');
       return false;
@@ -240,10 +341,46 @@ if (!isset($presets) || !is_array($presets)) {
       window.alert('Output cannot be a block device (/dev/…). Use a file under /mnt/.');
       return false;
     }
+
+    var ext = window.nbdCheckOutputExtension(path, format);
+    if (ext.level === 'warn') {
+      var msg = 'Extension / format mismatch\n\n'
+        + ext.message + '\n\n'
+        + 'Output: ' + path + '\n'
+        + 'Format: ' + format + '\n';
+      if (ext.suggest) msg += '\nSuggested path:\n  ' + ext.suggest + '\n';
+      msg += '\nContinue with the path as typed? (Job is not blocked.)';
+      if (!window.confirm(msg)) return false;
+    } else if (ext.level === 'hint') {
+      if (!window.confirm(
+        ext.message + '\n\nOutput: ' + path + '\nFormat: ' + format + '\n\nContinue anyway?'
+      )) return false;
+    }
+
     return window.confirm(
-      'Pull remote NBD disk into a file on this Unraid?\n  → ' + path + '\n\nContinue?'
+      'Pull remote NBD disk into a file on this Unraid?\n  → ' + path + '\n  format: ' + format + '\n\nContinue?'
     );
   };
+
+  // Live extension hint on Pull tab
+  function nbdWireExtHint() {
+    var out = document.getElementById('nbd_image_out');
+    var fmt = document.getElementById('nbd_format');
+    if (!out && !fmt) return;
+    if (out) {
+      out.addEventListener('input', window.nbdUpdateExtHint);
+      out.addEventListener('change', window.nbdUpdateExtHint);
+    }
+    if (fmt) {
+      fmt.addEventListener('change', window.nbdUpdateExtHint);
+    }
+    window.nbdUpdateExtHint();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', nbdWireExtHint);
+  } else {
+    nbdWireExtHint();
+  }
 
   // Live status auto-refresh lives in nbd-live-watch.php (footer) so Status tab gets it too.
 })();
