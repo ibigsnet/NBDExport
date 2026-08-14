@@ -1071,15 +1071,25 @@ function nbd_jobs_state() {
     $pid = isset($j['pid']) ? (int)$j['pid'] : 0;
     $j['alive'] = $pid > 0 && @file_exists('/proc/' . $pid);
     if (!$j['alive'] && empty($j['finished'])) {
-      // try to parse log for completion
+      // Process exited: parse log, or treat as failed if no success marker
+      // (qemu-img convert under set -e often dies without writing NBD_JOB_FAIL).
       $log = $j['log'] ?? '';
-      if ($log && is_file($log)) {
-        $tail = @file_get_contents($log);
-        if (is_string($tail) && (strpos($tail, 'NBD_JOB_OK') !== false || strpos($tail, 'NBD_JOB_FAIL') !== false)) {
-          $j['finished'] = true;
-          $j['ok'] = strpos($tail, 'NBD_JOB_OK') !== false;
+      $tail = ($log && is_file($log)) ? (string)@file_get_contents($log) : '';
+      $j['finished'] = true;
+      if (strpos($tail, 'NBD_JOB_OK') !== false) {
+        $j['ok'] = true;
+      } else {
+        $j['ok'] = false;
+        if (strpos($tail, 'NBD_JOB_FAIL') === false && $tail !== '') {
+          // Leave breadcrumb for log UI
+          @file_put_contents($log, "\nNBD_JOB_FAIL process_exited\n", FILE_APPEND);
         }
       }
+      $j['finished_at'] = date('c');
+      // Persist so UI/poller see a stable terminal state
+      $persist = $j;
+      unset($persist['alive'], $persist['output_size'], $persist['output_size_h']);
+      @file_put_contents($f, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
     }
     // progress: dest size if present
     if (!empty($j['output']) && is_file($j['output'])) {
@@ -1092,6 +1102,50 @@ function nbd_jobs_state() {
     return strcmp($b['started'] ?? '', $a['started'] ?? '');
   });
   return $list;
+}
+
+/**
+ * Compact live snapshot for WebUI polling (auto-refresh on terminal transitions).
+ * @return array{exports:array,jobs:array,watch:bool}
+ */
+function nbd_live_snapshot() {
+  $exports = [];
+  $watch = false;
+  foreach (nbd_exports_state() as $e) {
+    $st = nbd_export_ui_status($e);
+    $key = $st['key'] ?? 'down';
+    $exports[] = [
+      'id' => (string)($e['id'] ?? ''),
+      'key' => $key,
+      'alive' => !empty($e['alive']),
+      'listening' => !empty($e['listening']),
+    ];
+    if ($key === 'listening' || $key === 'process_up') {
+      $watch = true;
+    }
+  }
+  $jobs = [];
+  foreach (nbd_jobs_state() as $j) {
+    $st = nbd_job_ui_status($j);
+    $key = $st['key'] ?? 'idle';
+    $jobs[] = [
+      'id' => (string)($j['id'] ?? ''),
+      'key' => $key,
+      'alive' => !empty($j['alive']),
+      'finished' => !empty($j['finished']),
+      'ok' => !empty($j['ok']),
+      'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
+    ];
+    if ($key === 'running') {
+      $watch = true;
+    }
+  }
+  return [
+    'exports' => $exports,
+    'jobs' => $jobs,
+    'watch' => $watch,
+    'ts' => time(),
+  ];
 }
 
 /**
@@ -1140,19 +1194,22 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   $logfile = NBDEXPORT_LOG . '/' . $id . '.log';
   $script = NBDEXPORT_RUN . '/' . $id . '.sh';
 
-  $sh = "#!/bin/bash\nset -euo pipefail\n"
+  $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
     . 'FMT=' . escapeshellarg($format) . "\n"
+    . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
     . 'echo "$(date -Iseconds) job start" >>"$LOG"' . "\n"
     . 'for i in $(seq 1 60); do' . "\n"
     . '  if "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
     . '  sleep 5' . "\n"
-    . '  if [ "$i" -eq 60 ]; then echo NBD_JOB_FAIL wait_src >>"$LOG"; exit 1; fi' . "\n"
+    . '  if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . 'done' . "\n"
-    . '"$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1' . "\n"
+    . 'if ! "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
+    . '  fail convert' . "\n"
+    . 'fi' . "\n"
     . '"$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
     . '"$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
     . 'echo NBD_JOB_OK >>"$LOG"' . "\n"

@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14an">
+<!ENTITY version "2026.08.14ao">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,11 @@
 
 <CHANGES>
 ###&version;
+- **UI:** auto-refresh NBD pages when a Host goes Stopped/stale or a Pull job finishes /
+  fails (including qemu-img errors that used to look “Idle”). Polls live status while
+  exports/jobs are active.
+
+###2026.08.14an
 - **Fix:** Unassigned Devices badges only annotated the first disk row (JS row-dedupe bug);
   <strong>NBD RO</strong>/<strong>NBD RW</strong> now appear on the correct hosted device
   (e.g. Dev 2 / nvme1n1).
@@ -279,6 +284,10 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-status.php">
 <URL>&raw;/include/nbd-ud-status.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
+<URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-overlay.js">
