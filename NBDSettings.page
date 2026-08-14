@@ -106,15 +106,18 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>Opt-in only.</strong> When Yes, disks that are actively Hosted by NBD Export get small
-        lettering on <strong>Main → Unassigned Devices</strong>:
-        <span style="color:#3d8b5a;font-size:0.9em;font-weight:600">NBD RO</span>
-        or <span style="color:#c00;font-size:0.9em;font-weight:700">NBD RW</span>
-        (clickable → NBD settings).<br><br>
-        This is a <strong>best-effort DOM overlay</strong> on a page owned by the Unassigned Devices
-        plugin — not a formal API. UD layout/AJAX can change and break the badges until we adapt.
-        No mount/share controls are added. Leave <strong>No</strong> if you prefer NBD status only
-        under Network Services → NBD.
+        <strong>Opt-in only.</strong> When Yes, on Unraid <strong>Main → Unassigned Devices</strong>
+        (the disk list under Main — not UD Settings):
+        <ul style="margin:0.35em 0 0.35em 1.2em">
+          <li>Pill badge on the disk <strong>Identification</strong> cell:
+            <span style="color:#1a5c32;font-weight:700">NBD RO</span> /
+            <span style="color:#c00;font-weight:700">NBD RW</span></li>
+          <li>An <strong>NBD Hosts</strong> table under the SMB / NFS / ISO shares block
+            (local Host exports — not remote mounts)</li>
+        </ul>
+        This is a <strong>best-effort DOM overlay</strong> on a page owned by Unassigned Devices —
+        not a formal API; UD layout/AJAX can change. Leave <strong>No</strong> if you only want
+        status under Network Services → NBD.
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/integration-unassigned-devices.md" target="_blank" rel="noopener">Details ↗</a>
       </blockquote>
 

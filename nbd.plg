@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ap">
+<!ENTITY version "2026.08.14aq">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,11 @@
 
 <CHANGES>
 ###&version;
+- **UD overlay:** reliable Main → Unassigned Devices integration — disk-row
+  <strong>NBD RO/RW</strong> pills plus an <strong>NBD Hosts</strong> panel under
+  SMB/NFS/ISO shares (local Host exports, not mounts). Opt-in still required.
+
+###2026.08.14ap
 - **Security UX:** emergency <strong>Stop all writable hosts</strong> (and Stop all) on every tab
   while RW is listening. Destructive Off still allows already-running writable Hosts
   (documented caveat); settings flash warns if RW is still up.

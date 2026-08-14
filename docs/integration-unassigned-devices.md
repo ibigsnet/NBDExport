@@ -1,13 +1,34 @@
 # Unassigned Devices integration (opt-in)
 
-**Default: Off.** When enabled, NBD Export shows small status lettering on disks that are **actively Hosted** while you are on **Main → Unassigned Devices**.
+**Where:** Unraid **Main → Unassigned Devices** tab  
+(URL like `http://tower/Main/UnassignedDevices` — the same place you see Dev 1 / Dev 2 disks, **not** UD Settings.)
+
+**Default: Off.** When enabled, NBD Export overlays status on that page only (best-effort DOM; UD owns the page).
+
+### 1) Disk row badge (Identification column)
+
+On a disk that is currently **Hosted**:
+
+`Samsung_… (nvme1n1)` **`NBD RO`** or **`NBD RW`**
 
 | Badge | Meaning |
 |-------|---------|
-| **NBD RO** | This device (or a partition on it) is hosted **read-only** |
-| **NBD RW** | Hosted **writable** (red, bold) |
+| **NBD RO** | Hosted **read-only** (green pill) |
+| **NBD RW** | Hosted **writable** (red pill) |
 
-Click the badge → **Settings → Network Services → NBD**. Tooltip includes `nbd://…` when known.
+Click → **Settings → Network Services → NBD**. Tooltip includes `nbd://…`.
+
+### 2) NBD Hosts panel (under SMB / NFS / ISO)
+
+Below the **SMB Shares | NFS Shares | ISO File Shares** block (Shares switch area), a section:
+
+**NBD Hosts (this Unraid · not SMB/NFS mounts)**
+
+| Mode | Device | Clients use | Label | |
+|------|--------|-------------|-------|--|
+| NBD RO / **NBD RW** | `/dev/…` | `nbd://…` | optional | Open NBD |
+
+These are **local Host exports**, not remote mounts. They are listed next to the share area so they are easy to find when the Shares view is on; the disk-row badge stays visible on the Unassigned Disks table either way.
 
 ---
 
@@ -17,7 +38,7 @@ Click the badge → **Settings → Network Services → NBD**. Tooltip includes 
 2. **Settings → Network Services → NBD → Settings**  
 3. **Unassigned Devices badges** → **Yes** → **Apply**  
 4. Hard-refresh the browser (**Ctrl+Shift+R**).  
-5. Host a disk, then open **Main → Unassigned Devices**.
+5. Host a disk, then open **Main → Unassigned Devices** (Main section of the WebUI).
 
 Turn back to **No** anytime. Uninstall removes the soft page hook.
 

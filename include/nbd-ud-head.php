@@ -1,12 +1,10 @@
 <?php
 /**
- * Soft head hook for Unassigned Devices status badges.
- * Injected into Unraid HeadInlineJS.php (install). Emits nothing unless:
- *  - Settings → ud_status_overlay = yes
- *  - Unassigned Devices plugin is installed
- *  - Current page looks like Main → Unassigned Devices
+ * Soft head hook for Unassigned Devices (Main → Unassigned Devices) NBD badges + panel.
+ * Injected into Unraid HeadInlineJS.php (install). Emits nothing unless opt-in.
  *
- * Best-effort DOM overlay only — UD owns that page; layout can change.
+ * JS decides whether the UD tables are present (works for /Main/UnassignedDevices and
+ * similar Main paths). Best-effort DOM overlay — UD owns that page.
  */
 if (!defined('NBDEXPORT_UD_HEAD')) {
   define('NBDEXPORT_UD_HEAD', 1);
@@ -28,12 +26,8 @@ if (!is_dir($docroot . '/plugins/unassigned.devices')) {
   return;
 }
 
-$uri = (string)($_SERVER['REQUEST_URI'] ?? '');
-// Unraid: /Main/UnassignedDevices (and occasional query strings)
-if (stripos($uri, 'UnassignedDevices') === false) {
-  return;
-}
-
+// Load on any WebUI page when opt-in; overlay.js no-ops unless UD disk table exists.
+// (Avoid URI-only gates — Unraid Main tab URLs vary.)
 $ver = '1';
 $plg = $docroot . '/plugins/NBDExport/nbd.plg';
 if (is_file($plg)) {
@@ -43,5 +37,5 @@ if (is_file($plg)) {
   }
 }
 $js = '/plugins/NBDExport/include/nbd-ud-overlay.js?v=' . rawurlencode($ver);
-echo "\n<!-- NBDExport UD overlay (opt-in; best-effort) -->\n";
+echo "\n<!-- NBDExport UD overlay (opt-in; Main → Unassigned Devices) -->\n";
 echo '<script src="' . htmlspecialchars($js, ENT_QUOTES, 'UTF-8') . '"></script>' . "\n";
