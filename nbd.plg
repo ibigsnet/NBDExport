@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ax">
+<!ENTITY version "2026.08.14ay">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,9 @@
 
 <CHANGES>
 ###&version;
+- **Host:** multi-network bind via checkboxes (one <code>qemu-nbd</code> per selected IP, same disk/port).
+
+###2026.08.14ax
 - **Docs:** public README/docs hygiene — no lab hostnames; private notes stay local.
 
 ###2026.08.14aw

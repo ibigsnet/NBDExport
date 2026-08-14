@@ -132,11 +132,41 @@ function nbd_memory_save(array $mem) {
   ) !== false;
 }
 
-function nbd_memory_remember_host($device, $bind, $port, $read_only, $label) {
+/**
+ * @param string|string[] $bind Primary bind IP, or list of binds
+ * @param string[]|null $binds Optional multi-bind list (preferred when hosting on several networks)
+ */
+function nbd_memory_remember_host($device, $bind, $port, $read_only, $label, $binds = null) {
+  $list = [];
+  if (is_array($binds)) {
+    foreach ($binds as $b) {
+      $b = trim((string)$b);
+      if ($b !== '' && !in_array($b, $list, true)) {
+        $list[] = $b;
+      }
+    }
+  }
+  if (!$list) {
+    if (is_array($bind)) {
+      foreach ($bind as $b) {
+        $b = trim((string)$b);
+        if ($b !== '' && !in_array($b, $list, true)) {
+          $list[] = $b;
+        }
+      }
+    } else {
+      $b = trim((string)$bind);
+      if ($b !== '') {
+        $list[] = $b;
+      }
+    }
+  }
+  $primary = $list ? $list[0] : '';
   $mem = nbd_memory_load();
   $mem['last_host'] = [
     'device' => (string)$device,
-    'bind' => (string)$bind,
+    'bind' => $primary,
+    'binds' => $list,
     'port' => (int)$port,
     'read_only' => $read_only ? 'yes' : 'no',
     'label' => (string)$label,
@@ -1026,11 +1056,18 @@ function nbd_export_stop($id) {
       @posix_kill($pid, 9);
     }
   }
-  // also kill any qemu-nbd matching state bind/port
+  // also kill any qemu-nbd matching this export's bind+port (not all binds on same port)
   if (is_file($statefile)) {
     $j = @json_decode((string)@file_get_contents($statefile), true);
     if (is_array($j) && !empty($j['port'])) {
-      @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--port=' . (int)$j['port']) . ' 2>/dev/null || true');
+      $p = (int)$j['port'];
+      $b = trim((string)($j['bind'] ?? ''));
+      if ($b !== '') {
+        // cmd order: --bind=IP --port=N
+        @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--bind=' . $b . '.*--port=' . $p) . ' 2>/dev/null || true');
+      } else {
+        @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--port=' . $p) . ' 2>/dev/null || true');
+      }
     }
   }
   @unlink($pidfile);

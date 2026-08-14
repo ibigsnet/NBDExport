@@ -63,17 +63,43 @@ try {
 
     case 'export_start':
       $dev = trim((string)($_POST['device'] ?? ''));
-      $bind = trim((string)($_POST['bind'] ?? ''));
+      // Multi-bind: bind[] checkboxes, or legacy single bind / comma-separated
+      $bind_raw = $_POST['bind'] ?? [];
+      if (!is_array($bind_raw)) {
+        $bind_raw = (string)$bind_raw !== '' ? preg_split('/[\s,]+/', (string)$bind_raw) : [];
+      }
+      $binds = [];
+      foreach ($bind_raw as $b) {
+        $b = trim((string)$b);
+        if ($b !== '' && !in_array($b, $binds, true)) {
+          $binds[] = $b;
+        }
+      }
       $port = (int)($_POST['port'] ?? 10809);
       $ro = (($_POST['read_only'] ?? 'yes') === 'yes');
       $label = trim((string)($_POST['label'] ?? ''));
       $confirm = (($_POST['nbd_confirm'] ?? '') === 'yes');
-      $r = nbd_export_start($dev, $bind, $port, $ro, $label, 2, $confirm);
-      if (empty($r['ok'])) {
-        nbd_flash('NBD Export: ERROR — ' . ($r['error'] ?? 'start failed'));
-      } else {
-        nbd_memory_remember_host($dev, $bind, $port, $ro, $label);
-        nbd_flash('NBD Export: hosted ' . ($r['url'] ?? $r['id']) . ($ro ? ' (read-only)' : ' (WRITABLE)'));
+      if (!$binds) {
+        nbd_flash('NBD Export: ERROR — select at least one bind IP (network to host on).');
+        break;
+      }
+      $urls = [];
+      $errs = [];
+      foreach ($binds as $bind) {
+        $r = nbd_export_start($dev, $bind, $port, $ro, $label, 2, $confirm);
+        if (empty($r['ok'])) {
+          $errs[] = $bind . ': ' . ($r['error'] ?? 'start failed');
+        } else {
+          $urls[] = $r['url'] ?? ('nbd://' . $bind . ':' . $port);
+        }
+      }
+      if ($urls) {
+        nbd_memory_remember_host($dev, $binds[0], $port, $ro, $label, $binds);
+        $mode = $ro ? 'read-only' : 'WRITABLE';
+        nbd_flash('NBD Export: hosted ' . implode(', ', $urls) . ' (' . $mode . ')');
+      }
+      if ($errs) {
+        nbd_flash('NBD Export: ERROR — ' . implode('; ', $errs));
       }
       break;
 
@@ -117,9 +143,21 @@ try {
 
     case 'preset_save_host':
       $name = trim((string)($_POST['preset_name'] ?? ''));
+      $bind_raw = $_POST['bind'] ?? [];
+      if (!is_array($bind_raw)) {
+        $bind_raw = (string)$bind_raw !== '' ? preg_split('/[\s,]+/', (string)$bind_raw) : [];
+      }
+      $binds = [];
+      foreach ($bind_raw as $b) {
+        $b = trim((string)$b);
+        if ($b !== '' && !in_array($b, $binds, true)) {
+          $binds[] = $b;
+        }
+      }
       $fields = [
         'device' => trim((string)($_POST['device'] ?? '')),
-        'bind' => trim((string)($_POST['bind'] ?? '')),
+        'bind' => $binds ? $binds[0] : '',
+        'binds' => $binds,
         'port' => (int)($_POST['port'] ?? 10809),
         'read_only' => (($_POST['read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no',
         'label' => trim((string)($_POST['label'] ?? '')),

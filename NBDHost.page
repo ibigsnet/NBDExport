@@ -61,21 +61,56 @@ nbd_page_styles();
       </blockquote>
 
       <dl>
-        <dt>Listen on (bind IP):</dt>
-        <dd>
-          <select name="bind" id="nbd_bind">
-<?php if (!$binds): ?>
-            <option value="">No addresses found</option>
-<?php else: foreach ($binds as $b): ?>
-            <option value="<?= htmlspecialchars($b['ip']) ?>" <?= $b['ip'] === $default_bind ? 'selected' : '' ?>>
-              <?= htmlspecialchars($b['label']) ?>
-            </option>
+        <dt>Listen on (bind IPs):</dt>
+        <dd id="nbd_bind_list" class="nbd-bind-checks">
+<?php
+  // Prefill: last multi-select, or single last bind, or preferred default
+  $checked_binds = [];
+  if (!empty($last_host['binds']) && is_array($last_host['binds'])) {
+    foreach ($last_host['binds'] as $ip) {
+      $ip = trim((string)$ip);
+      if ($ip !== '') {
+        $checked_binds[$ip] = true;
+      }
+    }
+  } elseif ($pref_bind !== '') {
+    // legacy single bind (may be comma-separated)
+    foreach (preg_split('/[\s,]+/', (string)$pref_bind) as $ip) {
+      $ip = trim($ip);
+      if ($ip !== '') {
+        $checked_binds[$ip] = true;
+      }
+    }
+  }
+  if (!$checked_binds && $default_bind !== '') {
+    $checked_binds[$default_bind] = true;
+  }
+  if (!$binds):
+?>
+          <span class="nbd-muted">No addresses found</span>
+<?php else: foreach ($binds as $b):
+  $bip = (string)$b['ip'];
+  $is_chk = !empty($checked_binds[$bip]);
+?>
+          <label class="nbd-bind-opt" style="display:block;margin:0.15em 0">
+            <input type="checkbox" name="bind[]" class="nbd-bind-cb" value="<?= htmlspecialchars($bip) ?>"
+              <?= $is_chk ? 'checked' : '' ?>>
+            <?= htmlspecialchars($b['label']) ?>
+          </label>
 <?php endforeach; endif; ?>
-          </select>
+<?php if ($allow_all === 'yes'): ?>
+          <label class="nbd-bind-opt" style="display:block;margin:0.15em 0">
+            <input type="checkbox" name="bind[]" class="nbd-bind-cb" value="0.0.0.0"
+              <?= !empty($checked_binds['0.0.0.0']) ? 'checked' : '' ?>>
+            0.0.0.0 (all interfaces — allow_bind_all)
+          </label>
+<?php endif; ?>
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Only this IP accepts connections. Thunderbolt / private first. Clients use <code>nbd://ip:port</code>.
+        Check every network where this disk should accept NBD clients. Each selected IP starts its own
+        <code>qemu-nbd</code> on the same port (same disk). Thunderbolt / private first.
+        Clients use <code>nbd://ip:port</code> for the IP they can reach.
       </blockquote>
 
       <dl>

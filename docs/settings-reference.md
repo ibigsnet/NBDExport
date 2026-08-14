@@ -51,7 +51,7 @@ Publishes one local **block device** (whole disk or partition — raw blocks inc
 | Field / action | Notes |
 |----------------|--------|
 | Device | From `lsblk`; array/cache/pool, mounted, or boot need Destructive mode |
-| Listen on (bind IP) | Thunderbolt IPs listed first |
+| Listen on (bind IPs) | Checkboxes — pick one or more networks; Thunderbolt listed first |
 | Listen port | TCP port for the server |
 | Read-only | Strongly recommended Yes |
 | Label | Optional note |

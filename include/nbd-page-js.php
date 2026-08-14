@@ -15,16 +15,41 @@ if (!isset($presets) || !is_array($presets)) {
   var destructiveOn = <?= $destructive === 'yes' ? 'true' : 'false' ?>;
   var NBD_PRESETS = <?= json_encode($presets, JSON_UNESCAPED_SLASHES) ?> || {};
 
+  function nbdSelectedBinds() {
+    var boxes = document.querySelectorAll('#nbd_export_form input.nbd-bind-cb:checked');
+    var out = [];
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].value) out.push(boxes[i].value);
+    }
+    return out;
+  }
+
+  function nbdSetBindChecks(ips) {
+    var want = {};
+    if (!ips) ips = [];
+    if (typeof ips === 'string') {
+      ips = ips.split(/[\s,]+/).filter(Boolean);
+    }
+    for (var i = 0; i < ips.length; i++) want[ips[i]] = true;
+    var boxes = document.querySelectorAll('#nbd_export_form input.nbd-bind-cb');
+    for (var j = 0; j < boxes.length; j++) {
+      boxes[j].checked = !!want[boxes[j].value];
+    }
+  }
+
   window.nbdApplyHostPreset = function (name) {
     if (!name || !NBD_PRESETS[name] || NBD_PRESETS[name].type !== 'host') return;
     var f = NBD_PRESETS[name].fields || {};
     var dev = document.getElementById('nbd_device');
-    var bind = document.getElementById('nbd_bind');
     var port = document.getElementById('nbd_port');
     var ro = document.getElementById('nbd_read_only');
     var lab = document.getElementById('nbd_label');
     if (dev && f.device) dev.value = f.device;
-    if (bind && f.bind) bind.value = f.bind;
+    if (f.binds && f.binds.length) {
+      nbdSetBindChecks(f.binds);
+    } else if (f.bind) {
+      nbdSetBindChecks(f.bind);
+    }
     if (port && f.port) port.value = f.port;
     if (ro && f.read_only) ro.value = f.read_only;
     if (lab && f.label != null) lab.value = f.label;
@@ -44,7 +69,8 @@ if (!isset($presets) || !is_array($presets)) {
     if (!src) return true;
     var el;
     el = document.getElementById('nbd_ps_device'); if (el) el.value = (src.querySelector('[name=device]') || {}).value || '';
-    el = document.getElementById('nbd_ps_bind'); if (el) el.value = (src.querySelector('[name=bind]') || {}).value || '';
+    // Multi-bind: store selected IPs as comma-separated for preset_save_host
+    el = document.getElementById('nbd_ps_bind'); if (el) el.value = nbdSelectedBinds().join(',');
     el = document.getElementById('nbd_ps_port'); if (el) el.value = (src.querySelector('[name=port]') || {}).value || '';
     el = document.getElementById('nbd_ps_ro'); if (el) el.value = (src.querySelector('[name=read_only]') || {}).value || 'yes';
     el = document.getElementById('nbd_ps_label'); if (el) el.value = (src.querySelector('[name=label]') || {}).value || '';
@@ -169,6 +195,11 @@ if (!isset($presets) || !is_array($presets)) {
       window.alert('Select a device to export.');
       return false;
     }
+    var bindIps = nbdSelectedBinds();
+    if (!bindIps.length) {
+      window.alert('Select at least one network (bind IP) to host on.');
+      return false;
+    }
     var opt = devSel.options[devSel.selectedIndex];
     var warn = opt && opt.getAttribute('data-warn') === '1';
     var flags = (opt && opt.getAttribute('data-flags')) || '';
@@ -177,6 +208,7 @@ if (!isset($presets) || !is_array($presets)) {
 
     var devPath = devSel.value;
     var devLabel = (opt && opt.textContent) ? String(opt.textContent).replace(/\s+/g, ' ').trim() : devPath;
+    var bindLine = bindIps.join(', ');
 
     if (!ro && !destructiveOn) {
       window.alert(
@@ -199,6 +231,7 @@ if (!isset($presets) || !is_array($presets)) {
 
     if (needConfirm) {
       var msg = 'Host this Unraid disk on the network?\n  ' + devLabel + '\n  (' + devPath + ')\n\n';
+      msg += 'Bind IP(s): ' + bindLine + '\n\n';
       msg += 'Publishes raw blocks via NBD (Network Block Device). A client attaches ' +
         'as a remote disk (tools, nbd-client, Pull tab, qemu-img, …).\n\n';
       if (!ro) {
@@ -221,8 +254,9 @@ if (!isset($presets) || !is_array($presets)) {
       if (conf) conf.value = 'yes';
     } else {
       if (!window.confirm(
-        'Host this Unraid disk on the network (read-only)?\n  ' + devSel.value + '\n\n' +
-        'Clients use nbd://IP:port. Multi-disk: use another port for the next host.'
+        'Host this Unraid disk on the network (read-only)?\n  ' + devSel.value + '\n' +
+        'Bind IP(s): ' + bindLine + '\n\n' +
+        'Clients use nbd://IP:port per selected network. Multi-disk: use another port for the next host.'
       )) return false;
       if (conf) conf.value = 'no';
     }

@@ -57,10 +57,11 @@ Basic **qemu-nbd has no password**. Whoever can open a TCP connection to the bin
 |-------------|---------|
 | Thunderbolt / dedicated copper IP | Best — small, trusted fabric |
 | Specific private LAN IP | Good if that VLAN/LAN is trusted |
+| **Multiple checkboxes** | Host the same disk on several networks (one `qemu-nbd` per IP, same port) — only check networks that should reach this disk |
 | Wi‑Fi IP on a mixed home LAN | Higher exposure — prefer short Host windows |
 | `0.0.0.0` (all interfaces) | **Dangerous** on multi-homed hosts — disabled by default |
 
-The Host tab lists candidate IPs with Thunderbolt private addresses preferred.
+The Host tab lists candidate IPs as **checkboxes** (Thunderbolt private first). Check only the networks where clients should connect; each selected IP gets its own listener (`nbd://that-ip:port`).
 
 ## Recommended isolation
 
