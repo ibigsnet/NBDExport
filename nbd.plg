@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14aj">
+<!ENTITY version "2026.08.14ak">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,10 @@
 
 <CHANGES>
 ###&version;
+- **UI:** host export blue badge is <strong>Active</strong> (was “Starting…”) so a live
+  process is not mistaken for still waiting to begin.
+
+###2026.08.14aj
 - **Scan fix:** private <strong>routes</strong> (not only local iface prefixes), optional
   <code>scan_extra_subnets</code>, and remembered peer IPs so e.g. Holo on
   <code>192.168.254.0/24</code> can still find hosts on <code>192.168.1.0/24</code>.

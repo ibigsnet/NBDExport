@@ -365,7 +365,7 @@ function nbd_export_ui_status(array $e) {
     return ['key' => 'listening', 'label' => 'Listening', 'class' => 'nbd-badge-ok', 'hint' => 'qemu-nbd running and port open'];
   }
   if ($alive && !$listen) {
-    return ['key' => 'process_up', 'label' => 'Starting…', 'class' => 'nbd-badge-info', 'hint' => 'Process up; port not confirmed yet'];
+    return ['key' => 'process_up', 'label' => 'Active', 'class' => 'nbd-badge-info', 'hint' => 'Export process is running; port not fully confirmed yet'];
   }
   if ($stale || (!$alive && !$listen)) {
     return ['key' => 'stale', 'label' => 'Stopped / stale', 'class' => 'nbd-badge-stale', 'hint' => 'State file left behind — safe to Stop/clear'];

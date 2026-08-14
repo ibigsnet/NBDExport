@@ -262,7 +262,7 @@ function nbd_page_header() {
 <?php else: ?>
     <div class="nbd-status-legend" style="margin:0.35em 0 0.45em">
       <span><span class="nbd-badge nbd-badge-ok">Listening</span></span>
-      <span><span class="nbd-badge nbd-badge-info">Starting…</span></span>
+      <span><span class="nbd-badge nbd-badge-info">Active</span></span>
       <span><span class="nbd-badge nbd-badge-stale">Stopped</span></span>
       <span><span class="nbd-badge nbd-badge-rw">Writable</span></span>
     </div>
