@@ -275,12 +275,18 @@ function nbd_page_header() {
       <span><span class="nbd-badge nbd-badge-stale">Stopped</span></span>
       <span><span class="nbd-badge nbd-badge-rw">Writable</span></span>
     </div>
-<?php if ($n_writable > 0): ?>
+<?php
+  // Caveat only when Destructive is Off but RW hosts still listening
+  if ($n_writable > 0 && $destructive !== 'yes'):
+?>
     <div class="nbd-destructive-banner" role="alert" style="margin:0.35em 0 0.55em;border-color:rgba(200,60,60,0.55);background:rgba(200,60,60,0.14);color:#b33">
-      <strong><?= (int)$n_writable ?> writable</strong> host<?= $n_writable === 1 ? '' : 's' ?> listening —
-      peers can write the selected disk(s). Turning Destructive mode <strong>Off</strong> does
-      <em>not</em> stop them (only blocks starting new ones).
-      <form method="POST" action="/update.php" target="progressFrame" style="display:inline;margin-left:0.5em"
+      <div>
+        <strong><?= (int)$n_writable ?> writable</strong> host<?= $n_writable === 1 ? '' : 's' ?> still listening
+        while Destructive mode is <strong>Off</strong>.
+        Peers can write those disk(s). Destructive Off only blocks <em>starting</em> new elevated Hosts —
+        it does not stop ones already up.
+      </div>
+      <form method="POST" action="/update.php" target="progressFrame" style="display:block;margin:0.55em 0 0"
         onsubmit="return confirm('Emergency stop: halt ALL writable NBD hosts now?\n\nRead-only hosts stay up.');">
         <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
         <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">

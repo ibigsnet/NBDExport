@@ -19,7 +19,7 @@
   UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
   /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
 -->
-<!ENTITY version "2026.08.14ar">
+<!ENTITY version "2026.08.14as">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -42,6 +42,10 @@
 
 <CHANGES>
 ###&version;
+- **UI:** writable caveat banner only when Destructive is Off and RW hosts remain;
+  emergency stop button stacked under the text (not inline).
+
+###2026.08.14ar
 - **Fix:** auto-refresh on Pull fail / Host stop — paint-time baseline + Status tab
   watcher (was missing). qemu-img deaths show <strong>Failed</strong> not Idle.
 
@@ -302,6 +306,10 @@ Export a disk or partition as a **Network Block Device** (NBD) and image remote 
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
 <URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
+</FILE>
+
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-watch.php">
+<URL>&raw;/include/nbd-live-watch.php?v=&version;</URL>
 </FILE>
 
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-overlay.js">
