@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15af">
+<!ENTITY version "2026.08.15ag">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,7 @@
 
 <CHANGES>
 ###&version;
-- Install/remove cleanup: canonical paths; leave .plg file to Unraid.
+- Fix: do not wipe Unraid /tmp/plugins working copy during install prepare.
 
 ###2026.08.15aa
 - **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
@@ -66,7 +66,7 @@ if [ -d /boot/config/plugins/NbdExport ]; then
   rm -rf /boot/config/plugins/NbdExport
   echo "NBD Export: migrated flash config NbdExport → NBDExport"
 fi
-rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbd.txt 2>/dev/null || true
+# Note: do not delete /tmp/plugins/nbd.plg here — Unraid uses it as the install working copy
 rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
       /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
 mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
