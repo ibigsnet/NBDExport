@@ -49,6 +49,8 @@
 - **Pull:** warn (does not block) when output extension mismatches format
   (e.g. qcow2 + <code>.img</code>, raw + <code>.qcow2</code>); live hint + confirm.
 
+### Older releases
+- Full changelog (all versions): https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
 </CHANGES>
 
 <FILE Run="/bin/bash">
