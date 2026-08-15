@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15ae">
+<!ENTITY version "2026.08.15af">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,7 @@
 
 <CHANGES>
 ###&version;
-- Cleaner install/remove scripts (canonical paths only).
+- Install/remove cleanup: canonical paths; leave .plg file to Unraid.
 
 ###2026.08.15aa
 - **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
@@ -143,7 +143,7 @@ done
 rm -rf /usr/local/emhttp/plugins/NBDExport
 # Flash (config + cached package); legacy rename dir if any
 rm -rf /boot/config/plugins/NBDExport /boot/config/plugins/NbdExport
-rm -f /boot/config/plugins/nbd.plg /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
+rm -f /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
 rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbd.txt /tmp/plugins/nbdexport.plg 2>/dev/null || true
 echo "NBD Export: removed."
 ]]></INLINE>
