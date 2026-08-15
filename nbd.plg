@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15ad">
+<!ENTITY version "2026.08.15ae">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,8 +27,7 @@
 
 <CHANGES>
 ###&version;
-- Install: single runtime <code>.txz</code> (docs on GitHub only).
-- Plugins changelog shows recent entries; full history linked below.
+- Cleaner install/remove scripts (canonical paths only).
 
 ###2026.08.15aa
 - **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
@@ -57,7 +56,7 @@
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
 echo "NBD Export: preparing..."
-# Legacy NbdExport → NBDExport flash migration
+# One-time legacy flash rename (NbdExport → NBDExport)
 if [ -d /boot/config/plugins/NbdExport ]; then
   mkdir -p /boot/config/plugins/NBDExport
   cp -a /boot/config/plugins/NbdExport/. /boot/config/plugins/NBDExport/ 2>/dev/null || true
@@ -65,16 +64,14 @@ if [ -d /boot/config/plugins/NbdExport ]; then
     mv /boot/config/plugins/NBDExport/NbdExport.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
   fi
   rm -rf /boot/config/plugins/NbdExport
-  echo "NBD Export: migrated flash config from NbdExport → NBDExport"
+  echo "NBD Export: migrated flash config NbdExport → NBDExport"
 fi
+rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbd.txt 2>/dev/null || true
 rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
       /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
-# Drop previous multi-FILE install tree + old packages (upgrade path)
-rm -rf /usr/local/emhttp/plugins/NBDExport /usr/local/emhttp/plugins/NbdExport /usr/local/emhttp/plugins/nbdexport
-# Keep only this version's package on flash
-mkdir -p /boot/config/plugins/NBDExport
+mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
+rm -rf /usr/local/emhttp/plugins/NBDExport
 rm -f /boot/config/plugins/NBDExport/NBDExport-*.txz 2>/dev/null || true
-mkdir -p /var/run/nbdexport /var/log/nbdexport
 echo "NBD Export: ready for package install."
 ]]></INLINE>
 </FILE>
@@ -86,17 +83,13 @@ echo "NBD Export: ready for package install."
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
 echo "NBD Export: finishing install..."
-# Permissions
 chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/* 2>/dev/null || true
 chmod 755 /usr/local/emhttp/plugins/NBDExport/event/started 2>/dev/null || true
-# Default cfg on first install
-if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ]; then
-  if [ -f /usr/local/emhttp/plugins/NBDExport/default.cfg ]; then
-    cp -a /usr/local/emhttp/plugins/NBDExport/default.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
-    echo "NBD Export: created default NBDExport.cfg"
-  fi
+if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
+   && [ -f /usr/local/emhttp/plugins/NBDExport/default.cfg ]; then
+  cp -a /usr/local/emhttp/plugins/NBDExport/default.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
+  echo "NBD Export: created default NBDExport.cfg"
 fi
-# Companion + optional UD overlay
 php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); nbd_ud_overlay_inject();' 2>/dev/null || true
 echo "NBD Export: install complete."
 echo "NBD Export: Settings → Network Services → NBD"
@@ -106,9 +99,8 @@ echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."
 
 <FILE Run="/bin/bash" Method="remove">
 <INLINE><![CDATA[
-echo "NBD Export: removing plugin (full cleanup)..."
-
-# 0) Soft head hook for opt-in Unassigned Devices badges
+echo "NBD Export: removing..."
+# Unhook UD overlay (if present)
 if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_ud_overlay_uninject();' 2>/dev/null || true
 fi
@@ -121,8 +113,7 @@ do
   [ -f "$f" ] || continue
   sed -i '/NBDExport UD overlay/d' "$f" 2>/dev/null || true
 done
-
-# 1) Stop managed listeners/jobs only
+# Stop managed exports/jobs
 if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
   php -r '
     require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
@@ -143,32 +134,18 @@ if [ -d /var/run/nbdexport ]; then
     fi
   done
 fi
-
-# 2) Runtime + logs
 rm -rf /var/run/nbdexport /var/log/nbdexport
-
-# 3) Package database + emhttp tree
-removepkg NBDExport 2>/dev/null || true
+# Package + emhttp
 for p in /var/log/packages/NBDExport-*; do
   [ -e "$p" ] || continue
   removepkg "$(basename "$p")" 2>/dev/null || true
 done
 rm -rf /usr/local/emhttp/plugins/NBDExport
-rm -rf /usr/local/emhttp/plugins/NbdExport
-rm -rf /usr/local/emhttp/plugins/nbdexport
-
-# 4) Flash plugin state + cached packages
-rm -rf /boot/config/plugins/NBDExport
-rm -rf /boot/config/plugins/NbdExport
-rm -rf /boot/config/plugins/nbdexport
+# Flash (config + cached package); legacy rename dir if any
+rm -rf /boot/config/plugins/NBDExport /boot/config/plugins/NbdExport
 rm -f /boot/config/plugins/nbd.plg /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
-rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbdexport.plg /tmp/plugins/install.plg 2>/dev/null || true
-
-if [ -e /usr/local/emhttp/plugins/NBDExport ] || [ -e /usr/local/emhttp/plugins/nbdexport ]; then
-  echo "NBD Export: WARNING — some plugin paths still present"
-else
-  echo "NBD Export: removed."
-fi
+rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbd.txt /tmp/plugins/nbdexport.plg 2>/dev/null || true
+echo "NBD Export: removed."
 ]]></INLINE>
 </FILE>
 
