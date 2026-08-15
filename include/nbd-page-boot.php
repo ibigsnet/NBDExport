@@ -116,6 +116,42 @@ function nbd_page_styles() {
   font-size: 0.92em;
   line-height: 1.4;
 }
+.nbd-wrap .nbd-companion-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0.65em 0 0;
+}
+.nbd-wrap .nbd-companion-card {
+  flex: 1 1 14em;
+  min-width: 12em;
+  max-width: 22em;
+  padding: 0.55em 0.75em;
+  border-radius: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  background: rgba(128, 128, 128, 0.08);
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+.nbd-wrap .nbd-companion-card.nbd-companion-ok {
+  border-color: rgba(46, 160, 90, 0.45);
+  background: rgba(46, 160, 90, 0.1);
+}
+.nbd-wrap .nbd-companion-title {
+  font-weight: 700;
+  margin: 0 0 0.35em;
+  font-size: 0.98em;
+}
+.nbd-wrap .nbd-companion-status {
+  display: inline-block;
+  font-weight: 700;
+  margin-right: 0.25em;
+}
+.nbd-wrap .nbd-companion-status.nbd-status-ok { color: #2a7; }
+.nbd-wrap .nbd-companion-status.nbd-status-warn { color: #c80; }
+.nbd-wrap .nbd-companion-card p { margin: 0.25em 0; }
+.nbd-wrap .nbd-chrome-footer .nbd-companion-strip { margin-top: 0.55em; }
+
 .nbd-wrap .nbd-tip {
   margin: 0.5em 0 0.85em;
   padding: 0.55em 0.75em;
@@ -381,28 +417,45 @@ function nbd_page_header() {
  */
 function nbd_page_footer($show_cli = false) {
   global $tbn, $frr;
+  $tbn_install = 'https://raw.githubusercontent.com/ibigsnet/ThunderboltNet/stable/thunderboltnet.plg';
+  $frr_install = 'https://raw.githubusercontent.com/ibigsnet/FabricRouting/stable/fabricrouting.plg';
   ?>
 <div class="nbd-chrome-footer">
   <strong>Network Block Device</strong> —
   temporarily publish a whole disk/partition over TCP as NBD — raw blocks for remote tools or convert/archive (not SMB/NFS folders).
   Tabs: <strong>Host</strong> publish · <strong>Pull</strong> save to file · <strong>Settings</strong> options.
-  <div class="nbd-companion">
-    <strong>Companions</strong> —
+  <span class="nbd-muted"> NBD binds its own IP:port — companions below are optional.</span>
+  <div class="nbd-companion-strip" aria-label="Related plugins">
+    <div class="nbd-companion-card<?= !empty($tbn) ? ' nbd-companion-ok' : '' ?>">
+      <div class="nbd-companion-title">Private underlay (Thunderbolt Net)</div>
 <?php if (!empty($tbn)): ?>
-    Thunderbolt Net — prefer a Thunderbolt bind IP
-    (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).
+      <p><span class="nbd-companion-status nbd-status-ok">Installed</span>
+        Prefer a Thunderbolt bind IP on Host
+        (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Thunderbolt', event)">Network Settings → Thunderbolt</a>).</p>
 <?php else: ?>
-    Optional <a href="https://github.com/ibigsnet/ThunderboltNet" target="_blank" rel="noopener">Thunderbolt Net</a>
-    for a private underlay.
+      <p><span class="nbd-companion-status nbd-status-warn">Not installed</span>
+        Optional private cable path for Host bind. Skip if you already use a trusted LAN IP.</p>
+      <p>
+        Install <strong>Thunderbolt Net</strong> from CA or
+        <a href="<?= htmlspecialchars($tbn_install) ?>" target="_blank" rel="noopener">raw .plg</a>.
+      </p>
 <?php endif; ?>
+    </div>
+    <div class="nbd-companion-card<?= !empty($frr) ? ' nbd-companion-ok' : '' ?>">
+      <div class="nbd-companion-title">Multi-hop (FRR / OpenFabric)</div>
 <?php if (!empty($frr)): ?>
-    Fabric Routing (FRR): installed
-    (<a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Fabric Routing', event)">Network Settings → Fabric Routing</a>;
-    optional multi-hop only).
+      <p><span class="nbd-companion-status nbd-status-ok">Installed</span>
+        Optional multi-hop only — not required for a single NBD Host/Pull.
+        <a href="/Settings/NetworkSettings" onclick="return ibigsGotoNetTab('Fabric Routing', event)">Network Settings → Fabric Routing</a>.</p>
 <?php else: ?>
-    Fabric Routing (FRR): not needed for NBD.
+      <p><span class="nbd-companion-status nbd-status-warn">Not installed</span>
+        Optional for rings / multi-hop / Proxmox FRR peers. Skip for a single static path or direct LAN.</p>
+      <p>
+        Install <strong>Fabric Routing</strong> from CA or
+        <a href="<?= htmlspecialchars($frr_install) ?>" target="_blank" rel="noopener">raw .plg</a>.
+      </p>
 <?php endif; ?>
-    <span class="nbd-muted"> NBD binds its own IP:port.</span>
+    </div>
   </div>
 <script>
 /* Fleet standard: Network Settings sibling tabs (ibigsGotoNetTab).

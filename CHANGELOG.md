@@ -6,6 +6,9 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+###2026.08.15ai
+- Companions footer: card-style Thunderbolt Net + Multi-hop (FRR) wording aligned with Thunderbolt Net (Not installed / CA or raw .plg).
+
 ###2026.08.15ah
 - Uninstall: document full wipe of plugin flash tree; do not touch Unraid plugins-removed; leave user export JSON under /boot/config/nbdexport-config-*.json.
 

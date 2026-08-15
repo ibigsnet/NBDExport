@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15ah">
+<!ENTITY version "2026.08.15ai">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,10 @@
 
 <CHANGES>
 ###&version;
+- <strong>Companions:</strong> footer cards match Thunderbolt Net style — Thunderbolt underlay and
+  Multi-hop (FRR) with Not installed / Install from CA or raw .plg wording.
+
+###2026.08.15ah
 - **Uninstall:** remove all plugin-owned flash config and runtime scratch (clean reinstall).
 - NBD flash tree already wiped; leave Unraid plugins-removed alone.
 
@@ -44,10 +48,6 @@
 
 ###2026.08.14ax
 - **Docs:** public README/docs hygiene — no lab hostnames; private notes stay local.
-
-###2026.08.14aw
-- **Pull:** warn (does not block) when output extension mismatches format
-  (e.g. qcow2 + <code>.img</code>, raw + <code>.qcow2</code>); live hint + confirm.
 
 ### Older releases
 - Full changelog (all versions): https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
