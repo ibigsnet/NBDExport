@@ -1,18 +1,23 @@
-# Contributing
+# Contributing to NBD Export
 
-- Versioning: see [RELEASES.md](RELEASES.md).
-- Never force-push `main`.  
-- No empty-file pushes.  
-- Do not hard-`require` ThunderboltNet or FabricRouting PHP.  
-- Default security: read-only, no `0.0.0.0` without explicit allow.  
-- Keep `README.md` to a short Plugins-list blurb; long form in `DOCS.md` / `docs/`.  
+Thanks for helping improve network block device export and imaging on Unraid.
 
-## License
+## Guidelines
 
-By contributing, you agree that your contributions are licensed under the **GNU GPLv3 or later** (same as this project). Copyright for the project is held by **ibigs, LLC**.
+1. Prefer **read-only** Host and private bind IPs by default.  
+2. Do not hard-`require` Thunderbolt Net or Fabric Routing PHP.  
+3. Keep `README.md` short (Plugins list blurb); long form lives in `DOCS.md` / `docs/`.  
+4. Test Host / Pull paths when changing export or imaging code.  
 
 ## Branches
 
-- `main` — development (may break)
-- `stable` — production / CA channel only; maintainers merge release-ready work here
+| Branch | Role |
+|--------|------|
+| `main` | Development |
+| `stable` | Production / Community Applications |
 
+Install channels: [RELEASES.md](RELEASES.md).
+
+## License
+
+By contributing, you agree that your contributions are licensed under the **GNU GPLv3 or later**. Copyright for the project is held by **ibigs, LLC**.

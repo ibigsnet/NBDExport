@@ -11,13 +11,10 @@
     YYYY.MM.DDaa     2nd same day, then ab, ac, ... az, ba, bb, ...
   Two-letter only after the bare date — never single a–z
   (strcmp treats "aa" as older than "z").
-  Calendar day = lab wall clock (not invented “tomorrow”). See RELEASES.md.
+  Calendar day is the ship day; see RELEASES.md for install channels.
 
   Product: **NBD Export** (UI Network Services → **NBD**). Plugin id **NBDExport**.
-  PluginURL file: nbd.plg (not install.plg / nbdexport.plg).
-
-  UI: Network Settings siblings via ibigsGotoNetTab(Title) — never deep-link
-  /Settings/ThunderboltNet or /Settings/FabricRouting (standalone CA pages).
+  PluginURL file: nbd.plg.
 -->
 <!ENTITY version "2026.08.14ay">
 <!ENTITY launch "Settings/NBDExport">
@@ -125,7 +122,7 @@
 
 ###2026.08.14ab
 - **Lab channel:** On branch `main`, PluginURL + raw FILE sources point at `main` (lab uninstall/reinstall testing).
-- Branch `stable` remains the CA/production pin (see RELEASE-CHANNEL.md). Ship by merging to stable and rewriting entities to stable.
+- Branch `stable` remains the CA/production pin Production channel is branch `stable` (CA PluginURL).
 
 ###2026.08.14aa
 - **License:** GNU GPLv3 or later (copyright ibigs, LLC; Author: RifleJock).
