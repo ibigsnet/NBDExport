@@ -1,14 +1,13 @@
-# Local / agent notes — never publish to GitHub
-.grok-notes/
-*.local.md
-NOTES.local.md
-.private/
-.cursor/
-.idea/
-.vscode/
-
-# Editor / OS junk
+# Editor / OS
 *.swp
 *~
 .DS_Store
 *.kate-swp
+.idea/
+.vscode/
+.cursor/
+
+# Local scratch files
+*.local.md
+NOTES.local.md
+.private/
