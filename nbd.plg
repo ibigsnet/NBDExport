@@ -16,7 +16,7 @@
   Product: **NBD Export** (UI Network Services → **NBD**). Plugin id **NBDExport**.
   PluginURL file: nbd.plg.
 -->
-<!ENTITY version "2026.08.15ab">
+<!ENTITY version "2026.08.15ac">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">

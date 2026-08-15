@@ -1,4 +1,5 @@
 <?php
+/** packaged install 2026.08.15ac */
 /**
  * NBD Export — core helpers (no hard require of ThunderboltNet / FabricRouting).
  */
