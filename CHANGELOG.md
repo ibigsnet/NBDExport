@@ -1,3 +1,6 @@
+## 2026.08.15ah
+- Uninstall: document full wipe of plugin flash tree; do not touch Unraid plugins-removed; leave user export JSON under /boot/config/nbdexport-config-*.json.
+
 # Changelog — NBDExport
 
 User-facing history for this plugin. The `.plg` file (Community Applications / Plugins page) shows only the **most recent releases**; this file is the complete record.

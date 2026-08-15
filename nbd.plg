@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15ag">
+<!ENTITY version "2026.08.15ah">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,10 @@
 
 <CHANGES>
 ###&version;
+- **Uninstall:** remove all plugin-owned flash config and runtime scratch (clean reinstall).
+- NBD flash tree already wiped; leave Unraid plugins-removed alone.
+
+###2026.08.15ag
 - Fix: do not wipe Unraid /tmp/plugins working copy during install prepare.
 
 ###2026.08.15aa
@@ -45,12 +49,6 @@
 - **Pull:** warn (does not block) when output extension mismatches format
   (e.g. qcow2 + <code>.img</code>, raw + <code>.qcow2</code>); live hint + confirm.
 
-###2026.08.14av
-- **UD overlay:** no empty reserved slots on unhosted disks (stock layout restored);
-  badges only on active Hosts, absolutely positioned to avoid column reflow.
-
-### Older releases
-- Full changelog (all versions): https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
 </CHANGES>
 
 <FILE Run="/bin/bash">
@@ -144,7 +142,10 @@ rm -rf /usr/local/emhttp/plugins/NBDExport
 # Flash (config + cached package); legacy rename dir if any
 rm -rf /boot/config/plugins/NBDExport /boot/config/plugins/NbdExport
 rm -f /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
-rm -f /tmp/plugins/nbd.plg /tmp/plugins/nbd.txt /tmp/plugins/nbdexport.plg 2>/dev/null || true
+rm -f /tmp/plugins/nbd.txt /tmp/plugins/nbdexport.plg 2>/dev/null || true
+# Note: do not delete /tmp/plugins/nbd.plg here — Unraid install working copy during remove
+# Note: do not touch /boot/config/plugins-removed/ (Unraid-owned)
+# Note: user-exported JSON under /boot/config/nbdexport-config-*.json is left alone (export, not plugin state)
 echo "NBD Export: removed."
 ]]></INLINE>
 </FILE>
