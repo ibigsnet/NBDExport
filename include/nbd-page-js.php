@@ -86,21 +86,66 @@ if (!isset($presets) || !is_array($presets)) {
     return true;
   };
 
+  // Abortable network scan (Pull tab). Stop only cancels the browser wait —
+  // the PHP scan may still finish in the background for a moment.
+  var nbdScanAbort = null;
+  var nbdScanIdleStyle = '';
+
+  function nbdScanSetIdle(btn) {
+    if (!btn) return;
+    btn.value = 'Scan network';
+    btn.disabled = false;
+    btn.style.cssText = nbdScanIdleStyle || '';
+    btn.removeAttribute('data-nbd-scanning');
+  }
+
+  function nbdScanSetScanning(btn) {
+    if (!btn) return;
+    if (!btn.getAttribute('data-nbd-scanning')) {
+      nbdScanIdleStyle = btn.getAttribute('style') || '';
+    }
+    btn.setAttribute('data-nbd-scanning', '1');
+    btn.value = 'Stop scanning';
+    btn.disabled = false;
+    btn.style.cssText = 'color:#fff;background:#a33;border-color:#822;font-weight:700';
+  }
+
   window.nbdScanNetwork = function () {
     var btn = document.getElementById('nbd_scan_btn');
     var st = document.getElementById('nbd_scan_status');
     var box = document.getElementById('nbd_scan_results');
+
+    // Second click while scanning → stop
+    if (btn && btn.getAttribute('data-nbd-scanning') === '1') {
+      if (nbdScanAbort) {
+        try { nbdScanAbort.abort(); } catch (e) { /* ignore */ }
+      }
+      nbdScanAbort = null;
+      nbdScanSetIdle(btn);
+      if (st) st.textContent = 'Scan stopped.';
+      return;
+    }
+
     if (st) st.textContent = 'Scanning private LANs for NBD ports (10809+) and peer beacons (10808)…';
     if (box) {
       box.style.display = 'none';
       box.innerHTML = '';
     }
-    if (btn) btn.disabled = true;
+    nbdScanSetScanning(btn);
+
+    if (nbdScanAbort) {
+      try { nbdScanAbort.abort(); } catch (e2) { /* ignore */ }
+    }
+    nbdScanAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var url = '/plugins/NBDExport/include/nbd-scan.php?probe_info=1&_=' + Date.now();
-    fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+    var opts = { credentials: 'same-origin', cache: 'no-store' };
+    if (nbdScanAbort) opts.signal = nbdScanAbort.signal;
+
+    fetch(url, opts)
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (btn) btn.disabled = false;
+        nbdScanAbort = null;
+        nbdScanSetIdle(btn);
         if (!data || !data.ok) {
           if (st) st.textContent = (data && data.error) ? data.error : 'Scan failed';
           return;
@@ -154,7 +199,12 @@ if (!isset($presets) || !is_array($presets)) {
         box.style.display = 'block';
       })
       .catch(function (e) {
-        if (btn) btn.disabled = false;
+        nbdScanAbort = null;
+        nbdScanSetIdle(btn);
+        if (e && (e.name === 'AbortError' || e.message === 'The user aborted a request.')) {
+          if (st) st.textContent = 'Scan stopped.';
+          return;
+        }
         if (st) st.textContent = 'Scan error: ' + (e && e.message ? e.message : 'network');
       });
   };

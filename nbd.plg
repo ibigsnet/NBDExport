@@ -16,7 +16,7 @@
   Product: **NBD Export** (UI Network Services → **NBD**). Plugin id **NBDExport**.
   PluginURL file: nbd.plg.
 -->
-<!ENTITY version "2026.08.14az">
+<!ENTITY version "2026.08.15aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -39,6 +39,9 @@
 
 <CHANGES>
 ###&version;
+- **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
+
+###2026.08.14az
 - **Host:** Listen port shows default <strong>10809</strong> in blue when the field is empty (Unraid placeholder).
 
 ###2026.08.14ay
