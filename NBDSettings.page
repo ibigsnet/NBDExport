@@ -50,11 +50,13 @@ nbd_page_styles();
       <dl>
         <dt>Default port:</dt>
         <dd>
-          <input type="number" name="default_port" class="narrow" value="<?= $def_port ?>" min="1024" max="65535">
+          <input type="number" name="default_port" class="narrow" value="<?= $def_port ?>"
+            placeholder="10809" min="1024" max="65535"
+            title="qemu-nbd protocol default is 10809">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Suggested for new exports (common qemu-nbd default <strong>10809</strong>). Multi-disk uses other free ports.
+        Suggested for new Hosts. Empty uses protocol default <strong>10809</strong> (shown in blue). Multi-disk uses other free ports.
       </blockquote>
 
       <dl>

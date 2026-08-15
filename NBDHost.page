@@ -116,11 +116,16 @@ nbd_page_styles();
       <dl>
         <dt>Listen port:</dt>
         <dd>
-          <input type="number" name="port" id="nbd_port" class="narrow" value="<?= $pref_port ?>" min="1024" max="65535">
+          <input type="number" name="port" id="nbd_port" class="narrow"
+            value="<?= $pref_port ?>"
+            placeholder="<?= $def_port !== '' ? $def_port : '10809' ?>"
+            min="1024" max="65535"
+            title="Leave blank for default (<?= $def_port !== '' ? $def_port : '10809' ?>)">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Default <strong>10809</strong>. For a second disk, pick another free port (prefill may already be free).
+        qemu-nbd default is <strong>10809</strong> (blue placeholder when the field is empty).
+        Settings → Default port can change that. For a second disk, use another free port (prefill may already be free).
       </blockquote>
 
       <dl>

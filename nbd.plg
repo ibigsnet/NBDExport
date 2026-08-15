@@ -16,7 +16,7 @@
   Product: **NBD Export** (UI Network Services → **NBD**). Plugin id **NBDExport**.
   PluginURL file: nbd.plg.
 -->
-<!ENTITY version "2026.08.14ay">
+<!ENTITY version "2026.08.14az">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -39,6 +39,9 @@
 
 <CHANGES>
 ###&version;
+- **Host:** Listen port shows default <strong>10809</strong> in blue when the field is empty (Unraid placeholder).
+
+###2026.08.14ay
 - **Host:** multi-network bind via checkboxes (one <code>qemu-nbd</code> per selected IP, same disk/port).
 
 ###2026.08.14ax

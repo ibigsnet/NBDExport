@@ -34,6 +34,13 @@ try {
           $cfg[$k] = ($cfg[$k] === 'yes') ? 'yes' : 'no';
         }
       }
+      // Empty Default port → protocol default 10809
+      $dp = (int)($cfg['default_port'] ?? 0);
+      if ($dp < 1024 || $dp > 65535) {
+        $cfg['default_port'] = '10809';
+      } else {
+        $cfg['default_port'] = (string)$dp;
+      }
       if (($cfg['enabled'] ?? 'yes') !== 'yes') {
         nbd_stop_all_exports();
       }
@@ -75,7 +82,13 @@ try {
           $binds[] = $b;
         }
       }
-      $port = (int)($_POST['port'] ?? 10809);
+      // Empty / invalid → Settings default_port, else protocol default 10809
+      $port_raw = trim((string)($_POST['port'] ?? ''));
+      $port = ($port_raw === '') ? 0 : (int)$port_raw;
+      if ($port < 1024 || $port > 65535) {
+        $cfg_port = (int)(nbd_load_cfg()['default_port'] ?? 10809);
+        $port = ($cfg_port >= 1024 && $cfg_port <= 65535) ? $cfg_port : 10809;
+      }
       $ro = (($_POST['read_only'] ?? 'yes') === 'yes');
       $label = trim((string)($_POST['label'] ?? ''));
       $confirm = (($_POST['nbd_confirm'] ?? '') === 'yes');
