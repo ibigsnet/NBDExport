@@ -2,40 +2,31 @@
 
 Copyright (c) 2026 ibigs, LLC · Author: RifleJock · License: GPL-3.0-or-later
 
-This document is for **operators**, **Community Applications reviewers**, and **anyone deciding whether to Host a disk**. NBD is raw block I/O over TCP — treat Host like temporarily plugging a drive into another machine, over the network.
+NBD is raw block I/O over TCP — treat Host like temporarily plugging a drive into another machine, over the network.
 
 | | |
 |--|--|
-| **User guide (bind / isolation)** | [docs/security-and-bind.md](docs/security-and-bind.md) |
-| **When Destructive mode is required** | [docs/destructive-mode.md](docs/destructive-mode.md) |
-| **Hosting checklist (do this every time)** | [docs/hosting-safety.md](docs/hosting-safety.md) |
+| **Bind / isolation** | [docs/security-and-bind.md](docs/security-and-bind.md) |
+| **Destructive mode** | [docs/destructive-mode.md](docs/destructive-mode.md) |
+| **Hosting checklist** | [docs/hosting-safety.md](docs/hosting-safety.md) |
 | **Support** | [Unraid forum](https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/) |
 
 ---
 
-## TL;DR for CA / plugin review
+## Safe until you opt in
 
-| Expectation | How this plugin behaves |
-|-------------|-------------------------|
-| Safe until the user opts in | **Read-only** host default; **Destructive mode Off**; **no `0.0.0.0` bind** unless allowed; **no auto re-export** on array start |
-| Idle install is quiet | No Host listener until the user starts one; no cloud / telemetry / phone-home |
-| Network surface is explicit | Only what the user starts: `qemu-nbd` on a chosen IP:port; optional discovery beacon only while Host exports are up |
-| Privileged but scoped | Root (Unraid plugin model). Starts `qemu-nbd` / `qemu-img`. Does **not** edit `network.cfg`, array membership, or reformat disks |
-| Server-side gates | Destructive / RW / array-mounted / boot rules enforced for **new** Hosts; live exports keep running until Stop. Emergency: **Stop all writable hosts** / **Stop all hosted disks** / Enable=No |
-| Clean uninstall | Stops **managed** processes only (pid files under `/var/run/nbdexport`); removes plugin tree; leaves user images under `/mnt/` |
-| Supply chain | CA PluginURL → GitHub **`stable`**; development on **`main`** |
-
-**Five-minute review path**
-
-1. [`default.cfg`](default.cfg) — product defaults  
-2. [`include/nbd-lib.php`](include/nbd-lib.php) — `nbd_export_start`, `nbd_device_risk`, bind rules  
-3. [`nbd.plg`](nbd.plg) — FILE list, Method=remove, no opaque blobs  
-4. This file + [docs/hosting-safety.md](docs/hosting-safety.md)  
-5. Optional: [docs/destructive-mode.md](docs/destructive-mode.md)
+| Expectation | Behavior |
+|-------------|---------|
+| Defaults | **Read-only** Host; **Destructive mode Off**; **no `0.0.0.0` bind** unless allowed; **no auto re-export** on array start |
+| Idle install | No Host listener until you start one; no telemetry |
+| Network surface | Only what you start: `qemu-nbd` on a chosen IP:port; discovery beacon only while Hosts are up |
+| Scope | Root (Unraid plugin model). Starts `qemu-nbd` / `qemu-img`. Does **not** edit `network.cfg`, array membership, or reformat disks |
+| Gates | Destructive / RW / array-mounted / boot rules for **new** Hosts; live exports keep running until Stop |
+| Uninstall | Stops **managed** processes only; leaves user images under `/mnt/` |
 
 ---
 
-## Threat model (honest)
+## Threat model
 
 ### What NBD is
 
@@ -103,13 +94,13 @@ Read-only does **not** freeze local writers on the source Unraid host. Quiesce o
 | `rehydrate_on_start` | **no** | No surprise re-export after reboot / array start |
 | `ud_status_overlay` | **no** | No DOM badges on Unassigned Devices until the user opts in |
 
-Source of truth: [`default.cfg`](default.cfg). Live flash: `/boot/config/plugins/NBDExport/NBDExport.cfg`.
+Live settings: `/boot/config/plugins/NBDExport/NBDExport.cfg`.
 
 ---
 
-## Server-side enforcement (Host)
+## Host enforcement
 
-All Host starts go through `nbd_export_start()` in `include/nbd-lib.php`. UI confirmations are **not** the only gate.
+UI confirmations are **not** the only gate — the server enforces the same rules.
 
 | Rule | Enforced |
 |------|----------|
@@ -184,20 +175,15 @@ A malicious or mistaken `nbd://` can fill a share or pull unexpected content —
 
 ---
 
-## Install / update supply chain
+## Install channel
 
-| Track | URL |
-|-------|-----|
-| **CA / production (`stable`)** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg` |
-| **Lab / development (`main`)** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg` |
-
-- All plugin `FILE` sources are plain text from the same GitHub branch as PluginURL.  
-- No third-party binary blob in the `.plg` beyond what Unraid already provides (`qemu-*` from the OS/VM stack).  
-- Version strings are calendar `YYYY.MM.DD` + optional two-letter suffix (Unraid `strcmp` updates).
+Production / Community Applications: GitHub branch **`stable`**.  
+Lab / development: branch **`main`**.  
+Uses Unraid’s existing `qemu-nbd` / `qemu-img` (no extra binary payload in the plugin).
 
 ---
 
-## Operational “good smell” for hosted disks
+## Operational checklist
 
 When **you** are the Host operator:
 
@@ -213,6 +199,7 @@ Full checklist: [docs/hosting-safety.md](docs/hosting-safety.md).
 
 ## Contact
 
-- **Support (CA / Plugins page):** https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/  
+- **Support:** https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/  
+
 - **GitHub issues:** https://github.com/ibigsnet/NBDExport/issues  
 - **Project:** https://github.com/ibigsnet/NBDExport  
