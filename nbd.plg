@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.15ai">
+<!ENTITY version "2026.08.16aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,10 @@
 
 <CHANGES>
 ###&version;
+- <strong>Install/upgrade:</strong> always removepkg prior NBDExport-* / NbdExport-* packages and
+  wipe emhttp plugin dirs before the new .txz (no mixed leftover files after versioned updates).
+
+###2026.08.15ai
 - <strong>Companions:</strong> footer cards match Thunderbolt Net style — Thunderbolt underlay and
   Multi-hop (FRR) with Not installed / Install from CA or raw .plg wording.
 
@@ -70,7 +74,15 @@ fi
 rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
       /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
 mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
-rm -rf /usr/local/emhttp/plugins/NBDExport
+# YYYY.MM.DDxx package names: always remove prior installs so upgrades never leave mixed files
+for p in /var/log/packages/NBDExport-* /var/log/packages/NbdExport-*; do
+  [ -e "$p" ] || continue
+  echo "NBD Export: removing old package $(basename "$p")"
+  removepkg "$(basename "$p")" 2>/dev/null || true
+done
+rm -rf /usr/local/emhttp/plugins/NBDExport \
+       /usr/local/emhttp/plugins/NbdExport \
+       /usr/local/emhttp/plugins/nbdexport 2>/dev/null || true
 rm -f /boot/config/plugins/NBDExport/NBDExport-*.txz 2>/dev/null || true
 echo "NBD Export: ready for package install."
 ]]></INLINE>
@@ -83,6 +95,10 @@ echo "NBD Export: ready for package install."
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
 echo "NBD Export: finishing install..."
+if [ ! -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
+  echo "NBD Export: ERROR — package did not install (missing nbd-lib.php)"
+  exit 1
+fi
 chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/* 2>/dev/null || true
 chmod 755 /usr/local/emhttp/plugins/NBDExport/event/started 2>/dev/null || true
 if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
@@ -91,6 +107,7 @@ if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
   echo "NBD Export: created default NBDExport.cfg"
 fi
 php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); nbd_ud_overlay_inject();' 2>/dev/null || true
+echo "NBD Export: packages now: $(ls /var/log/packages/NBDExport-* 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
 echo "NBD Export: install complete."
 echo "NBD Export: Settings → Network Services → NBD"
 echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."

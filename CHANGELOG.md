@@ -6,6 +6,11 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+###2026.08.16aa
+- **Install/upgrade hygiene:** prepare always `removepkg`s prior `NBDExport-*` / legacy
+  `NbdExport-*` packages and wipes emhttp plugin dirs before the new `.txz`. Prevents mixed
+  leftover files across `YYYY.MM.DDxx` package names.
+
 ###2026.08.15ai
 - Companions footer: card-style Thunderbolt Net + Multi-hop (FRR) wording aligned with Thunderbolt Net (Not installed / CA or raw .plg).
 
