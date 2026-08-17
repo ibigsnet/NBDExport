@@ -18,7 +18,7 @@ CA is fed from [unraid-templates](https://github.com/ibigsnet/unraid-templates).
 |---------|----------|-----|
 | **Production (`stable`)** | Normal install / CA channel | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg` |
 | **Lab (`main`)** | Newest development tree | `https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg` |
-| **Recommended freeze** | Known-good pin | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.13aj/nbd.plg` |
+| **Recommended freeze** | Known-good pin | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.17aa/nbd.plg` |
 | **Pinned version** | Install or roll back to a fixed tag | `https://raw.githubusercontent.com/ibigsnet/NBDExport/vVERSION/nbd.plg` |
 
 - **`stable`** — what CA installs; production updates.
@@ -29,9 +29,9 @@ CA is fed from [unraid-templates](https://github.com/ibigsnet/unraid-templates).
 
 | | |
 |--|--|
-| **Version** | **2026.08.13aj** |
-| **Tag** | [`stable-recommended-2026.08.13aj`](https://github.com/ibigsnet/NBDExport/releases/tag/stable-recommended-2026.08.13aj) (also `v2026.08.13aj`) |
-| **Install** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.13aj/nbd.plg` |
+| **Version** | **2026.08.17aa** |
+| **Tag** | [`stable-recommended-2026.08.17aa`](https://github.com/ibigsnet/NBDExport/releases/tag/stable-recommended-2026.08.17aa) (also `v2026.08.17aa`) |
+| **Install** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable-recommended-2026.08.17aa/nbd.plg` |
 
 Host / Pull / Settings tabs, Destructive mode default Off, Thunderbolt-first bind list.
 
