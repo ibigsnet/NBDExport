@@ -23,7 +23,7 @@
   min="6.12.0"
   support="&forum;"
   project="https://github.com/&github;"
-  readme="https://raw.githubusercontent.com/&github;/stable/README.md">
+  readme="https://raw.githubusercontent.com/&github;/main/README.md">
 
 <CHANGES>
 ###&version;
