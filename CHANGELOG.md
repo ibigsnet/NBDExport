@@ -1,3 +1,7 @@
+## 2026.08.17aa
+
+- **Audit harden:** UD HeadInline inject only when overlay enabled; marker + stock backup; install no longer always patches layout.
+
 # Changelog — NBDExport
 
 User-facing history for this plugin. The `.plg` file (Community Applications / Plugins page) shows only the **most recent releases**; this file is the complete record.

@@ -78,7 +78,8 @@ Read-only does **not** freeze local writers on the source Unraid host. Quiesce o
 | Install unrelated packages at boot | Tools are Unraid VM stack (`qemu-nbd` / `qemu-img`) |
 | Require Thunderbolt Net or Fabric Routing | Soft companions only |
 | Phone home / analytics / ads | No external calls for “license check” or telemetry |
-| Inject into Unraid Core UI by default | Host status lives under **Network Services → NBD**. Optional **opt-in** soft hook for small badges on Main → Unassigned Devices (third-party page; default **Off**) — [docs/integration-unassigned-devices.md](docs/integration-unassigned-devices.md) |
+| Inject into Unraid Core UI by default | Host status lives under **Network Services → NBD**. Optional **opt-in** soft hook for small badges on Main → Unassigned Devices (third-party page; default **Off**). Install does **not** patch HeadInlineJS until overlay is Yes — [docs/integration-unassigned-devices.md](docs/integration-unassigned-devices.md) |
+| Walk array folders | UD inject edits **fixed** emhttp layout paths only; never `/mnt` or share folders |
 
 ---
 

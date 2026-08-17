@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.16aa">
+<!ENTITY version "2026.08.17aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,10 @@
 
 <CHANGES>
 ###&version;
+- <strong>Audit harden:</strong> UD HeadInline inject only when overlay enabled (not on every install);
+  marker + stock backup under plugin flash; strip marker-only on uninstall. Fixed layout paths only.
+
+###2026.08.16aa
 - <strong>Install/upgrade:</strong> always removepkg prior NBDExport-* / NbdExport-* packages and
   wipe emhttp plugin dirs before the new .txz (no mixed leftover files after versioned updates).
 
@@ -106,7 +110,8 @@ if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
   cp -a /usr/local/emhttp/plugins/NBDExport/default.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
   echo "NBD Export: created default NBDExport.cfg"
 fi
-php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); nbd_ud_overlay_inject();' 2>/dev/null || true
+# Companion marker only. UD HeadInline inject only when user enables overlay (Settings).
+php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); $c=nbd_load_cfg(); if (($c["ud_status_overlay"]??"no")==="yes") { nbd_ud_overlay_inject(); } else { nbd_ud_overlay_uninject(); }' 2>/dev/null || true
 echo "NBD Export: packages now: $(ls /var/log/packages/NBDExport-* 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
 echo "NBD Export: install complete."
 echo "NBD Export: Settings → Network Services → NBD"
@@ -128,7 +133,7 @@ for f in \
   /usr/local/emhttp/plugins/dynamix/include/HeadInclude.php
 do
   [ -f "$f" ] || continue
-  sed -i '/NBDExport UD overlay/d' "$f" 2>/dev/null || true
+  sed -i '/NBDExport-inject/d;/NBDExport UD overlay/d' "$f" 2>/dev/null || true
 done
 # Stop managed exports/jobs
 if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then

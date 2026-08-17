@@ -849,26 +849,36 @@ function nbd_destructive_mode_on(array $cfg = null) {
 
 /**
  * Soft-inject opt-in Unassigned Devices overlay hook into Unraid HeadInlineJS.
- * The include is a no-op unless ud_status_overlay=yes and the user is on UD.
- * Marker comments make uninstall reliable (same idea as Storage Guard inject).
+ * Call only when ud_status_overlay=yes. Marker comments make uninstall reliable.
+ * Fixed absolute layout paths only — never walks /mnt or user shares.
  */
 function nbd_ud_overlay_inject() {
-  $marker = 'NBDExport UD overlay';
+  $marker = 'NBDExport-inject';
+  $legacy = 'NBDExport UD overlay';
   $line = '<?php @include \'/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php\'; /* ' . $marker . ' */ ?>';
   $candidates = [
     '/usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php',
     '/usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php',
   ];
+  $backup_dir = NBDEXPORT_CFG_DIR . '/stock-backup';
+  if (!is_dir($backup_dir)) {
+    @mkdir($backup_dir, 0755, true);
+  }
   $ok = false;
   foreach ($candidates as $path) {
     if (!is_file($path) || !is_writable($path)) {
       continue;
     }
+    $base = basename($path);
+    $stock = $backup_dir . '/' . $base . '.stock';
+    if (!is_file($stock)) {
+      @copy($path, $stock);
+    }
     $raw = @file_get_contents($path);
     if (!is_string($raw)) {
       continue;
     }
-    if (strpos($raw, $marker) !== false) {
+    if (strpos($raw, $marker) !== false || strpos($raw, $legacy) !== false) {
       $ok = true;
       continue;
     }
@@ -882,7 +892,7 @@ function nbd_ud_overlay_inject() {
 
 /** Remove UD overlay inject markers from Unraid layout files. */
 function nbd_ud_overlay_uninject() {
-  $marker = 'NBDExport UD overlay';
+  $markers = ['NBDExport-inject', 'NBDExport UD overlay'];
   $candidates = [
     '/usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php',
     '/usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php',
@@ -894,16 +904,32 @@ function nbd_ud_overlay_uninject() {
       continue;
     }
     $raw = @file_get_contents($path);
-    if (!is_string($raw) || strpos($raw, $marker) === false) {
+    if (!is_string($raw)) {
+      continue;
+    }
+    $hit = false;
+    foreach ($markers as $marker) {
+      if (strpos($raw, $marker) !== false) {
+        $hit = true;
+        break;
+      }
+    }
+    if (!$hit) {
       continue;
     }
     $lines = preg_split('/\r\n|\r|\n/', $raw);
     $out = [];
     foreach ($lines as $ln) {
-      if (strpos($ln, $marker) !== false) {
-        continue;
+      $drop = false;
+      foreach ($markers as $marker) {
+        if (strpos($ln, $marker) !== false) {
+          $drop = true;
+          break;
+        }
       }
-      $out[] = $ln;
+      if (!$drop) {
+        $out[] = $ln;
+      }
     }
     @file_put_contents($path, implode("\n", $out) . (substr($raw, -1) === "\n" ? "\n" : ''));
   }
