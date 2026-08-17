@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.17aa">
+<!ENTITY version "2026.08.17ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,38 +27,25 @@
 
 <CHANGES>
 ###&version;
-- <strong>Audit harden:</strong> UD HeadInline inject only when overlay enabled (not on every install);
-  marker + stock backup under plugin flash; strip marker-only on uninstall. Fixed layout paths only.
+- <strong>Plugins UI:</strong> trim embedded CHANGES list. CA/PluginURL use GitHub <code>main</code>.
+
+###2026.08.17aa
+- <strong>Audit harden:</strong> UD HeadInline inject only when overlay enabled; marker + stock backup.
 
 ###2026.08.16aa
-- <strong>Install/upgrade:</strong> always removepkg prior NBDExport-* / NbdExport-* packages and
-  wipe emhttp plugin dirs before the new .txz (no mixed leftover files after versioned updates).
+- Clean package replace on every upgrade.
 
 ###2026.08.15ai
-- <strong>Companions:</strong> footer cards match Thunderbolt Net style — Thunderbolt underlay and
-  Multi-hop (FRR) with Not installed / Install from CA or raw .plg wording.
+- Companion cards match Thunderbolt Net multi-hop wording.
 
 ###2026.08.15ah
-- **Uninstall:** remove all plugin-owned flash config and runtime scratch (clean reinstall).
-- NBD flash tree already wiped; leave Unraid plugins-removed alone.
+- Full uninstall wipe of plugin flash config.
 
 ###2026.08.15ag
-- Fix: do not wipe Unraid /tmp/plugins working copy during install prepare.
-
-###2026.08.15aa
-- **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
-
-###2026.08.14az
-- **Host:** Listen port shows default <strong>10809</strong> in blue when the field is empty (Unraid placeholder).
-
-###2026.08.14ay
-- **Host:** multi-network bind via checkboxes (one <code>qemu-nbd</code> per selected IP, same disk/port).
-
-###2026.08.14ax
-- **Docs:** public README/docs hygiene — no lab hostnames; private notes stay local.
+- Do not wipe Unraid /tmp/plugins working copy during install prepare.
 
 ### Older releases
-- Full changelog (all versions): https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
+- Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
 </CHANGES>
 
 <FILE Run="/bin/bash">

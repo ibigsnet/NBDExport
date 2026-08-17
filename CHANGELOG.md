@@ -1,3 +1,7 @@
+## 2026.08.17ab
+
+- Trim plg CHANGES for Plugins/CA UI (every ### is a listed release). Channel: main.
+
 ## 2026.08.17aa
 
 - **Audit harden:** UD HeadInline inject only when overlay enabled; marker + stock backup; install no longer always patches layout.
