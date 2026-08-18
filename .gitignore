@@ -1,13 +1,17 @@
 # Editor / OS
-*.swp
 *~
+*.swp
 .DS_Store
-*.kate-swp
 .idea/
 .vscode/
 .cursor/
 
-# Local scratch files
+# Local scratch
 *.local.md
 NOTES.local.md
 .private/
+
+# Lab / workstation only — NOT Unraid runtime
+AGENTS.md
+scripts/pack-txz.sh
+scripts/promote-stable.sh
