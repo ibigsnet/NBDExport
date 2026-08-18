@@ -1,3 +1,8 @@
+## 2026.08.17ac
+
+- Settings help: **Enable NBD Export = No** + Apply stops **plugin-managed** hosts only
+  (not a hand-started qemu-nbd). Turning Yes again does not auto-restart hosts.
+
 ## 2026.08.17ab
 
 - Trim plg CHANGES for Plugins/CA UI (every ### is a listed release). Channel: main.

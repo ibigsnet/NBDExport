@@ -31,7 +31,7 @@ Every tab shows a shared header: **disks currently hosted** (and an orange banne
 
 | Control | Default | Notes |
 |---------|---------|--------|
-| Enable NBD Export | Yes | **No** + Apply stops all hosts |
+| Enable NBD Export | Yes | **No** + Apply stops all plugin-managed hosts (not external qemu-nbd); Yes does not auto-restart |
 | Default read-only | Yes | Prefill for new Host listeners |
 | Default port | 10809 | 1024–65535; multi-disk uses other free ports |
 | Allow bind 0.0.0.0 | No | Dangerous; basic NBD has no auth — see [security-and-bind.md](security-and-bind.md) |

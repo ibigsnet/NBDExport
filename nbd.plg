@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.17ab">
+<!ENTITY version "2026.08.17ac">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- <strong>Plugins UI:</strong> trim embedded CHANGES list. CA/PluginURL use GitHub <code>main</code>.
+- Clarify master switch: No + Apply stops plugin-managed hosts only (not external qemu-nbd).
+
+###2026.08.17ab
+- Plugins UI: trim embedded CHANGES list.
 
 ###2026.08.17aa
 - <strong>Audit harden:</strong> UD HeadInline inject only when overlay enabled; marker + stock backup.

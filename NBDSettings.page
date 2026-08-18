@@ -31,7 +31,8 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Master switch. Setting <strong>No</strong> and applying stops all active exports.
+        Master switch. Setting <strong>No</strong> and applying stops all <strong>NBD Export–managed</strong> hosts
+        (not a hand-started <code>qemu-nbd</code> outside this plugin). Turning <strong>Yes</strong> again does not auto-restart them.
       </blockquote>
 
       <dl>
