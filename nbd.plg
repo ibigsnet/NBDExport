@@ -4,9 +4,9 @@
 <!ENTITY author "RifleJock">
 <!ENTITY version "2026.08.17ac">
 <!ENTITY launch "Settings/NBDExport">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
-<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing">
+<!ENTITY raw "https://raw.githubusercontent.com/ibigsnet/NBDExport/main">
 <!ENTITY forum "https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NBDExport">
 <!ENTITY configdir "/boot/config/plugins/NBDExport">
@@ -23,7 +23,7 @@
   min="6.12.0"
   support="&forum;"
   project="https://github.com/&github;"
-  readme="https://raw.githubusercontent.com/&github;/testing/README.md">
+  readme="https://raw.githubusercontent.com/&github;/main/README.md">
 
 <CHANGES>
 ###&version;
