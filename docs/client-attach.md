@@ -41,7 +41,7 @@ Unraid VM XML can use a network disk (syntax varies slightly by Unraid/libvirt v
 <disk type='network' device='disk'>
   <driver name='qemu' type='raw' cache='none'/>
   <source protocol='nbd' name=''>
-    <host name='192.168.1.3' port='10809'/>
+    <host name='<HOST_IP>' port='10809'/>
   </source>
   <target dev='hdc' bus='virtio'/>
 </disk>
@@ -50,7 +50,7 @@ Unraid VM XML can use a network disk (syntax varies slightly by Unraid/libvirt v
 Or QEMU CLI style:
 
 ```bash
--drive file=nbd://192.168.1.3:10809,format=raw,if=virtio,cache=none
+-drive file=nbd://<HOST_IP>:10809,format=raw,if=virtio,cache=none
 ```
 
 **Pros:** No `/dev/nbdN` on the host; guest I/O goes straight to NBD.  
@@ -81,7 +81,7 @@ If the Host exported **read-only**, clients can **read** but not **write**. With
 
 ```bash
 modprobe nbd
-nbd-client 192.168.1.3 10809 /dev/nbd0
+nbd-client <HOST_IP> 10809 /dev/nbd0
 # then use /dev/nbd0 in libvirt as a block disk, or mount carefully
 nbd-client -d /dev/nbd0   # disconnect when done
 ```

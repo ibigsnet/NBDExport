@@ -178,8 +178,8 @@ A malicious or mistaken `nbd://` can fill a share or pull unexpected content —
 
 ## Install channel
 
-Production / Community Applications: GitHub branch **`stable`**.  
-Lab / development: branch **`main`**.  
+Production / Community Applications: GitHub branch **`main`**.  
+WIP / possibly untested builds: branch **`testing`**.  
 Uses Unraid’s existing `qemu-nbd` / `qemu-img` (no extra binary payload in the plugin).
 
 ---

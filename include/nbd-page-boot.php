@@ -297,20 +297,22 @@ function nbd_page_header() {
 <?php endif; ?>
 
   <div class="nbd-chrome-hosted">
-    <h3>Disks currently hosted on the network
+    <h3>Disks this Unraid is hosting
       <span class="nbd-muted" style="font-weight:500;font-size:0.88em" id="nbd-live-chrome-counts">
         · <?= (int)$n ?> live<?= $nj ? ' · ' . (int)$nj . ' pull job(s)' : '' ?>
       </span>
     </h3>
 <?php if (!$exports): ?>
     <div class="nbd-empty" style="margin:0.4em 0 0;padding:0.65em 0.85em">
-      None hosted. Use the <strong>Host</strong> tab to publish a disk or partition
+      None hosted on this Unraid. Use the <strong>Host</strong> tab to publish a disk or partition
       (one free port per disk).
     </div>
 <?php else:
   $n_writable = 0;
   foreach ($exports as $_e) {
-    if (empty($_e['read_only'])) {
+    // Match stop-writables: missing read_only treated as writable (legacy / unsafe default)
+    $ro = array_key_exists('read_only', $_e) ? !empty($_e['read_only']) : false;
+    if (!$ro) {
       $n_writable++;
     }
   }
@@ -322,15 +324,18 @@ function nbd_page_header() {
       <span><span class="nbd-badge nbd-badge-rw">Writable</span></span>
     </div>
 <?php
-  // Caveat only when Destructive is Off but RW hosts still listening
+  // Caveat only when Destructive is Off but RW hosts still listening on THIS Unraid
   if ($n_writable > 0 && $destructive !== 'yes'):
 ?>
     <div class="nbd-destructive-banner" role="alert" style="margin:0.35em 0 0.55em;border-color:rgba(200,60,60,0.55);background:rgba(200,60,60,0.14);color:#b33">
       <div>
+        <strong>On this Unraid:</strong>
         <strong><?= (int)$n_writable ?> writable</strong> host<?= $n_writable === 1 ? '' : 's' ?> still listening
         while Destructive mode is <strong>Off</strong>.
-        Peers can write those disk(s). Destructive Off only blocks <em>starting</em> new elevated Hosts —
-        it does not stop ones already up.
+        Peers can write <em>these local</em> disk(s).
+        This banner is about Host exports on <em>this</em> server — not whether a remote
+        <code>nbd://</code> you Pull from is read-only.
+        Destructive Off only blocks <em>starting</em> new elevated Hosts; it does not stop ones already up.
       </div>
       <form method="POST" action="/update.php" target="progressFrame" style="display:block;margin:0.55em 0 0"
         onsubmit="return confirm('Emergency stop: halt ALL writable NBD hosts now?\n\nRead-only hosts stay up.');">
@@ -417,13 +422,13 @@ function nbd_page_header() {
  */
 function nbd_page_footer($show_cli = false) {
   global $tbn, $frr;
-  $tbn_install = 'https://raw.githubusercontent.com/ibigsnet/ThunderboltNet/stable/thunderboltnet.plg';
-  $frr_install = 'https://raw.githubusercontent.com/ibigsnet/FabricRouting/stable/fabricrouting.plg';
+  $tbn_install = 'https://raw.githubusercontent.com/ibigsnet/ThunderboltNet/main/thunderboltnet.plg';
+  $frr_install = 'https://raw.githubusercontent.com/ibigsnet/FabricRouting/main/fabricrouting.plg';
   ?>
 <div class="nbd-chrome-footer">
   <strong>Network Block Device</strong> —
   temporarily publish a whole disk/partition over TCP as NBD — raw blocks for remote tools or convert/archive (not SMB/NFS folders).
-  Tabs: <strong>Host</strong> publish · <strong>Pull</strong> save to file · <strong>Settings</strong> options.
+  Tabs: <strong>Host</strong> publish · <strong>Pull</strong> save to file · <strong>Help</strong> recovery / peer host · <strong>Settings</strong> options.
   <span class="nbd-muted"> NBD binds its own IP:port — companions below are optional.</span>
   <div class="nbd-companion-strip" aria-label="Related plugins">
     <div class="nbd-companion-card<?= !empty($tbn) ? ' nbd-companion-ok' : '' ?>">
@@ -521,34 +526,16 @@ function nbd_page_footer($show_cli = false) {
   setTimeout(applyWanted, 600);
 })(window);
 </script>
-<?php if ($show_cli): ?>
-  <details class="nbd-cli-box">
-    <summary>CLI reference (same path the UI wraps)</summary>
-    <pre class="nbd-cli"># Host (read-only, private bind) — multi-disk: change --port per disk
-qemu-nbd --read-only --persistent --shared=2 \
-  --bind=10.255.0.1 --port=10809 --format=raw /dev/nvme0n1
-
-# Pull on Unraid
-qemu-img info nbd://10.255.0.1:10809
-qemu-img convert -p -f raw -O qcow2 -t writeback -W \
-  nbd://10.255.0.1:10809 /mnt/user/domains/example.qcow2</pre>
-    <p class="nbd-muted" style="margin:0.4em 0 0">
-      Docs:
-      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
-      ·
-      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">imaging ↗</a>
-      ·
-      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">security ↗</a>
-    </p>
-  </details>
-<?php else: ?>
   <p class="nbd-muted" style="margin:0.45em 0 0">
     Docs:
+    <a href="/Settings/NBDHelp">Help tab</a>
+    ·
     <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">how to use ↗</a>
+    ·
+    <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/peer-host-linux.md" target="_blank" rel="noopener">peer Linux host ↗</a>
     ·
     <a href="https://github.com/ibigsnet/NBDExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS ↗</a>
   </p>
-<?php endif; ?>
 </div>
 <?php
   // Auto-refresh when Host/Pull goes terminal (all tabs, including Status)

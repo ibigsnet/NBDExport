@@ -7,14 +7,21 @@ Markdown="false"
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
 ?>
+<link type="text/css" rel="stylesheet" href="<?autov('/webGui/styles/jquery.filetree.css')?>">
 <div class="nbd-wrap">
 <?php nbd_page_header(); ?>
   <div class="nbd-tab-body">
   <div class="nbd-section" style="margin-top:0">
     <h3>Pull a remote disk into a file</h3>
     <p class="nbd-section-lead">
-      <strong>Client</strong> — connect to <code>nbd://…</code> and write qcow2/raw under <code>/mnt/…</code>
-      (hint: <code>/mnt/user/domains/</code>). Jobs stay running if you close the browser; see <strong>Status</strong>.
+      <strong>Client</strong> — connect to <code>nbd://…</code> and write qcow2/raw under <code>/mnt/…</code>.
+      Prefer <code>/mnt/cache/…</code> or <code>/mnt/diskN/…</code> for large images;
+      <code>/mnt/user</code> / <code>/mnt/user0</code> work but are slower (FUSE/array).
+      Jobs stay running if you close the browser; see <strong>Status</strong>.
+    </p>
+    <p class="nbd-muted" style="margin:0.35em 0 0.75em">
+      The red “writable host” banner above (if shown) is about <strong>Host exports on this Unraid</strong>,
+      not whether the remote <code>nbd://</code> is read-only.
     </p>
 <?php if ($pull_presets): ?>
     <p class="nbd-muted">
@@ -52,14 +59,25 @@ nbd_page_styles();
       <dl>
         <dt>Output path:</dt>
         <dd>
-          <input type="text" name="output" id="nbd_image_out" style="width:28em" placeholder="/mnt/user/domains/disk.qcow2" value="<?= $pref_out ?>">
+          <input type="text" name="output" id="nbd_image_out" style="width:28em"
+            autocomplete="off" spellcheck="false"
+            placeholder="Click to select under /mnt/…"
+            value="<?= $pref_out ?>"
+            data-pickroot="/mnt"
+            data-picktop="/mnt"
+            data-pickfolders="true"
+            data-pickfilter="HIDE_FILES_FILTER"
+            data-pickcloseonfile="true">
         </dd>
       </dl>
       <blockquote class="inline_help">
+        Click the field to browse from <code>/mnt</code> (same Unraid folder picker as Docker/VM).
         File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
-        Placeholder uses Unraid’s VM share (<code>/mnt/user/domains/</code>); cache is fine for speed.
+        Pick a folder then append a filename (e.g. <code>disk.qcow2</code>), or type the full path.
+        Prefer cache/disk/pool for multi-TB pulls; <code>/mnt/user</code> and <code>/mnt/user0</code> are allowed with a soft warning.
         Match the extension to the format: <strong>.qcow2</strong> for qcow2, <strong>.img</strong> or <strong>.raw</strong> for raw.
       </blockquote>
+      <p id="nbd_path_hint" class="nbd-ext-hint" style="display:none;margin:0.35em 0 0.6em;padding:0.45em 0.65em;border-radius:4px;font-size:0.92em;line-height:1.35"></p>
 
       <dl>
         <dt>Format:</dt>

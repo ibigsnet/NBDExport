@@ -13,10 +13,11 @@ Read in this order for a new install:
 | 7 | [hosting-safety.md](hosting-safety.md) | **Host checklist** every time you publish a disk |
 | 8 | [../SECURITY.md](../SECURITY.md) | Threat model + **CA review** notes |
 | 9 | [imaging-workflow.md](imaging-workflow.md) | CLI convert + restore |
-| 10 | [settings-reference.md](settings-reference.md) | Controls by tab |
-| 11 | [discovery.md](discovery.md) | **Scan network** / peer beacon (multi-Unraid) |
-| 12 | [client-attach.md](client-attach.md) | Live `nbd://` for VMs / nbd-client (vs Pull image) |
-| 13 | [troubleshooting.md](troubleshooting.md) | Failures |
+| 10 | [peer-host-linux.md](peer-host-linux.md) | Host a disk from another Linux (firewall + Pull) |
+| 11 | [settings-reference.md](settings-reference.md) | Controls by tab |
+| 12 | [discovery.md](discovery.md) | **Scan network** / peer beacon (multi-Unraid) |
+| 13 | [client-attach.md](client-attach.md) | Live `nbd://` for VMs / nbd-client (vs Pull image) |
+| 14 | [troubleshooting.md](troubleshooting.md) | Failures |
 
 ### Integrations (optional)
 

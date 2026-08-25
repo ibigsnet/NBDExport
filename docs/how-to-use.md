@@ -100,11 +100,11 @@ Until a client connects, the host just **waits** on the port (minimal disk serve
 
 ### On the peer (host)
 
-Option 1 — peer CLI:
+Option 1 — peer CLI (any Linux): see **[peer-host-linux.md](peer-host-linux.md)** (read-only `qemu-nbd`, narrow firewall, then stop).
 
 ```bash
 qemu-nbd --read-only --persistent --shared=2 \
-  --bind=<PEER_THUNDERBOLT_OR_LAN_IP> --port=10809 --format=raw \
+  --bind=<PEER_PRIVATE_IP> --port=10809 --format=raw \
   /dev/nvme0n1
 ```
 
@@ -114,7 +114,7 @@ Option 2 — peer is also Unraid with this plugin: **Host** tab → host that di
 
 1. **Pull** tab  
 2. NBD URL: `nbd://<peer-ip>:10809`  
-3. Output: e.g. `/mnt/user/domains/name.qcow2` (a **file**, never `/dev/…`)  
+3. Output: click the field to browse from `/mnt/…`, then append a file name (e.g. `name.qcow2`). Prefer `/mnt/cache/…` or `/mnt/diskN/…` for large images; `/mnt/user` / `/mnt/user0` are allowed with a soft warning. Never `/dev/…`.  
 4. Format: qcow2 → start pull  
 5. When **Done**, stop hosting on the peer  
 

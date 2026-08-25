@@ -388,12 +388,45 @@ if (!isset($presets) || !is_array($presets)) {
     return { level: 'ok', message: '', suggest: '' };
   };
 
+  window.nbdIsUserSharePath = function (path) {
+    path = String(path || '').trim();
+    return /^\/mnt\/user0?(\/|$)/.test(path);
+  };
+
+  window.nbdUpdatePathHint = function () {
+    var hint = document.getElementById('nbd_path_hint');
+    var out = document.getElementById('nbd_image_out');
+    if (!hint || !out) return;
+    var path = String(out.value || '').trim();
+    if (!path) {
+      hint.style.display = 'none';
+      hint.textContent = '';
+      return;
+    }
+    if (window.nbdIsUserSharePath(path)) {
+      hint.style.display = 'block';
+      hint.className = 'nbd-ext-hint nbd-ext-warn';
+      hint.textContent = 'Path is under /mnt/user or /mnt/user0 (FUSE/array). '
+        + 'Large sparse pulls are usually faster on /mnt/cache/…, /mnt/diskN/…, or a pool mount. '
+        + 'Allowed — continue if that is what you want.';
+      return;
+    }
+    if (/^\/mnt\/(cache|disk\d+|disks)\b/.test(path) || /^\/mnt\/[^\/]+(\/|$)/.test(path)) {
+      hint.style.display = 'none';
+      hint.textContent = '';
+      return;
+    }
+    hint.style.display = 'none';
+    hint.textContent = '';
+  };
+
   window.nbdUpdateExtHint = function () {
     var hint = document.getElementById('nbd_ext_hint');
     var out = document.getElementById('nbd_image_out');
     var fmt = document.getElementById('nbd_format');
     if (!hint || !out || !fmt) return;
     var path = String(out.value || '').trim();
+    window.nbdUpdatePathHint();
     if (!path) {
       hint.style.display = 'none';
       hint.textContent = '';
@@ -425,6 +458,26 @@ if (!isset($presets) || !is_array($presets)) {
       window.alert('Output cannot be a block device (/dev/…). Use a file under /mnt/.');
       return false;
     }
+    // Folder-only pick from fileTree — need a file name
+    if (path.slice(-1) === '/') {
+      window.alert('Output path ends with /. Append a file name (e.g. disk.qcow2).');
+      return false;
+    }
+    var base = path.split('/').pop() || '';
+    if (base.indexOf('.') < 0 && !window.confirm(
+      'Output has no file extension.\n  ' + path + '\n\n'
+      + 'Append .qcow2 / .img before continuing? (Cancel to go back and edit.)'
+    )) {
+      return false;
+    }
+
+    if (window.nbdIsUserSharePath(path)) {
+      if (!window.confirm(
+        'Output is under /mnt/user or /mnt/user0.\n\n'
+        + 'For large images, /mnt/cache/… or /mnt/diskN/… is usually better.\n\n'
+        + 'Continue with:\n  ' + path + '\n?'
+      )) return false;
+    }
 
     var ext = window.nbdCheckOutputExtension(path, format);
     if (ext.level === 'warn') {
@@ -446,14 +499,40 @@ if (!isset($presets) || !is_array($presets)) {
     );
   };
 
-  // Live extension hint on Pull tab
-  function nbdWireExtHint() {
+  // Live extension + path hints; Unraid folder picker on Pull output
+  function nbdWirePullPathUi() {
     var out = document.getElementById('nbd_image_out');
     var fmt = document.getElementById('nbd_format');
     if (!out && !fmt) return;
     if (out) {
       out.addEventListener('input', window.nbdUpdateExtHint);
       out.addEventListener('change', window.nbdUpdateExtHint);
+      // Stock Unraid browse-from-/mnt (Docker/VM pattern)
+      if (typeof window.jQuery !== 'undefined' && typeof jQuery.fn.fileTreeAttach === 'function') {
+        jQuery(out).fileTreeAttach(null, null, function (folder) {
+          var cur = String(out.value || '').trim();
+          var next = String(folder || '');
+          if (!next) return;
+          // Folder pick: keep trailing slash so user can type a file name
+          if (next.slice(-1) !== '/' && !/\.(qcow2|qcow|img|raw|dd|bin)$/i.test(next.split('/').pop() || '')) {
+            next = next.replace(/\/?$/, '/');
+          }
+          // If they already typed a basename, preserve it when replacing the directory
+          var base = '';
+          if (cur && cur.slice(-1) !== '/') {
+            var parts = cur.split('/');
+            var last = parts[parts.length - 1] || '';
+            if (last.indexOf('.') >= 0) base = last;
+          }
+          if (base && next.slice(-1) === '/') {
+            out.value = next + base;
+          } else {
+            out.value = next;
+          }
+          try { jQuery(out).trigger('change'); } catch (e) { /* ignore */ }
+          window.nbdUpdateExtHint();
+        });
+      }
     }
     if (fmt) {
       fmt.addEventListener('change', window.nbdUpdateExtHint);
@@ -461,9 +540,9 @@ if (!isset($presets) || !is_array($presets)) {
     window.nbdUpdateExtHint();
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', nbdWireExtHint);
+    document.addEventListener('DOMContentLoaded', nbdWirePullPathUi);
   } else {
-    nbdWireExtHint();
+    nbdWirePullPathUi();
   }
 
   // Live status auto-refresh lives in nbd-live-watch.php (footer) so Status tab gets it too.
