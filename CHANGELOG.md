@@ -1,3 +1,10 @@
+## 2026.08.24aa
+
+- **Pull:** Unraid-style `/mnt` folder browser (`fileTree`) for output path; soft warn on `/mnt/user` and `/mnt/user0`.
+- **Help** tab: Safe Mode / offline stop commands; generic peer-Linux host + narrow firewall guide (`docs/peer-host-linux.md`).
+- Chrome: “Disks this Unraid is hosting”; writable banner clarifies local Host vs remote RO Pull.
+- Channels/docs: install URLs on **main**; **testing** = WIP; companion install links use `/main/`; public RELEASES kept user-facing only.
+
 ## 2026.08.17ac
 
 - Settings help: **Enable NBD Export = No** + Apply stops **plugin-managed** hosts only
@@ -15,7 +22,7 @@
 
 User-facing history for this plugin. The `.plg` file (Community Applications / Plugins page) shows only the **most recent releases**; this file is the complete record.
 
-**Install channels:** production/CA uses branch `stable`; lab uses `main`. See [RELEASES.md](RELEASES.md).
+**Install channels:** production/CA uses branch `main`; WIP uses `testing`. See [RELEASES.md](RELEASES.md).
 
 ---
 

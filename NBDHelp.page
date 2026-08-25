@@ -1,0 +1,100 @@
+Menu="NBDExport:5"
+Title="Help"
+Tag="question-circle"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
+nbd_page_styles();
+?>
+<div class="nbd-wrap">
+<?php nbd_page_header(); ?>
+  <div class="nbd-tab-body">
+
+  <div class="nbd-section" style="margin-top:0">
+    <h3>Help and recovery</h3>
+    <p class="nbd-section-lead">
+      Short commands for Safe Mode / offline recovery, and how to host a disk from another Linux machine.
+      Full write-ups live on GitHub (links below).
+    </p>
+  </div>
+
+  <div class="nbd-section">
+    <h3>Safe Mode / offline (this Unraid)</h3>
+    <p class="nbd-muted">
+      In <strong>Safe Mode</strong> the plugin UI does not load. Use the console or SSH.
+      Plugin-managed hosts store state under <code>/var/run/nbdexport/</code>; pull job logs under <code>/var/log/nbdexport/</code>.
+    </p>
+    <pre class="nbd-cli"># Stop every plugin-managed Host export
+/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop all
+
+# Stop one export by id (see Status tab, or JSON under /var/run/nbdexport/)
+/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop &lt;export-id&gt;
+
+# List qemu-nbd processes (plugin and any you started by hand)
+ps aux | grep '[q]emu-nbd'
+
+# Kill a hand-started qemu-nbd (example — use the real PID)
+kill &lt;pid&gt;</pre>
+    <blockquote class="inline_help">
+      <strong>Enable NBD Export = No</strong> under Settings also stops plugin-managed hosts after Apply.
+      It does not kill a <code>qemu-nbd</code> you started manually on the console.
+    </blockquote>
+  </div>
+
+  <div class="nbd-section">
+    <h3>CLI (same path the UI wraps)</h3>
+    <pre class="nbd-cli"># Host read-only on a private bind IP (change --port per disk)
+qemu-nbd --read-only --persistent --shared=2 \
+  --bind=&lt;BIND_IP&gt; --port=10809 --format=raw &lt;DEVICE&gt;
+
+# On the Unraid that will save the image
+qemu-img info nbd://&lt;BIND_IP&gt;:10809
+qemu-img convert -p -f raw -O qcow2 -t writeback -W \
+  nbd://&lt;BIND_IP&gt;:10809 /mnt/cache/domains/example.qcow2</pre>
+    <p class="nbd-muted" style="margin:0.4em 0 0">
+      Prefer a real path under <code>/mnt/cache</code>, <code>/mnt/diskN</code>, or a pool — not only <code>/mnt/user</code> — for large pulls.
+    </p>
+  </div>
+
+  <div class="nbd-section">
+    <h3>Host a disk on another Linux (generic)</h3>
+    <ol style="line-height:1.5;margin:0.4em 0 0.6em 1.25em;padding:0">
+      <li>Install <code>qemu-nbd</code> (package name varies by distro; often part of <code>qemu-img</code> / <code>qemu-tools</code>).</li>
+      <li>Prefer <strong>read-only</strong>. Bind a <strong>private</strong> address Unraid can reach — not an open WAN listener.</li>
+      <li>Start the export (example):
+        <pre class="nbd-cli" style="margin:0.4em 0">qemu-nbd --read-only --persistent --shared=4 \
+  --bind=&lt;BIND_IP&gt; --port=10809 --format=raw &lt;DEVICE&gt;</pre>
+      </li>
+      <li>Open the firewall <strong>only</strong> for the Unraid (or private subnet) that will Pull — then remove the allow when finished.
+        <pre class="nbd-cli" style="margin:0.4em 0"># firewalld example (adjust zone/subnet/port)
+firewall-cmd --add-rich-rule='rule family="ipv4" source address="&lt;CLIENT_SUBNET_OR_IP&gt;" port port="10809" protocol="tcp" accept'
+# When done:
+firewall-cmd --remove-rich-rule='rule family="ipv4" source address="&lt;CLIENT_SUBNET_OR_IP&gt;" port port="10809" protocol="tcp" accept'</pre>
+      </li>
+      <li>On Unraid: <strong>Pull</strong> tab → <code>nbd://&lt;BIND_IP&gt;:10809</code> → file under <code>/mnt/…</code>.</li>
+      <li>Stop <code>qemu-nbd</code> on the peer and close the temporary firewall hole.</li>
+    </ol>
+    <blockquote class="inline_help">
+      NBD has no authentication. Anyone who can reach the port can read (or write, if you hosted writable) raw sectors.
+      Keep the allow-list narrow. Full guide:
+      <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/peer-host-linux.md" target="_blank" rel="noopener">peer-host-linux.md ↗</a>
+    </blockquote>
+  </div>
+
+  <div class="nbd-section">
+    <h3>More docs</h3>
+    <ul style="line-height:1.55;margin:0.35em 0 0 1.1em;padding:0">
+      <li><a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/how-to-use.md" target="_blank" rel="noopener">How to use</a></li>
+      <li><a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/destructive-mode.md" target="_blank" rel="noopener">Destructive mode</a></li>
+      <li><a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/security-and-bind.md" target="_blank" rel="noopener">Security and bind</a></li>
+      <li><a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/imaging-workflow.md" target="_blank" rel="noopener">Imaging workflow</a></li>
+      <li><a href="https://github.com/ibigsnet/NBDExport/blob/main/DOCS.md" target="_blank" rel="noopener">DOCS (overview)</a></li>
+      <li><a href="https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/" target="_blank" rel="noopener">Forum support thread</a></li>
+    </ul>
+  </div>
+
+  </div>
+<?php nbd_page_footer(false); ?>
+</div>
+<?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

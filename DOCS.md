@@ -4,9 +4,9 @@
 
 | | |
 |--|--|
-| **UI** | **Settings → Network Services → NBD** (tabs: Status · Host · Pull · Settings) |
+| **UI** | **Settings → Network Services → NBD** (tabs: Status · Host · Pull · Help · Settings) |
 | **Install (CA)** | Apps → search **NBD Export** |
-| **Install (raw)** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg` |
+| **Install (raw)** | `https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg` |
 | **Support** | [Unraid forum thread](https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/) · [GitHub Issues](https://github.com/ibigsnet/NBDExport/issues) |
 | **Source** | [github.com/ibigsnet/NBDExport](https://github.com/ibigsnet/NBDExport) |
 | **Support development** | [Patreon](https://www.patreon.com/cw/IBIGSNet) · [PayPal](https://www.paypal.com/paypalme/RifleJock) |
@@ -100,7 +100,7 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 ### Option B — raw `.plg` URL
 
 1. **Plugins → Install Plugin**.  
-2. Paste: `https://raw.githubusercontent.com/ibigsnet/NBDExport/stable/nbd.plg`  
+2. Paste: `https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg`  
 3. Hard-refresh → **Network Services → NBD**.
 
 Requires **Unraid product 6.12+** (plugin `min=` / CA MinVer — not a Linux kernel version).  
