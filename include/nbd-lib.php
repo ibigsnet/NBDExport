@@ -2756,9 +2756,12 @@ function nbd_job_delete_output($id) {
 
 /**
  * Start a new Pull using a prior job's (or edited) source/output/format.
- * Optionally remove an existing incomplete output file first.
  *
- * @param array{url?:string,output?:string,format?:string,remove_output?:bool} $overrides
+ * - If the output path is unchanged and the file still exists → delete it first
+ *   (stopped converts cannot resume).
+ * - On success → clear the old History card (list entry + log); new job is Active/Queued.
+ *
+ * @param array{url?:string,output?:string,format?:string} $overrides
  */
 function nbd_image_retry($id, array $overrides = []) {
   $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
@@ -2773,23 +2776,28 @@ function nbd_image_retry($id, array $overrides = []) {
   if (in_array($k, ['running', 'paused', 'queued'], true)) {
     return ['ok' => false, 'error' => 'Stop or cancel the live job before retrying'];
   }
+  $old_out = trim((string)($j['output'] ?? ''));
   $url = trim((string)($overrides['url'] ?? $j['url'] ?? ''));
   $output = trim((string)($overrides['output'] ?? $j['output'] ?? ''));
   $format = trim((string)($overrides['format'] ?? $j['format'] ?? 'qcow2'));
   if ($url === '' || $output === '') {
     return ['ok' => false, 'error' => 'Missing source or output path'];
   }
-  $remove = !empty($overrides['remove_output']);
-  if ($remove && is_file($output)) {
-    if (!@unlink($output)) {
-      return ['ok' => false, 'error' => 'Could not remove existing output: ' . $output];
+  $removed = false;
+  // Same path (or still pointing at old file): must remove — cannot resume mid-convert
+  if ($output === $old_out && $output !== '' && is_file($output)) {
+    $dr = nbd_job_delete_output($id);
+    if (empty($dr['ok'])) {
+      return ['ok' => false, 'error' => 'Could not remove existing output: ' . ($dr['error'] ?? $output)];
     }
-  } elseif (is_file($output) && !$remove) {
-    // Allow overwrite — qemu-img convert replaces; warn via flash only
+    $removed = empty($dr['missing']);
   }
   $r = nbd_image_start($url, $output, $format);
   if (!empty($r['ok'])) {
     $r['retried_from'] = $id;
+    $r['removed_output'] = $removed;
+    // Drop old History card so the new Active/Queued job is the one that remains
+    nbd_job_clear_one($id);
   }
   return $r;
 }
