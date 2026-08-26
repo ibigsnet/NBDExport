@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.25aa">
+<!ENTITY version "2026.08.25ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,20 +27,21 @@
 
 <CHANGES>
 ###&version;
-- Pull: idle ionice + nice by default; max 1 concurrent; refuse duplicate nbd:// jobs.
-- Settings: Pull IO class / nice / concurrency — keep array WebUI responsive.
+- Pull queue: auto-queue when busy; Status Play / Force start; array/parity warn.
+- Fix Stop leaving orphan qemu-img (kill process group + convert by output).
+- Running badge orange; Done green; Failed red; Queued blue; Idle grey.
+
+###2026.08.25aa
+- Pull: idle ionice + nice; max concurrent setting; refuse duplicate nbd://.
 
 ###2026.08.24aa
-- Pull /mnt folder browser; Help tab; Host chrome clarity; channels docs.
+- Pull /mnt folder browser; Help tab; Host chrome clarity.
 
 ###2026.08.17ac–ab
-- Master switch and Plugins CHANGES trim; channels documented as main / testing.
+- Master switch and Plugins CHANGES trim; channels main / testing.
 
 ###2026.08.17aa
-- <strong>Audit harden:</strong> UD Head Inline inject only when overlay enabled; marker + stock backup.
-
-###2026.08.16aa
-- Clean package replace on every upgrade.
+- Audit harden: UD Head Inline inject only when overlay enabled.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md

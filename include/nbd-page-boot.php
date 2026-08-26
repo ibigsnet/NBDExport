@@ -188,11 +188,12 @@ function nbd_page_styles() {
   display: inline-block; padding: 0.15em 0.55em; border-radius: 4px;
   font-size: 0.85em; font-weight: 600; background: rgba(128, 128, 128, 0.28);
 }
-.nbd-wrap .nbd-badge-ok { background: rgba(46, 160, 90, 0.4); }
-.nbd-wrap .nbd-badge-info { background: rgba(74, 144, 217, 0.4); }
-.nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); }
-.nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); }
-.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); }
+.nbd-wrap .nbd-badge-ok { background: rgba(46, 160, 90, 0.4); } /* Done / Listening */
+.nbd-wrap .nbd-badge-info { background: rgba(74, 144, 217, 0.4); } /* Queued / Active */
+.nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); } /* Idle */
+.nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); } /* Failed */
+.nbd-wrap .nbd-badge-run { background: rgba(220, 140, 40, 0.5); color: inherit; } /* Running (orange) */
+.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); } /* Writable host */
 .nbd-wrap .nbd-section { margin: 1.25em 0 0; padding: 0 0 0.5em; }
 .nbd-wrap .nbd-section > h3 {
   margin: 0 0 0.5em; padding: 0.35em 0 0.45em; font-size: 1.12em; font-weight: 700;

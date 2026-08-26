@@ -49,11 +49,16 @@ nbd_page_styles();
       <p class="nbd-muted">No recent pull jobs.</p>
 <?php else: ?>
       <div class="nbd-status-legend">
-        <span><span class="nbd-badge nbd-badge-ok">Running</span></span>
+        <span><span class="nbd-badge nbd-badge-run">Running</span></span>
+        <span><span class="nbd-badge nbd-badge-info">Queued</span></span>
         <span><span class="nbd-badge nbd-badge-ok">Done</span></span>
         <span><span class="nbd-badge nbd-badge-bad">Failed</span></span>
         <span><span class="nbd-badge nbd-badge-stale">Idle</span></span>
       </div>
+      <p class="nbd-muted" style="margin:0 0 0.65em">
+        Extra Pulls wait in <strong>Queued</strong> (parity/array-safe). <strong>Play</strong> starts the next job;
+        <strong>Force start</strong> runs alongside a live job (can stall Main on array disks).
+      </p>
       <table class="nbd-data tablesorter">
         <thead>
           <tr>
@@ -67,12 +72,14 @@ nbd_page_styles();
         <tbody>
 <?php foreach ($jobs as $j):
   $jst = nbd_job_ui_status($j);
-  $alive = !empty($j['alive']);
+  $jkey = $jst['key'] ?? '';
+  $alive = ($jkey === 'running');
+  $queued = ($jkey === 'queued');
   $jid = htmlspecialchars($j['id'] ?? '');
 ?>
           <tr data-nbd-job-id="<?= $jid ?>">
             <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
-              data-nbd-key="<?= htmlspecialchars($jst['key'] ?? '') ?>"
+              data-nbd-key="<?= htmlspecialchars($jkey) ?>"
               title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
             <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
             <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
@@ -84,6 +91,30 @@ nbd_page_styles();
                 <input type="hidden" name="nbd_action" value="image_stop">
                 <input type="hidden" name="job_id" value="<?= $jid ?>">
                 <input type="submit" name="#apply" value="Stop">
+              </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-play-form">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_play">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="hidden" name="force" value="no">
+                <input type="submit" name="#apply" value="Play">
+              </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-force-form"
+                onsubmit="return confirm('Force start this Pull while another may still be running?\n\nConcurrent array writes contend for parity and can stall the WebUI.');">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_play">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="hidden" name="force" value="yes">
+                <input type="submit" name="#apply" value="Force start">
+              </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-cancel-form">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_stop">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="submit" name="#apply" value="Cancel">
               </form>
             </td>
           </tr>

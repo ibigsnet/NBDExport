@@ -6,6 +6,17 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.25ab
+
+- **Pull queue:** when at max concurrent (default 1), new Pulls are **Queued** with an
+  array/parity WebUI warning. Status: **Play** (next slot), **Force start** (override),
+  **Cancel**. Auto-starts the oldest queued job when a Running job finishes.
+- **Fix Stop orphans:** `image_stop` kills the process group and any `qemu-img convert`
+  still writing the job output (setsid wrapper could die while convert kept running —
+  including into a deleted qcow2 inode).
+- **Status colors:** Running **orange**, Queued blue, Done green, Failed red, Idle grey.
+- Detect orphaned converts in job state (show Running until Stop).
+
 ## 2026.08.25aa
 
 - **Pull WebUI safety:** `qemu-img` runs under **ionice idle** + nice (default 10); **max 1**

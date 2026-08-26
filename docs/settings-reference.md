@@ -69,7 +69,8 @@ Connects to a disk already hosted on the network and writes a **file** under Unr
 | NBD URL | `nbd://ip:port` of a running host |
 | Output path | File under `/mnt/` or `/tmp/` — never `/dev/…`. Placeholder: `/mnt/user/domains/disk.qcow2` |
 | Format | **qcow2** (default, sparse / VM-friendly) or **raw** (full image; often named `.img`). Other `qemu-img` formats via CLI — see [when-to-use — formats](when-to-use-nbd.md#image-formats-not-only-qcow2). |
-| **Pull remote disk → file** | Background `qemu-img convert` |
+| **Pull remote disk → file** | Background `qemu-img convert` (idle IO; queues if another Pull is running) |
+| Status → **Play** / **Force start** | Start a queued Pull; Force overrides concurrency (array/parity warn) |
 
 Jobs appear on **Status**; they keep running if you close the browser.
 

@@ -163,7 +163,15 @@ try {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
         nbd_memory_remember_pull($url, $out, $fmt);
-        nbd_flash('NBD Image: job started ' . ($r['id'] ?? ''));
+        if (!empty($r['queued'])) {
+          nbd_flash('NBD Image: queued ' . ($r['id'] ?? '') . ' — ' . ($r['warn'] ?? 'see Status → Play'));
+        } else {
+          $msg = 'NBD Image: job started ' . ($r['id'] ?? '');
+          if (!empty($r['warn'])) {
+            $msg .= ' — ' . $r['warn'];
+          }
+          nbd_flash($msg);
+        }
       }
       break;
 
@@ -171,6 +179,21 @@ try {
       $id = trim((string)($_POST['job_id'] ?? ''));
       $r = nbd_image_stop($id);
       nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'stop failed')) : ('Stopped job ' . $id));
+      break;
+
+    case 'image_play':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $force = (isset($_POST['force']) && (string)$_POST['force'] === 'yes');
+      $r = nbd_image_play($id, $force);
+      if (empty($r['ok'])) {
+        nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'play failed'));
+      } else {
+        $msg = 'NBD Image: started ' . $id . ($force ? ' (forced)' : '');
+        if (!empty($r['warn'])) {
+          $msg .= ' — ' . $r['warn'];
+        }
+        nbd_flash($msg);
+      }
       break;
 
     case 'preset_save_host':
