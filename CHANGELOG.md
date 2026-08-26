@@ -6,6 +6,12 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26am
+
+- **Fix rc=138:** SIGUSR1 without `-p` terminates `qemu-img` on QEMU 10 (exit 128+10).
+  Progress is back to **`-p`** with unbuffered stderr appended to a raw file and polled
+  (no USR1). Still uses subshell + `exec` so the waited PID is `qemu-img`.
+
 ## 2026.08.26al
 
 - **History toolbar clarity:** split into **Checkboxes** (Check all / Check failed /
