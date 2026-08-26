@@ -23,6 +23,9 @@ $def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
 $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $ud_overlay = (($cfg['ud_status_overlay'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$pull_io_class = (($cfg['pull_io_class'] ?? 'idle') === 'best-effort') ? 'best-effort' : 'idle';
+$max_concurrent_pulls = (string)max(1, min(4, (int)($cfg['max_concurrent_pulls'] ?? 1)));
+$pull_nice = (string)max(0, min(19, (int)($cfg['pull_nice'] ?? 10)));
 $ud_plugin_present = is_dir('/usr/local/emhttp/plugins/unassigned.devices');
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['fabricrouting']);
@@ -185,11 +188,12 @@ function nbd_page_styles() {
   display: inline-block; padding: 0.15em 0.55em; border-radius: 4px;
   font-size: 0.85em; font-weight: 600; background: rgba(128, 128, 128, 0.28);
 }
-.nbd-wrap .nbd-badge-ok { background: rgba(46, 160, 90, 0.4); }
-.nbd-wrap .nbd-badge-info { background: rgba(74, 144, 217, 0.4); }
-.nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); }
-.nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); }
-.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); }
+.nbd-wrap .nbd-badge-ok { background: rgba(46, 160, 90, 0.4); } /* Done / Listening */
+.nbd-wrap .nbd-badge-info { background: rgba(74, 144, 217, 0.4); } /* Queued / Active */
+.nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); } /* Idle */
+.nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); } /* Failed */
+.nbd-wrap .nbd-badge-run { background: rgba(220, 140, 40, 0.5); color: inherit; } /* Running (orange) */
+.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); } /* Writable host */
 .nbd-wrap .nbd-section { margin: 1.25em 0 0; padding: 0 0 0.5em; }
 .nbd-wrap .nbd-section > h3 {
   margin: 0 0 0.5em; padding: 0.35em 0 0.45em; font-size: 1.12em; font-weight: 700;

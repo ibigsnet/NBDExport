@@ -40,6 +40,10 @@ function nbd_load_cfg() {
     'scan_extra_subnets' => '',
     // Opt-in: small NBD RO/RW badges on Main → Unassigned Devices (DOM overlay; UD owns that page)
     'ud_status_overlay' => 'no',
+    // Pull jobs: keep array WebUI responsive (idle IO + nice; limit concurrency)
+    'max_concurrent_pulls' => '1',
+    'pull_io_class' => 'idle', // idle | best-effort
+    'pull_nice' => '10',
   ];
   $path = nbd_cfg_path();
   if (!is_file($path) && is_file(nbd_default_cfg_path())) {
@@ -74,6 +78,7 @@ function nbd_write_cfg(array $cfg) {
   $keys = [
     'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
     'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+    'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
   ];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
@@ -301,6 +306,7 @@ function nbd_config_import_bundle(array $bundle, $settings = true, $memory = tru
     foreach ([
       'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
       'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+      'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
     ] as $k) {
       if (array_key_exists($k, $bundle['settings'])) {
         $cfg[$k] = (string)$bundle['settings'][$k];
@@ -416,14 +422,28 @@ function nbd_export_ui_status(array $e) {
 }
 
 /**
- * Job status for UI: running | done | failed | idle
+ * Job status for UI: queued | running | done | failed | idle
+ * Colors: Running orange, Done green, Failed red, Idle grey, Queued blue.
  */
 function nbd_job_ui_status(array $j) {
+  $status = (string)($j['status'] ?? '');
   $alive = !empty($j['alive']);
   $fin = !empty($j['finished']);
   $ok = !empty($j['ok']);
-  if ($alive) {
-    return ['key' => 'running', 'label' => 'Running', 'class' => 'nbd-badge-ok', 'hint' => 'qemu-img convert in progress'];
+  if ($status === 'queued' && !$alive && !$fin) {
+    return [
+      'key' => 'queued',
+      'label' => 'Queued',
+      'class' => 'nbd-badge-info',
+      'hint' => (string)($j['queue_hint'] ?? 'Waiting for a free Pull slot — Play to start'),
+    ];
+  }
+  if ($alive || $status === 'running') {
+    $hint = 'qemu-img convert in progress';
+    if (!empty($j['orphaned'])) {
+      $hint = 'Orphaned convert still running (wrapper died) — Stop to kill it';
+    }
+    return ['key' => 'running', 'label' => 'Running', 'class' => 'nbd-badge-run', 'hint' => $hint];
   }
   if ($fin && $ok) {
     return ['key' => 'done', 'label' => 'Done', 'class' => 'nbd-badge-ok', 'hint' => 'Finished successfully'];
@@ -432,11 +452,16 @@ function nbd_job_ui_status(array $j) {
     return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'See log tail'];
   }
   // Process gone without a finish marker still means the job ended (usually error).
-  // Prefer Failed over Idle so the UI does not look like "never started".
-  if (!$alive && !empty($j['pid'])) {
+  if (!$alive && !empty($j['pid']) && $status !== 'queued') {
     return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'Process exited — see log tail'];
   }
   return ['key' => 'idle', 'label' => 'Idle', 'class' => 'nbd-badge-stale', 'hint' => 'Not running'];
+}
+
+/** True if path is Unraid array-like (parity contention under concurrent writes). */
+function nbd_path_is_array_like($path) {
+  $path = (string)$path;
+  return (bool)preg_match('#^/mnt/(disk\d+|user0?|disks)(/|$)#', $path);
 }
 
 function nbd_plugin_version() {
@@ -1213,53 +1238,112 @@ function nbd_count_writable_exports() {
 function nbd_jobs_state() {
   nbd_ensure_runtime_dirs();
   $list = [];
+  $finished_now = false;
   foreach (glob(NBDEXPORT_RUN . '/job-*.json') ?: [] as $f) {
     $raw = @file_get_contents($f);
     $j = is_string($raw) ? @json_decode($raw, true) : null;
     if (!is_array($j) || empty($j['id'])) {
       continue;
     }
+    $status = (string)($j['status'] ?? '');
     $pid = isset($j['pid']) ? (int)$j['pid'] : 0;
-    $j['alive'] = $pid > 0 && @file_exists('/proc/' . $pid);
-    if (!$j['alive'] && empty($j['finished'])) {
-      // Process exited: parse log, or treat as failed if no success marker
-      // (qemu-img convert under set -e often dies without writing NBD_JOB_FAIL).
-      $log = $j['log'] ?? '';
-      $tail = ($log && is_file($log)) ? (string)@file_get_contents($log) : '';
-      $j['finished'] = true;
-      if (strpos($tail, 'NBD_JOB_OK') !== false) {
-        $j['ok'] = true;
-      } else {
-        $j['ok'] = false;
-        if (strpos($tail, 'NBD_JOB_FAIL') === false && $tail !== '') {
-          // Leave breadcrumb for log UI
-          @file_put_contents($log, "\nNBD_JOB_FAIL process_exited\n", FILE_APPEND);
-        }
-      }
-      $j['finished_at'] = date('c');
-      // Persist so UI/poller see a stable terminal state
-      $persist = $j;
-      unset($persist['alive'], $persist['output_size'], $persist['output_size_h']);
-      @file_put_contents($f, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+    $wrapper_alive = $pid > 0 && @file_exists('/proc/' . $pid);
+    $orphan_pid = 0;
+    if (!$wrapper_alive && empty($j['finished']) && $status !== 'queued') {
+      $orphan_pid = nbd_find_orphan_qemu_img($j);
     }
-    // progress: dest size if present
+    if ($wrapper_alive) {
+      $j['alive'] = true;
+      $j['orphaned'] = false;
+      $j['status'] = 'running';
+    } elseif ($orphan_pid > 0) {
+      // Wrapper died (Stop bug / setsid) but convert still running — surface as Running
+      $j['alive'] = true;
+      $j['orphaned'] = true;
+      $j['orphan_pid'] = $orphan_pid;
+      $j['status'] = 'running';
+    } elseif ($status === 'queued') {
+      $j['alive'] = false;
+      $j['status'] = 'queued';
+    } else {
+      $j['alive'] = false;
+      if (empty($j['finished'])) {
+        $log = $j['log'] ?? '';
+        $tail = ($log && is_file($log)) ? (string)@file_get_contents($log) : '';
+        $j['finished'] = true;
+        if (strpos($tail, 'NBD_JOB_OK') !== false) {
+          $j['ok'] = true;
+        } else {
+          $j['ok'] = false;
+          if (strpos($tail, 'NBD_JOB_FAIL') === false && $tail !== '') {
+            @file_put_contents($log, "\nNBD_JOB_FAIL process_exited\n", FILE_APPEND);
+          }
+        }
+        $j['finished_at'] = date('c');
+        $j['status'] = !empty($j['ok']) ? 'done' : 'failed';
+        $persist = $j;
+        unset($persist['alive'], $persist['output_size'], $persist['output_size_h'], $persist['orphaned'], $persist['orphan_pid']);
+        @file_put_contents($f, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+        $finished_now = true;
+      }
+    }
     if (!empty($j['output']) && is_file($j['output'])) {
       $j['output_size'] = filesize($j['output']);
       $j['output_size_h'] = nbd_format_bytes($j['output_size']);
+    } elseif (!empty($j['output'])) {
+      // Deleted outfile while orphan still held the inode
+      $j['output_size_h'] = !empty($j['orphaned']) ? '(deleted, still writing)' : '—';
     }
     $list[] = $j;
   }
   usort($list, function ($a, $b) {
     return strcmp($b['started'] ?? '', $a['started'] ?? '');
   });
+  if ($finished_now) {
+    nbd_pull_queue_kick();
+  }
   return $list;
 }
 
 /**
+ * Find qemu-img convert still writing a job output after the wrapper died.
+ */
+function nbd_find_orphan_qemu_img(array $j) {
+  $out = (string)($j['output'] ?? '');
+  $id = (string)($j['id'] ?? '');
+  if ($out === '' && $id === '') {
+    return 0;
+  }
+  $out_esc = str_replace(["'", '\\'], ["'\\''", '\\\\'], $out);
+  $cmd = "ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true";
+  $raw = (string)@shell_exec($cmd);
+  foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+    $line = trim($line);
+    if ($line === '') {
+      continue;
+    }
+    if (!preg_match('/^(\d+)\s+(.*)$/', $line, $m)) {
+      continue;
+    }
+    $pid = (int)$m[1];
+    $cmdline = $m[2];
+    if ($out !== '' && strpos($cmdline, $out) !== false) {
+      return $pid;
+    }
+    if ($id !== '' && strpos($cmdline, $id) !== false) {
+      return $pid;
+    }
+  }
+  return 0;
+}
+
+/**
  * Compact live snapshot for WebUI polling (in-place badge updates).
- * @return array{exports:array,jobs:array,watch:bool,live_exports:int,live_jobs:int}
+ * @return array{exports:array,jobs:array,watch:bool,live_exports:int,live_jobs:int,queued_jobs:int}
  */
 function nbd_live_snapshot() {
+  // Kick queue when a slot is free (poller path)
+  nbd_pull_queue_kick();
   $exports = [];
   $watch = false;
   $live_exports = 0;
@@ -1288,6 +1372,7 @@ function nbd_live_snapshot() {
   }
   $jobs = [];
   $live_jobs = 0;
+  $queued_jobs = 0;
   foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
@@ -1295,8 +1380,12 @@ function nbd_live_snapshot() {
       $live_jobs++;
       $watch = true;
     }
+    if ($key === 'queued') {
+      $queued_jobs++;
+      $watch = true;
+    }
     $log_tail = '';
-    if (!empty($j['log']) && is_file($j['log']) && ($key === 'failed' || $key === 'done' || $key === 'running')) {
+    if (!empty($j['log']) && is_file($j['log']) && in_array($key, ['failed', 'done', 'running', 'queued'], true)) {
       $log_tail = nbd_log_tail($j['log'], 6);
     }
     $jobs[] = [
@@ -1308,6 +1397,8 @@ function nbd_live_snapshot() {
       'alive' => !empty($j['alive']),
       'finished' => !empty($j['finished']),
       'ok' => !empty($j['ok']),
+      'orphaned' => !empty($j['orphaned']),
+      'array_like' => !empty($j['array_like']),
       'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
       'output_size_h' => (string)($j['output_size_h'] ?? '—'),
       'log_tail' => $log_tail,
@@ -1319,13 +1410,182 @@ function nbd_live_snapshot() {
     'watch' => $watch,
     'live_exports' => $live_exports,
     'live_jobs' => $live_jobs,
+    'queued_jobs' => $queued_jobs,
     'ts' => time(),
   ];
 }
 
+/** Count Running Pull jobs (wrapper or orphaned qemu-img). */
+function nbd_count_running_pull_jobs() {
+  $n = 0;
+  foreach (nbd_jobs_state() as $j) {
+    $st = nbd_job_ui_status($j);
+    if (($st['key'] ?? '') === 'running') {
+      $n++;
+    }
+  }
+  return $n;
+}
+
+/** @deprecated use nbd_count_running_pull_jobs */
+function nbd_count_alive_pull_jobs() {
+  return nbd_count_running_pull_jobs();
+}
+
+function nbd_pull_max_concurrent(array $cfg = null) {
+  if ($cfg === null) {
+    $cfg = nbd_load_cfg();
+  }
+  $max = (int)($cfg['max_concurrent_pulls'] ?? 1);
+  if ($max < 1) {
+    $max = 1;
+  }
+  if ($max > 4) {
+    $max = 4;
+  }
+  return $max;
+}
+
 /**
- * Background qemu-img convert from nbd:// to local path.
+ * Persist job JSON (strip ephemeral keys).
  */
+function nbd_job_persist(array $j) {
+  $id = (string)($j['id'] ?? '');
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return false;
+  }
+  $f = NBDEXPORT_RUN . '/' . $id . '.json';
+  $persist = $j;
+  unset($persist['alive'], $persist['output_size'], $persist['output_size_h'], $persist['orphaned'], $persist['orphan_pid']);
+  return @file_put_contents($f, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n") !== false;
+}
+
+function nbd_job_load($id) {
+  $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return null;
+  }
+  $f = NBDEXPORT_RUN . '/' . $id . '.json';
+  if (!is_file($f)) {
+    return null;
+  }
+  $j = @json_decode((string)@file_get_contents($f), true);
+  return is_array($j) ? $j : null;
+}
+
+/**
+ * Launch prepared job script (sets status=running).
+ */
+function nbd_image_launch($id) {
+  $j = nbd_job_load($id);
+  if (!$j) {
+    return ['ok' => false, 'error' => 'Unknown job'];
+  }
+  if (($j['status'] ?? '') === 'running' && !empty($j['pid']) && @file_exists('/proc/' . (int)$j['pid'])) {
+    return ['ok' => true, 'id' => $id, 'already' => true];
+  }
+  $script = NBDEXPORT_RUN . '/' . $id . '.sh';
+  $pidfile = NBDEXPORT_RUN . '/' . $id . '.pid';
+  if (!is_file($script)) {
+    return ['ok' => false, 'error' => 'Job script missing'];
+  }
+  $log = (string)($j['log'] ?? (NBDEXPORT_LOG . '/' . $id . '.log'));
+  @file_put_contents($log, date('c') . " launch\n", FILE_APPEND);
+  $full = 'setsid nohup bash ' . escapeshellarg($script) . ' >/dev/null 2>&1 & echo $! >' . escapeshellarg($pidfile);
+  exec($full);
+  usleep(200000);
+  $pid = (int)@file_get_contents($pidfile);
+  $j['pid'] = $pid;
+  $j['status'] = 'running';
+  $j['started_run'] = date('c');
+  unset($j['finished'], $j['finished_at'], $j['ok'], $j['queue_hint']);
+  nbd_job_persist($j);
+  return ['ok' => true, 'id' => $id, 'pid' => $pid];
+}
+
+/**
+ * Start next queued job(s) while under max concurrent.
+ */
+function nbd_pull_queue_kick() {
+  static $busy = false;
+  if ($busy) {
+    return ['ok' => true, 'started' => [], 'busy' => true];
+  }
+  $busy = true;
+  $cfg = nbd_load_cfg();
+  $max = nbd_pull_max_concurrent($cfg);
+  $running = nbd_count_running_pull_jobs();
+  if ($running >= $max) {
+    $busy = false;
+    return ['ok' => true, 'started' => []];
+  }
+  $queued = [];
+  foreach (nbd_jobs_state() as $j) {
+    if (($j['status'] ?? '') === 'queued' && empty($j['finished'])) {
+      $queued[] = $j;
+    }
+  }
+  // Oldest first
+  usort($queued, function ($a, $b) {
+    return strcmp($a['queued_at'] ?? $a['started'] ?? '', $b['queued_at'] ?? $b['started'] ?? '');
+  });
+  $started = [];
+  foreach ($queued as $j) {
+    if ($running >= $max) {
+      break;
+    }
+    $r = nbd_image_launch($j['id']);
+    if (!empty($r['ok'])) {
+      $started[] = $j['id'];
+      $running++;
+    }
+  }
+  $busy = false;
+  return ['ok' => true, 'started' => $started];
+}
+
+/**
+ * Play a queued job. $force=true starts even if at concurrency limit (user override).
+ */
+function nbd_image_play($id, $force = false) {
+  $j = nbd_job_load($id);
+  if (!$j) {
+    return ['ok' => false, 'error' => 'Unknown job'];
+  }
+  if (($j['status'] ?? '') !== 'queued') {
+    // Allow Play on orphaned/failed-looking jobs that still have qemu-img? No — use Stop.
+    if (!empty($j['alive']) || ($j['status'] ?? '') === 'running') {
+      return ['ok' => false, 'error' => 'Job is already running'];
+    }
+    if (!empty($j['finished'])) {
+      return ['ok' => false, 'error' => 'Job already finished'];
+    }
+  }
+  $cfg = nbd_load_cfg();
+  $max = nbd_pull_max_concurrent($cfg);
+  $running = nbd_count_running_pull_jobs();
+  if (!$force && $running >= $max) {
+    return [
+      'ok' => false,
+      'error' => 'Another Pull is still running (limit ' . $max
+        . '). Wait for it to finish, or Force start (may stall the WebUI on array disks).',
+      'need_force' => true,
+    ];
+  }
+  $warn = '';
+  if ($force && $running > 0) {
+    $warn = 'Forced start while ' . $running . ' job(s) already running.';
+    if (!empty($j['array_like'])) {
+      $warn .= ' Array/parity writes will compete.';
+    }
+  }
+  $r = nbd_image_launch($id);
+  if (!empty($r['ok']) && $warn !== '') {
+    $r['warn'] = $warn;
+  }
+  return $r;
+}
+
 function nbd_image_start($url, $output, $format = 'qcow2') {
   nbd_ensure_runtime_dirs();
   $cfg = nbd_load_cfg();
@@ -1348,11 +1608,9 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   if ($output === '' || strpos($output, '..') !== false) {
     return ['ok' => false, 'error' => 'Invalid output path.'];
   }
-  // Never write image jobs onto block devices (wipe risk)
   if (preg_match('#^/dev/#', $output) || (function_exists('is_block') && @is_block($output))) {
     return ['ok' => false, 'error' => 'Output cannot be a block device (/dev/…). Use a file under /mnt/ (e.g. qcow2 on cache).'];
   }
-  // Prefer under /mnt/
   if (strpos($output, '/mnt/') !== 0 && strpos($output, '/tmp/') !== 0) {
     return ['ok' => false, 'error' => 'Output must be under /mnt/ (cache/array/share) or /tmp/.'];
   }
@@ -1363,30 +1621,65 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     }
   }
 
+  $max = nbd_pull_max_concurrent($cfg);
+  $array_like = nbd_path_is_array_like($output);
+
+  // Same nbd:// already running or queued — refuse duplicate
+  foreach (nbd_jobs_state() as $j) {
+    $st = nbd_job_ui_status($j);
+    $k = $st['key'] ?? '';
+    if (!in_array($k, ['running', 'queued'], true)) {
+      continue;
+    }
+    if (($j['url'] ?? '') === $url) {
+      return [
+        'ok' => false,
+        'error' => 'A Pull of this NBD URL is already ' . $k . ' (' . ($j['id'] ?? '?')
+          . '). Starting another copy of the same disk fights the array and the WebUI.',
+      ];
+    }
+  }
+
   $id = 'job-' . date('Ymd-His') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
   $pidfile = NBDEXPORT_RUN . '/' . $id . '.pid';
   $statefile = NBDEXPORT_RUN . '/' . $id . '.json';
   $logfile = NBDEXPORT_LOG . '/' . $id . '.log';
   $script = NBDEXPORT_RUN . '/' . $id . '.sh';
 
+  $io_class = strtolower(trim((string)($cfg['pull_io_class'] ?? 'idle')));
+  if (!in_array($io_class, ['idle', 'best-effort'], true)) {
+    $io_class = 'idle';
+  }
+  $nice = (int)($cfg['pull_nice'] ?? 10);
+  if ($nice < 0) {
+    $nice = 0;
+  }
+  if ($nice > 19) {
+    $nice = 19;
+  }
+  $ionice_args = ($io_class === 'idle') ? '-c3' : '-c2 -n7';
   $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
     . 'FMT=' . escapeshellarg($format) . "\n"
+    . 'NICE_N=' . (int)$nice . "\n"
+    . 'IONICE_ARGS=' . escapeshellarg($ionice_args) . "\n"
     . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
-    . 'echo "$(date -Iseconds) job start" >>"$LOG"' . "\n"
+    . 'if command -v ionice >/dev/null 2>&1; then WRAP=(ionice $IONICE_ARGS nice -n "$NICE_N"); else WRAP=(nice -n "$NICE_N"); fi' . "\n"
+    . 'run_img() { "${WRAP[@]}" "$@"; }' . "\n"
+    . 'echo "$(date -Iseconds) job start wrap=${WRAP[*]}" >>"$LOG"' . "\n"
     . 'for i in $(seq 1 60); do' . "\n"
-    . '  if "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
+    . '  if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
     . '  sleep 5' . "\n"
     . '  if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . 'done' . "\n"
-    . 'if ! "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
+    . 'if ! run_img "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
     . '  fail convert' . "\n"
     . 'fi' . "\n"
-    . '"$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
-    . '"$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
+    . 'run_img "$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
+    . 'run_img "$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
     . 'echo NBD_JOB_OK >>"$LOG"' . "\n"
     . 'echo "$(date -Iseconds) job done" >>"$LOG"' . "\n";
 
@@ -1394,41 +1687,148 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   @chmod($script, 0755);
   @file_put_contents($logfile, date('c') . " prepared\n");
 
-  $full = 'setsid nohup bash ' . escapeshellarg($script) . ' >/dev/null 2>&1 & echo $! >' . escapeshellarg($pidfile);
-  exec($full);
-  usleep(200000);
-  $pid = (int)@file_get_contents($pidfile);
+  $running = nbd_count_running_pull_jobs();
+  $queue = ($running >= $max);
+
+  // Extra warn when queueing behind an array write, or this job is array-like
+  $queue_hint = 'Waiting for a free Pull slot (max ' . $max . '). Open Status → Play to start, or it starts when the running job finishes.';
+  if ($array_like) {
+    $queue_hint .= ' Output is on an array path (/mnt/disk* or /mnt/user*) — concurrent array Pulls contend for parity and can stall the WebUI. Prefer /mnt/cache for large images.';
+  }
+  foreach (nbd_jobs_state() as $rj) {
+    if ((nbd_job_ui_status($rj)['key'] ?? '') !== 'running') {
+      continue;
+    }
+    if (!empty($rj['array_like']) && $array_like) {
+      $queue_hint .= ' Another array Pull is already running — queued to protect parity/WebUI.';
+      break;
+    }
+  }
 
   $state = [
     'id' => $id,
     'url' => $url,
     'output' => $output,
     'format' => $format,
-    'pid' => $pid,
+    'pid' => 0,
     'started' => date('c'),
     'log' => $logfile,
+    'io_class' => $io_class,
+    'nice' => (string)$nice,
+    'array_like' => $array_like,
+    'status' => $queue ? 'queued' : 'running',
   ];
-  @file_put_contents($statefile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-  return ['ok' => true, 'id' => $id];
+  if ($queue) {
+    $state['queued_at'] = date('c');
+    $state['queue_hint'] = $queue_hint;
+    @file_put_contents($logfile, date('c') . " queued: " . $queue_hint . "\n", FILE_APPEND);
+    nbd_job_persist($state);
+    return [
+      'ok' => true,
+      'id' => $id,
+      'queued' => true,
+      'warn' => $queue_hint,
+    ];
+  }
+
+  nbd_job_persist($state);
+  $r = nbd_image_launch($id);
+  if (empty($r['ok'])) {
+    return $r;
+  }
+  $out = ['ok' => true, 'id' => $id, 'queued' => false];
+  if ($array_like) {
+    $out['warn'] = 'Writing to an array path — large Pulls can slow Main. Prefer /mnt/cache when possible.';
+  }
+  return $out;
 }
 
+/**
+ * Stop a Pull job: kill process group + any orphaned qemu-img for this output.
+ */
 function nbd_image_stop($id) {
   $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
   if ($id === '' || strpos($id, 'job-') !== 0) {
     return ['ok' => false, 'error' => 'Invalid job id'];
   }
+  $j = nbd_job_load($id);
   $pidfile = NBDEXPORT_RUN . '/' . $id . '.pid';
   $pid = is_file($pidfile) ? (int)@file_get_contents($pidfile) : 0;
-  if ($pid > 0 && @file_exists('/proc/' . $pid)) {
-    // kill process group if possible
-    @posix_kill($pid, 15);
-    usleep(200000);
-    if (@file_exists('/proc/' . $pid)) {
-      @posix_kill($pid, 9);
+  if ($pid <= 0 && is_array($j)) {
+    $pid = (int)($j['pid'] ?? 0);
+  }
+
+  // Cancel queued job (never launched)
+  if (is_array($j) && ($j['status'] ?? '') === 'queued') {
+    $j['status'] = 'failed';
+    $j['finished'] = true;
+    $j['ok'] = false;
+    $j['finished_at'] = date('c');
+    $log = (string)($j['log'] ?? '');
+    if ($log !== '') {
+      @file_put_contents($log, "\nNBD_JOB_FAIL cancelled_while_queued\n", FILE_APPEND);
+    }
+    nbd_job_persist($j);
+    nbd_pull_queue_kick();
+    return ['ok' => true, 'cancelled_queue' => true];
+  }
+
+  $pids = [];
+  if ($pid > 0) {
+    $pids[] = $pid;
+    // Children of wrapper
+    $kids = (string)@shell_exec('pgrep -P ' . (int)$pid . ' 2>/dev/null || true');
+    foreach (preg_split('/\s+/', trim($kids)) as $k) {
+      if ($k !== '' && ctype_digit($k)) {
+        $pids[] = (int)$k;
+      }
+    }
+    // Process group (setsid makes wrapper the PGID)
+    @exec('kill -TERM -' . (int)$pid . ' 2>/dev/null || true');
+  }
+  if (is_array($j)) {
+    $orphan = nbd_find_orphan_qemu_img($j);
+    if ($orphan > 0) {
+      $pids[] = $orphan;
     }
   }
-  @exec('pkill -f ' . escapeshellarg($id . '.sh') . ' 2>/dev/null || true');
-  return ['ok' => true];
+  // Also match qemu-img by job script path / output
+  $out = is_array($j) ? (string)($j['output'] ?? '') : '';
+  if ($out !== '') {
+    $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
+    foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+      if (preg_match('/^(\d+)\s+(.*)$/', trim($line), $m) && strpos($m[2], $out) !== false) {
+        $pids[] = (int)$m[1];
+      }
+    }
+  }
+  $pids = array_values(array_unique(array_filter($pids)));
+  foreach ($pids as $p) {
+    if ($p > 1 && @file_exists('/proc/' . $p)) {
+      @posix_kill($p, 15);
+    }
+  }
+  usleep(300000);
+  foreach ($pids as $p) {
+    if ($p > 1 && @file_exists('/proc/' . $p)) {
+      @posix_kill($p, 9);
+    }
+  }
+  // Avoid pkill -f self-match; targeted kills above are enough
+
+  if (is_array($j)) {
+    $j['status'] = 'failed';
+    $j['finished'] = true;
+    $j['ok'] = false;
+    $j['finished_at'] = date('c');
+    $log = (string)($j['log'] ?? '');
+    if ($log !== '') {
+      @file_put_contents($log, "\nNBD_JOB_FAIL stopped_by_user\n", FILE_APPEND);
+    }
+    nbd_job_persist($j);
+  }
+  nbd_pull_queue_kick();
+  return ['ok' => true, 'killed' => $pids];
 }
 
 function nbd_write_companion_marker() {

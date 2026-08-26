@@ -27,7 +27,7 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   var fails = 0;
 
   var BADGE_CLASSES = [
-    'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw'
+    'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw', 'nbd-badge-run'
   ];
 
   function mapById(list) {
@@ -47,7 +47,7 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     }
     list = snap.jobs || [];
     for (i = 0; i < list.length; i++) {
-      if (list[i].key === 'running') return true;
+      if (list[i].key === 'running' || list[i].key === 'queued') return true;
     }
     return false;
   }
@@ -90,10 +90,16 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     if (badge) setBadge(badge, item);
     var size = row.querySelector('.nbd-live-job-size');
     if (size && item.output_size_h) size.textContent = item.output_size_h;
-    var form = row.querySelector('.nbd-live-job-stop-form');
-    if (form) {
-      form.style.display = item.alive || item.key === 'running' ? 'inline' : 'none';
-    }
+    var running = item.key === 'running';
+    var queued = item.key === 'queued';
+    var stop = row.querySelector('.nbd-live-job-stop-form');
+    if (stop) stop.style.display = running ? 'inline' : 'none';
+    var play = row.querySelector('.nbd-live-job-play-form');
+    if (play) play.style.display = queued ? 'inline' : 'none';
+    var force = row.querySelector('.nbd-live-job-force-form');
+    if (force) force.style.display = queued ? 'inline' : 'none';
+    var cancel = row.querySelector('.nbd-live-job-cancel-form');
+    if (cancel) cancel.style.display = queued ? 'inline' : 'none';
     var logRow = document.querySelector('tr[data-nbd-job-log="' + cssEscape(item.id) + '"]');
     if (logRow && item.log_tail != null) {
       var pre = logRow.querySelector('.nbd-live-job-log, pre.nbd-log');
@@ -115,8 +121,12 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var nj = typeof snap.live_jobs === 'number'
       ? snap.live_jobs
       : (snap.jobs || []).filter(function (j) { return j.key === 'running'; }).length;
+    var nq = typeof snap.queued_jobs === 'number'
+      ? snap.queued_jobs
+      : (snap.jobs || []).filter(function (j) { return j.key === 'queued'; }).length;
     var t = ' · ' + ne + ' live';
     if (nj) t += ' · ' + nj + ' pull job(s)';
+    if (nq) t += ' · ' + nq + ' queued';
     el.textContent = t;
   }
 

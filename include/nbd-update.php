@@ -20,6 +20,7 @@ try {
       foreach ([
         'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
         'rehydrate_on_start', 'ud_status_overlay',
+        'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
       ] as $k) {
         if (isset($_POST[$k])) {
           $cfg[$k] = trim((string)$_POST[$k]);
@@ -41,6 +42,24 @@ try {
       } else {
         $cfg['default_port'] = (string)$dp;
       }
+      $mcp = (int)($cfg['max_concurrent_pulls'] ?? 1);
+      if ($mcp < 1) {
+        $mcp = 1;
+      }
+      if ($mcp > 4) {
+        $mcp = 4;
+      }
+      $cfg['max_concurrent_pulls'] = (string)$mcp;
+      $pic = strtolower((string)($cfg['pull_io_class'] ?? 'idle'));
+      $cfg['pull_io_class'] = ($pic === 'best-effort') ? 'best-effort' : 'idle';
+      $pn = (int)($cfg['pull_nice'] ?? 10);
+      if ($pn < 0) {
+        $pn = 0;
+      }
+      if ($pn > 19) {
+        $pn = 19;
+      }
+      $cfg['pull_nice'] = (string)$pn;
       if (($cfg['enabled'] ?? 'yes') !== 'yes') {
         nbd_stop_all_exports();
       }
@@ -144,7 +163,15 @@ try {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
         nbd_memory_remember_pull($url, $out, $fmt);
-        nbd_flash('NBD Image: job started ' . ($r['id'] ?? ''));
+        if (!empty($r['queued'])) {
+          nbd_flash('NBD Image: queued ' . ($r['id'] ?? '') . ' — ' . ($r['warn'] ?? 'see Status → Play'));
+        } else {
+          $msg = 'NBD Image: job started ' . ($r['id'] ?? '');
+          if (!empty($r['warn'])) {
+            $msg .= ' — ' . $r['warn'];
+          }
+          nbd_flash($msg);
+        }
       }
       break;
 
@@ -152,6 +179,21 @@ try {
       $id = trim((string)($_POST['job_id'] ?? ''));
       $r = nbd_image_stop($id);
       nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'stop failed')) : ('Stopped job ' . $id));
+      break;
+
+    case 'image_play':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $force = (isset($_POST['force']) && (string)$_POST['force'] === 'yes');
+      $r = nbd_image_play($id, $force);
+      if (empty($r['ok'])) {
+        nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'play failed'));
+      } else {
+        $msg = 'NBD Image: started ' . $id . ($force ? ' (forced)' : '');
+        if (!empty($r['warn'])) {
+          $msg .= ' — ' . $r['warn'];
+        }
+        nbd_flash($msg);
+      }
       break;
 
     case 'preset_save_host':
