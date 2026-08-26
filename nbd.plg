@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ah">
+<!ENTITY version "2026.08.26ai">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,11 +27,13 @@
 
 <CHANGES>
 ###&version;
-- Status: Active/Queued/History sections; clear checkboxes; Retry/Edit/Delete file; queue ↑↓; Paused purple.
-- Dashboard: lazy async tile (no full-width load flash / blocker).
+- Full paths on job cards; Select failed; shared delete-before-retry; Clear can delete images; Unraid MB/s and GB units; Pause/Stop align.
+
+###2026.08.26ah
+- Status Active/Queued/History; clear/retry/edit/delete; queue ↑↓; Paused purple; lazy Dashboard tile.
 
 ###2026.08.26ag
-- Reliable Pull progress via SIGUSR1; Status % / elapsed / ETA / net / disk; busy-upgrade refuse copy.
+- Reliable Pull progress via SIGUSR1; Status metrics; busy-upgrade refuse copy.
 
 ###2026.08.26af
 - Fix Dashboard tile (no style before tbody); Status job cards.
