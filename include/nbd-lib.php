@@ -40,6 +40,10 @@ function nbd_load_cfg() {
     'scan_extra_subnets' => '',
     // Opt-in: small NBD RO/RW badges on Main → Unassigned Devices (DOM overlay; UD owns that page)
     'ud_status_overlay' => 'no',
+    // Pull jobs: keep array WebUI responsive (idle IO + nice; limit concurrency)
+    'max_concurrent_pulls' => '1',
+    'pull_io_class' => 'idle', // idle | best-effort
+    'pull_nice' => '10',
   ];
   $path = nbd_cfg_path();
   if (!is_file($path) && is_file(nbd_default_cfg_path())) {
@@ -74,6 +78,7 @@ function nbd_write_cfg(array $cfg) {
   $keys = [
     'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
     'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+    'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
   ];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
@@ -301,6 +306,7 @@ function nbd_config_import_bundle(array $bundle, $settings = true, $memory = tru
     foreach ([
       'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
       'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
+      'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
     ] as $k) {
       if (array_key_exists($k, $bundle['settings'])) {
         $cfg[$k] = (string)$bundle['settings'][$k];
@@ -1326,6 +1332,45 @@ function nbd_live_snapshot() {
 /**
  * Background qemu-img convert from nbd:// to local path.
  */
+/**
+ * Count Pull jobs whose wrapper PID is still alive.
+ */
+function nbd_count_alive_pull_jobs() {
+  $n = 0;
+  foreach (nbd_jobs_state() as $j) {
+    if (!empty($j['alive'])) {
+      $n++;
+    }
+  }
+  return $n;
+}
+
+/**
+ * Build ionice/nice prefix for qemu-img (WebUI-friendly defaults).
+ */
+function nbd_pull_sched_prefix(array $cfg = null) {
+  if ($cfg === null) {
+    $cfg = nbd_load_cfg();
+  }
+  $class = strtolower(trim((string)($cfg['pull_io_class'] ?? 'idle')));
+  if (!in_array($class, ['idle', 'best-effort'], true)) {
+    $class = 'idle';
+  }
+  $nice = (int)($cfg['pull_nice'] ?? 10);
+  if ($nice < 0) {
+    $nice = 0;
+  }
+  if ($nice > 19) {
+    $nice = 19;
+  }
+  // ionice may be missing on some builds — fall back to nice only
+  if ($class === 'idle') {
+    return 'ionice -c3 nice -n ' . $nice . ' ';
+  }
+  // best-effort, lower priority within class (7 = lowest BE)
+  return 'ionice -c2 -n7 nice -n ' . $nice . ' ';
+}
+
 function nbd_image_start($url, $output, $format = 'qcow2') {
   nbd_ensure_runtime_dirs();
   $cfg = nbd_load_cfg();
@@ -1363,30 +1408,77 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     }
   }
 
+  $max = (int)($cfg['max_concurrent_pulls'] ?? 1);
+  if ($max < 1) {
+    $max = 1;
+  }
+  if ($max > 4) {
+    $max = 4;
+  }
+  $alive = nbd_count_alive_pull_jobs();
+  if ($alive >= $max) {
+    return [
+      'ok' => false,
+      'error' => 'Already ' . $alive . ' Pull job(s) running (limit ' . $max
+        . '). Wait for Status → Done, or raise Max concurrent Pulls under Settings. '
+        . 'Multiple array writes can stall the Unraid WebUI.',
+    ];
+  }
+  // Same nbd:// already converting — refuse duplicate (common accidental double-start)
+  foreach (nbd_jobs_state() as $j) {
+    if (empty($j['alive'])) {
+      continue;
+    }
+    if (($j['url'] ?? '') === $url) {
+      return [
+        'ok' => false,
+        'error' => 'A Pull of this NBD URL is already running (' . ($j['id'] ?? '?')
+          . '). Starting another copy of the same disk fights the array and the WebUI.',
+      ];
+    }
+  }
+
   $id = 'job-' . date('Ymd-His') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
   $pidfile = NBDEXPORT_RUN . '/' . $id . '.pid';
   $statefile = NBDEXPORT_RUN . '/' . $id . '.json';
   $logfile = NBDEXPORT_LOG . '/' . $id . '.log';
   $script = NBDEXPORT_RUN . '/' . $id . '.sh';
 
+  $io_class = strtolower(trim((string)($cfg['pull_io_class'] ?? 'idle')));
+  if (!in_array($io_class, ['idle', 'best-effort'], true)) {
+    $io_class = 'idle';
+  }
+  $nice = (int)($cfg['pull_nice'] ?? 10);
+  if ($nice < 0) {
+    $nice = 0;
+  }
+  if ($nice > 19) {
+    $nice = 19;
+  }
+  // Bash array WRAP: ionice (if present) + nice — keeps qemu-img off the WebUI's IO class
+  $ionice_args = ($io_class === 'idle') ? '-c3' : '-c2 -n7';
   $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
     . 'FMT=' . escapeshellarg($format) . "\n"
+    . 'NICE_N=' . (int)$nice . "\n"
+    . 'IONICE_ARGS=' . escapeshellarg($ionice_args) . "\n"
     . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
-    . 'echo "$(date -Iseconds) job start" >>"$LOG"' . "\n"
+    . 'if command -v ionice >/dev/null 2>&1; then WRAP=(ionice $IONICE_ARGS nice -n "$NICE_N"); else WRAP=(nice -n "$NICE_N"); fi' . "\n"
+    . 'run_img() { "${WRAP[@]}" "$@"; }' . "\n"
+    . 'echo "$(date -Iseconds) job start wrap=${WRAP[*]}" >>"$LOG"' . "\n"
     . 'for i in $(seq 1 60); do' . "\n"
-    . '  if "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
+    . '  if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
     . '  sleep 5' . "\n"
     . '  if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . 'done' . "\n"
-    . 'if ! "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
+    . 'if ! run_img "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
     . '  fail convert' . "\n"
     . 'fi' . "\n"
-    . '"$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
-    . '"$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
+    . 'run_img "$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
+    . 'run_img "$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
     . 'echo NBD_JOB_OK >>"$LOG"' . "\n"
     . 'echo "$(date -Iseconds) job done" >>"$LOG"' . "\n";
 
@@ -1407,6 +1499,8 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     'pid' => $pid,
     'started' => date('c'),
     'log' => $logfile,
+    'io_class' => (string)($cfg['pull_io_class'] ?? 'idle'),
+    'nice' => (string)($cfg['pull_nice'] ?? '10'),
   ];
   @file_put_contents($statefile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
   return ['ok' => true, 'id' => $id];

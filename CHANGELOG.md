@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.25aa
+
+- **Pull WebUI safety:** `qemu-img` runs under **ionice idle** + nice (default 10); **max 1**
+  concurrent Pull (Settings); refuse a second job for the same `nbd://` URL.
+- Prefer `/mnt/cache` (or pool) for large images — array `/mnt/diskN` writes can stall Main.
+- Settings: Pull IO class / nice / concurrency.
+
 ## 2026.08.24aa
 
 - **Pull:** Unraid-style `/mnt` folder browser (`fileTree`) for output path; soft warn on `/mnt/user` and `/mnt/user0`.

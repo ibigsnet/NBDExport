@@ -15,9 +15,11 @@ nbd_page_styles();
     <h3>Pull a remote disk into a file</h3>
     <p class="nbd-section-lead">
       <strong>Client</strong> — connect to <code>nbd://…</code> and write qcow2/raw under <code>/mnt/…</code>.
-      Prefer <code>/mnt/cache/…</code> or <code>/mnt/diskN/…</code> for large images;
-      <code>/mnt/user</code> / <code>/mnt/user0</code> work but are slower (FUSE/array).
+      Prefer <code>/mnt/cache/…</code> (or a pool) for multi‑TB images — array
+      <code>/mnt/diskN</code> writes can stall Main while Pull runs.
+      <code>/mnt/user</code> / <code>/mnt/user0</code> are slower (FUSE).
       Jobs stay running if you close the browser; see <strong>Status</strong>.
+      Default: one Pull at a time, idle IO class (Settings).
     </p>
     <p class="nbd-muted" style="margin:0.35em 0 0.75em">
       The red “writable host” banner above (if shown) is about <strong>Host exports on this Unraid</strong>,

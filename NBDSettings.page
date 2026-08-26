@@ -124,6 +124,52 @@ nbd_page_styles();
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/integration-unassigned-devices.md" target="_blank" rel="noopener">Details ↗</a>
       </blockquote>
 
+      <h3 style="margin-top:1.25em">Pull jobs (WebUI friendly)</h3>
+      <p class="nbd-muted" style="margin:0.25em 0 0.75em">
+        Large <code>qemu-img</code> writes to array disks can stall Main. Defaults keep Pull in the
+        idle IO class and limit concurrency.
+      </p>
+
+      <dl>
+        <dt>Max concurrent Pulls:</dt>
+        <dd>
+          <select name="max_concurrent_pulls">
+            <?= mk_option($max_concurrent_pulls, '1', '1 (recommended)') ?>
+            <?= mk_option($max_concurrent_pulls, '2', '2') ?>
+            <?= mk_option($max_concurrent_pulls, '3', '3') ?>
+            <?= mk_option($max_concurrent_pulls, '4', '4') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Extra parallel Pulls to the same array fight each other and Folder Caching.
+        Prefer <strong>1</strong>. Duplicate Pulls of the same <code>nbd://</code> URL are always refused.
+      </blockquote>
+
+      <dl>
+        <dt>Pull IO class:</dt>
+        <dd>
+          <select name="pull_io_class">
+            <?= mk_option($pull_io_class, 'idle', 'Idle (recommended — ionice idle)') ?>
+            <?= mk_option($pull_io_class, 'best-effort', 'Best-effort (lower priority)') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Idle yields disk bandwidth to the WebUI and other interactive work. Best-effort is still
+        deprioritized but can finish faster on a quiet box.
+      </blockquote>
+
+      <dl>
+        <dt>Pull CPU nice:</dt>
+        <dd>
+          <input type="number" name="pull_nice" class="narrow" min="0" max="19" value="<?= htmlspecialchars($pull_nice) ?>">
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        0–19 (higher = nicer to other processes). Default <strong>10</strong>.
+      </blockquote>
+
       <p class="nbd-actions">
         <input type="submit" name="#apply" value="Apply" onclick="return nbdConfirmDestructiveSave(this.form)">
         <input type="button" value="Done" onclick="done()">
