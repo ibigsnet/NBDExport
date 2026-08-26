@@ -206,7 +206,8 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-badge-stale { background: rgba(140, 140, 140, 0.35); } /* Idle */
 .nbd-wrap .nbd-badge-bad { background: rgba(200, 60, 60, 0.4); } /* Failed */
 .nbd-wrap .nbd-badge-run { background: rgba(220, 140, 40, 0.5); color: inherit; } /* Running (orange) */
-.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); } /* Writable host */
+.nbd-wrap .nbd-badge-paused { background: rgba(140, 90, 200, 0.5); color: inherit; } /* Paused (purple) */
+.nbd-wrap .nbd-badge-rw { background: rgba(220, 140, 40, 0.45); } /* Writable host (not Pause) */
 .nbd-wrap .nbd-section { margin: 1.25em 0 0; padding: 0 0 0.5em; }
 .nbd-wrap .nbd-section > h3 {
   margin: 0 0 0.5em; padding: 0.35em 0 0.45em; font-size: 1.12em; font-weight: 700;
@@ -256,10 +257,25 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-job-card-meta .nbd-job-path {
   display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font-size: 0.9em;
 }
-.nbd-wrap .nbd-job-card-actions { margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.35em; }
+.nbd-wrap .nbd-job-card-actions { margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; }
 .nbd-wrap .nbd-job-card-actions form { display: inline; margin: 0; }
 .nbd-wrap .nbd-job-card details.nbd-job-log { margin-top: 0.45em; font-size: 0.9em; }
 .nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
+.nbd-wrap .nbd-job-section-title { margin: 1.1em 0 0.45em; font-size: 1.05em; }
+.nbd-wrap .nbd-jobs-toolbar {
+  display: flex; flex-wrap: wrap; gap: 0.45em; align-items: center;
+  margin: 0 0 0.65em; padding: 0.45em 0.55em;
+  border: 1px solid rgba(128,128,128,0.3); border-radius: 6px;
+  background: rgba(128,128,128,0.06);
+}
+.nbd-wrap .nbd-job-sel { display: inline-flex; width: 1.4em; flex: 0 0 auto; }
+.nbd-wrap .nbd-job-sel-spacer { display: inline-block; width: 1.4em; }
+.nbd-wrap .nbd-job-edit {
+  margin-top: 0.5em; padding: 0.5em 0.65em; border-radius: 4px;
+  background: rgba(128,128,128,0.08); border: 1px dashed rgba(128,128,128,0.35);
+}
+.nbd-wrap .nbd-job-edit label { display: block; margin: 0.35em 0; font-size: 0.92em; }
+.nbd-wrap .nbd-job-edit-toggle { cursor: pointer; }
 .nbd-wrap details.nbd-cli-box { margin-top: 1.25em; font-size: 0.95em; }
 .nbd-wrap details.nbd-cli-box summary { cursor: pointer; font-weight: 600; }
 /* Shared header block (all tabs) */

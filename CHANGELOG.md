@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ah
+
+- **Status sections:** **Active** / **Queued** / **History** instead of one flat list.
+- **History management (TBN-style):** checkboxes + Clear selected / Clear all finished;
+  **Retry**, **Edit & retry**, **Delete file** (incomplete output under `/mnt`|/tmp only).
+- **Queue reorder:** ↑ / ↓ on queued jobs (`queue_seq`); kick starts queue head.
+- **Paused = purple** badge (Running stays orange) so Pause ≠ Running.
+- **Dashboard lazy load:** tile is a cheap shell; body fills via `nbd-dash-status.php` after
+  first paint (avoids full-width “NBD EXPORT” flash / blocking Dashboard load).
+
 ## 2026.08.26ag
 
 - **Progress `%` (real fix):** drop fragile `qemu-img -p` CR + process-substitution. Convert

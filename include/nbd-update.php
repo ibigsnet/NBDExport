@@ -208,6 +208,86 @@ try {
       nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'resume failed')) : ('Resumed job ' . $id));
       break;
 
+    case 'jobs_clear':
+      $ids = [];
+      if (!empty($_POST['job_ids']) && is_array($_POST['job_ids'])) {
+        foreach ($_POST['job_ids'] as $jid) {
+          $ids[] = trim((string)$jid);
+        }
+      }
+      $all = (isset($_POST['clear_finished']) && (string)$_POST['clear_finished'] === 'yes');
+      $r = nbd_jobs_clear($ids, $all);
+      if (empty($r['ok'])) {
+        nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'clear failed'));
+      } else {
+        $n = count($r['cleared'] ?? []);
+        $msg = 'NBD Image: cleared ' . $n . ' job' . ($n === 1 ? '' : 's') . ' from the list';
+        if (!empty($r['skipped'])) {
+          $msg .= ' (' . count($r['skipped']) . ' skipped)';
+        }
+        nbd_flash($msg);
+      }
+      break;
+
+    case 'image_retry':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $overrides = [];
+      if (isset($_POST['nbd_url']) && trim((string)$_POST['nbd_url']) !== '') {
+        $overrides['url'] = trim((string)$_POST['nbd_url']);
+      }
+      if (isset($_POST['output']) && trim((string)$_POST['output']) !== '') {
+        $overrides['output'] = trim((string)$_POST['output']);
+      }
+      if (isset($_POST['format']) && trim((string)$_POST['format']) !== '') {
+        $overrides['format'] = trim((string)$_POST['format']);
+      }
+      $overrides['remove_output'] = (isset($_POST['remove_output']) && (string)$_POST['remove_output'] === 'yes');
+      $old = nbd_job_load($id);
+      $r = nbd_image_retry($id, $overrides);
+      if (empty($r['ok'])) {
+        nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'retry failed'));
+      } else {
+        $u = (string)($overrides['url'] ?? (is_array($old) ? ($old['url'] ?? '') : ''));
+        $o = (string)($overrides['output'] ?? (is_array($old) ? ($old['output'] ?? '') : ''));
+        $f = (string)($overrides['format'] ?? (is_array($old) ? ($old['format'] ?? 'qcow2') : 'qcow2'));
+        nbd_memory_remember_pull($u, $o, $f);
+        if (!empty($r['queued'])) {
+          nbd_flash('NBD Image: retry queued ' . ($r['id'] ?? '') . ' — ' . ($r['warn'] ?? 'see Status'));
+        } else {
+          $msg = 'NBD Image: retry started ' . ($r['id'] ?? '') . ' (from ' . $id . ')';
+          if (!empty($overrides['remove_output'])) {
+            $msg .= ' — old output removed';
+          }
+          if (!empty($r['warn'])) {
+            $msg .= ' — ' . $r['warn'];
+          }
+          nbd_flash($msg);
+        }
+      }
+      break;
+
+    case 'job_delete_output':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $r = nbd_job_delete_output($id);
+      if (empty($r['ok'])) {
+        nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'delete failed'));
+      } elseif (!empty($r['missing'])) {
+        nbd_flash('NBD Image: output already gone — ' . ($r['path'] ?? ''));
+      } else {
+        $sz = isset($r['bytes']) ? nbd_format_bytes((int)$r['bytes']) : '';
+        nbd_flash('NBD Image: deleted ' . ($r['path'] ?? '') . ($sz !== '' ? (' (' . $sz . ')') : ''));
+      }
+      break;
+
+    case 'queue_move':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $dir = (int)($_POST['dir'] ?? 0);
+      $r = nbd_queue_move($id, $dir);
+      nbd_flash(empty($r['ok'])
+        ? ('ERROR — ' . ($r['error'] ?? 'move failed'))
+        : ('Queue updated for ' . $id));
+      break;
+
     case 'preset_save_host':
       $name = trim((string)($_POST['preset_name'] ?? ''));
       $bind_raw = $_POST['bind'] ?? [];
