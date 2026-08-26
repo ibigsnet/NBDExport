@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26an">
+<!ENTITY version "2026.08.26ao">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,46 +27,25 @@
 
 <CHANGES>
 ###&version;
+- Unknown Failures: Found a bug? (plugin diagnostics, forum/GitHub, Tools → Diagnostics); broader Reason map.
+
+###2026.08.26an
 - Failed jobs show a short Reason (exit code / NBD_JOB_FAIL / qemu message map).
 
-###2026.08.26am
-- Fix convert killed by SIGUSR1 (rc=138); progress via -p file poll.
+###2026.08.26am–aj
+- Convert PID and SIGUSR1 (rc=138) fixes; History Clear/Retry/Delete wording; net Gb/s.
 
-###2026.08.26al
-- History toolbar wording: Checkboxes vs Remove from list.
+###2026.08.26ai–ag
+- Status Active/Queued/History; metrics/units; Paused purple; lazy Dashboard; busy Update refuse.
 
-###2026.08.26ak
-- Retry auto-clears History and same-path output; Clear is list-only.
+###2026.08.26af–ad
+- Dashboard tile fix; job cards; uninstall always exit 0 (CA no-op fix).
 
-###2026.08.26aj
-- Fix false NBD_JOB_FAIL (wait on ionice PID); net shows Gb/s above 1 Gb/s.
-
-###2026.08.26ai
-- Full paths; Select failed; MB/s and GB units; Pause/Stop align.
-
-###2026.08.26ah
-- Status Active/Queued/History; clear/retry/edit/delete; queue ↑↓; Paused purple; lazy Dashboard.
-
-###2026.08.26ag
-- Reliable Pull progress via SIGUSR1; Status metrics; busy-upgrade refuse copy.
-
-###2026.08.26af
-- Fix Dashboard tile (no style before tbody); Status job cards.
-
-###2026.08.26ae
-- Attempted progress via stdbuf (insufficient); /mnt/user ENOSPC warn.
-
-###2026.08.26ad
-- Robust uninstall: always exit 0 (CA no-op fix); wipe legacy dirs/packages; stop beacon/jobs.
-
-###2026.08.26ac–ab
-- Pull fileTree: in-flow like VM templates; restore click-to-open after dismiss-guard regression.
-
-###2026.08.26aa
-- Pull path picker: load jquery.filetree.js; Browse for local file source.
+###2026.08.26ac–aa
+- Pull fileTree path picker (VM-style in-flow Browse).
 
 ###2026.08.25ad
-- Upgrade-safe busy abort + reconcile; external qemu-img in Status; local /dev|/mnt Pull sources.
+- Upgrade-safe busy abort + reconcile; external qemu-img; local /dev|/mnt Pull sources.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md

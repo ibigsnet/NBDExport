@@ -36,6 +36,20 @@ if ($running && $eta_h === '') {
 $out_exists = ($out !== '' && $out !== '(unknown)' && @is_file($out));
 $qpos = isset($nbd_queue_pos) ? (int)$nbd_queue_pos : -1;
 $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
+$fail = ['code' => '', 'reason' => '', 'known' => true];
+if ($jkey === 'failed' && function_exists('nbd_job_fail_info')) {
+  $fail = nbd_job_fail_info($j);
+}
+$fail_known = !empty($fail['known']);
+$show_bug = ($jkey === 'failed' && !$fail_known);
+$support = function_exists('nbd_support_links') ? nbd_support_links() : [
+  'forum' => 'https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/',
+  'github' => 'https://github.com/ibigsnet/NBDExport',
+  'issues' => 'https://github.com/ibigsnet/NBDExport/issues',
+];
+$diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
+  ? nbd_job_diagnostics_text($j)
+  : '';
 ?>
         <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>" data-nbd-key="<?= htmlspecialchars($jkey) ?>">
           <div class="nbd-job-card-top">
@@ -63,18 +77,15 @@ $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
           <div class="nbd-job-card-meta">
             <div><span class="nbd-muted">Source</span> <code class="nbd-job-path"><?= htmlspecialchars($src !== '' ? $src : '—') ?></code></div>
             <div><span class="nbd-muted">Output</span> <code class="nbd-job-path"><?= htmlspecialchars($out !== '' ? $out : '—') ?></code></div>
-<?php if ($jkey === 'failed'):
-  $fail = function_exists('nbd_job_fail_info') ? nbd_job_fail_info($j) : ['code' => '', 'reason' => ''];
-  if ($fail['reason'] !== ''):
-?>
+<?php if ($jkey === 'failed' && ($fail['reason'] ?? '') !== ''): ?>
             <div class="nbd-job-fail">
               <strong>Reason</strong>
               <?= htmlspecialchars($fail['reason']) ?>
-<?php if ($fail['code'] !== '' && $fail['code'] !== 'unknown'): ?>
+<?php if (($fail['code'] ?? '') !== '' && ($fail['code'] ?? '') !== 'unknown'): ?>
               <span class="nbd-muted"> (<?= htmlspecialchars($fail['code']) ?>)</span>
 <?php endif; ?>
             </div>
-<?php endif; endif; ?>
+<?php endif; ?>
           </div>
           <div class="nbd-job-card-actions nbd-live-job-actions">
               <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline-flex' : 'none' ?>" class="nbd-live-job-pause-form">
@@ -161,7 +172,33 @@ $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
               </form>
 <?php endif; ?>
 <?php endif; ?>
+<?php if ($show_bug): ?>
+              <button type="button" class="nbd-job-bug-btn" data-nbd-bug="<?= $jid ?>"
+                title="Reason is outside our known map — copy diagnostics for support">Found a bug?</button>
+<?php endif; ?>
           </div>
+<?php if ($show_bug): ?>
+          <div class="nbd-bug-panel" id="nbd-bug-<?= $jid ?>" hidden>
+            <p class="nbd-bug-lead">
+              This failure is not in our known Reason map. Copy the plugin diagnostics below and
+              paste them on the
+              <a href="<?= htmlspecialchars($support['forum']) ?>" target="_blank" rel="noopener">Unraid support forum</a>
+              or open a
+              <a href="<?= htmlspecialchars($support['issues']) ?>" target="_blank" rel="noopener">GitHub issue</a>
+              (<a href="<?= htmlspecialchars($support['github']) ?>" target="_blank" rel="noopener">repository</a>).
+            </p>
+            <p class="nbd-bug-tools">
+              For a full Unraid package (syslog, lspci, etc.), also run
+              <a href="/Tools/Diagnostics">Tools → Diagnostics</a>
+              and attach that zip with the report.
+            </p>
+            <label class="nbd-diag-label" for="nbd-diag-<?= $jid ?>">Plugin diagnostics</label>
+            <textarea id="nbd-diag-<?= $jid ?>" class="nbd-diag" readonly rows="12" spellcheck="false"><?= htmlspecialchars($diag_text) ?></textarea>
+            <p class="nbd-bug-actions">
+              <input type="button" value="Copy diagnostics" onclick="nbdCopyDiagnostics('<?= $jid ?>')">
+            </p>
+          </div>
+<?php endif; ?>
 <?php if ($clearable && !$external): ?>
           <div class="nbd-job-edit" id="nbd-edit-<?= $jid ?>" style="display:none">
             <form method="POST" action="/update.php" target="progressFrame" class="nbd-job-edit-form"

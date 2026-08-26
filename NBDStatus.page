@@ -186,13 +186,47 @@ foreach ($jobs_history as $j) {
   };
   window.nbdJobsClearSubmit = function () { return true; };
   document.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
-    if (!btn) return;
-    var id = btn.getAttribute('data-nbd-edit');
-    var box = id ? document.getElementById('nbd-edit-' + id) : null;
-    if (!box) return;
-    box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+    var editBtn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
+    if (editBtn) {
+      var eid = editBtn.getAttribute('data-nbd-edit');
+      var ebox = eid ? document.getElementById('nbd-edit-' + eid) : null;
+      if (ebox) {
+        ebox.style.display = (ebox.style.display === 'none' || ebox.style.display === '') ? 'block' : 'none';
+      }
+      return;
+    }
+    var bugBtn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-bug-btn') : null;
+    if (!bugBtn) return;
+    var bid = bugBtn.getAttribute('data-nbd-bug');
+    var panel = bid ? document.getElementById('nbd-bug-' + bid) : null;
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      try {
+        panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (e) { /* ignore */ }
+    }
   });
+  window.nbdCopyDiagnostics = function (id) {
+    var el = document.getElementById('nbd-diag-' + id);
+    if (!el) return;
+    var text = el.value || el.textContent || '';
+    function ok() {
+      try {
+        el.focus();
+        el.select();
+      } catch (e) { /* ignore */ }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok).catch(function () {
+        ok();
+        try { document.execCommand('copy'); } catch (e2) { /* ignore */ }
+      });
+    } else {
+      ok();
+      try { document.execCommand('copy'); } catch (e3) { /* ignore */ }
+    }
+  };
 })();
 </script>
 <?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

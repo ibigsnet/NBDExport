@@ -488,6 +488,7 @@ function nbd_job_ui_status(array $j) {
 /**
  * Known failure codes / markers → short Status reasons (maintainer table).
  * Keys: NBD_JOB_FAIL tokens, qemu log snippets, or signal exit codes (128+N).
+ * Keep reasons one-line and plain — Status shows these without digging the log.
  *
  * @return array<string,string>
  */
@@ -505,14 +506,20 @@ function nbd_fail_reason_table() {
     '143' => 'Terminated (SIGTERM) — Stop or system shutdown',
     '139' => 'Crashed (SIGSEGV)',
     '134' => 'Aborted (SIGABRT)',
+    '130' => 'Interrupted (SIGINT / Ctrl-C)',
+    '129' => 'Hung up (SIGHUP)',
     '9' => 'Killed (SIGKILL)',
     '15' => 'Terminated (SIGTERM)',
     '10' => 'Killed by SIGUSR1',
-    // qemu-img / system message fragments (matched in log)
+    // qemu-img / system message fragments (matched in log; longest needles first in matcher)
     'no route to host' => 'No route to NBD host (network / VPN / firewall)',
     'connection refused' => 'NBD connection refused (export down or wrong port)',
+    'connection reset by peer' => 'NBD connection reset by peer (export stopped mid-pull)',
     'connection timed out' => 'NBD connection timed out',
     'network is unreachable' => 'Network unreachable to NBD host',
+    'host is down' => 'NBD host is down',
+    'name or service not known' => 'Hostname did not resolve',
+    'temporary failure in name resolution' => 'DNS lookup failed for NBD host',
     'no space left' => 'No space left on destination',
     'disk quota exceeded' => 'Disk quota exceeded on destination',
     'permission denied' => 'Permission denied on source or output',
@@ -521,17 +528,76 @@ function nbd_fail_reason_table() {
     'could not open' => 'Could not open source or output',
     'failed to connect' => 'Failed to connect to NBD source',
     'is not a regular file' => 'Output path is not a regular file',
+    'no such file or directory' => 'Path missing (source, output dir, or device)',
+    'protocol error' => 'NBD protocol error (peer / qemu mismatch)',
+    'server rejected' => 'NBD server rejected the request',
+    'export not found' => 'NBD export name not found on peer',
+    'image format' => 'Image format error (corrupt or wrong type)',
+    'invalid argument' => 'Invalid argument to qemu-img / NBD',
+    'operation not permitted' => 'Operation not permitted (capabilities / mount flags)',
+    'broken pipe' => 'Broken pipe (peer closed mid-transfer)',
+  ];
+}
+
+/** Support / project URLs (forum + GitHub). */
+function nbd_support_links() {
+  return [
+    'forum' => 'https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/',
+    'github' => 'https://github.com/ibigsnet/NBDExport',
+    'issues' => 'https://github.com/ibigsnet/NBDExport/issues',
   ];
 }
 
 /**
+ * Whether a fail code/reason is in our known map (no "Found a bug?" CTA).
+ * Vague convert-without-mapped-rc and unknown tokens are not known.
+ */
+function nbd_fail_reason_is_known($code, $reason = '') {
+  $code = trim((string)$code);
+  $reason = trim((string)$reason);
+  if ($code === '' || $code === 'unknown') {
+    return false;
+  }
+  $table = nbd_fail_reason_table();
+  if (preg_match('/rc=(\d+)/', $code, $m) && isset($table[$m[1]])) {
+    return true;
+  }
+  $token = strtolower(trim(preg_replace('/\s+rc=\d+\s*$/i', '', $code)));
+  if ($token !== '' && isset($table[$token])) {
+    // Bare "convert" / "convert rc=NN" without a mapped signal/rc is not specific enough.
+    if ($token === 'convert') {
+      return preg_match('/rc=(\d+)/', $code, $m2) && isset($table[$m2[1]]);
+    }
+    return true;
+  }
+  if (isset($table[$code])) {
+    return true;
+  }
+  if ($reason !== '') {
+    foreach ($table as $k => $msg) {
+      if ($k === 'convert') {
+        continue;
+      }
+      if ($msg === $reason) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Parse job log / stored fields into a short fail reason for Status.
- * @return array{code:string,reason:string}
+ * @return array{code:string,reason:string,known:bool}
  */
 function nbd_job_fail_info(array $j) {
   if (!empty($j['fail_reason']) && is_string($j['fail_reason'])) {
     $code = (string)($j['fail_code'] ?? '');
-    return ['code' => $code, 'reason' => (string)$j['fail_reason']];
+    $reason = (string)$j['fail_reason'];
+    $known = array_key_exists('fail_known', $j)
+      ? !empty($j['fail_known'])
+      : nbd_fail_reason_is_known($code, $reason);
+    return ['code' => $code, 'reason' => $reason, 'known' => $known];
   }
   $table = nbd_fail_reason_table();
   $log = (string)($j['log'] ?? '');
@@ -549,13 +615,17 @@ function nbd_job_fail_info(array $j) {
   }
   $code = '';
   $reason = '';
+  $known = false;
   // NBD_JOB_FAIL convert rc=138  OR  NBD_JOB_FAIL wait_src
   if (preg_match('/NBD_JOB_FAIL\s+(\S+)(?:\s+rc=(\d+))?/i', $text, $m)) {
     $token = strtolower($m[1]);
     $rc = isset($m[2]) ? $m[2] : '';
     if ($rc !== '' && isset($table[$rc])) {
-      $code = 'rc=' . $rc;
+      $code = ($token === 'convert' || $token === '')
+        ? ('convert rc=' . $rc)
+        : ($token . ' rc=' . $rc);
       $reason = $table[$rc];
+      $known = true;
     } elseif (isset($table[$token])) {
       $code = $token;
       $reason = $table[$token];
@@ -563,42 +633,123 @@ function nbd_job_fail_info(array $j) {
         $code .= ' rc=' . $rc;
         if ($token === 'convert' && isset($table[$rc])) {
           $reason = $table[$rc];
-        } elseif ($rc !== '') {
+          $known = true;
+        } elseif ($token === 'convert') {
+          $reason = 'Convert failed (exit ' . $rc . ') — open Log or Found a bug?';
+          $known = false;
+        } else {
           $reason .= ' (exit ' . $rc . ')';
+          $known = true;
         }
+      } else {
+        // Bare convert without rc is not specific enough for a closed-form reason.
+        $known = ($token !== 'convert');
       }
     } else {
       $code = $token . ($rc !== '' ? (' rc=' . $rc) : '');
       $reason = 'Job failed: ' . $token . ($rc !== '' ? (' (exit ' . $rc . ')') : '');
+      $known = false;
     }
   }
-  if ($reason === '' && $text !== '') {
+  // Refine vague convert/unknown with log message fragments (ENOSPC, refused, …).
+  if ((!$known || $reason === '') && $text !== '') {
     $low = strtolower($text);
+    $skip = ['wait_src', 'convert', 'cancelled_while_queued', 'stopped_by_user', 'process_exited'];
+    // Prefer longer needles so "connection reset by peer" wins over shorter fragments.
+    $needles = [];
     foreach ($table as $needle => $msg) {
-      if (ctype_digit((string)$needle)) {
+      if (ctype_digit((string)$needle) || in_array($needle, $skip, true)) {
         continue;
       }
-      if (in_array($needle, ['wait_src', 'convert', 'cancelled_while_queued', 'stopped_by_user', 'process_exited'], true)) {
-        continue;
-      }
+      $needles[(string)$needle] = $msg;
+    }
+    uksort($needles, function ($a, $b) {
+      return strlen($b) - strlen($a);
+    });
+    foreach ($needles as $needle => $msg) {
       if (strpos($low, $needle) !== false) {
-        $code = $needle;
+        $frag_code = $needle;
+        // Keep convert rc=… when present; append fragment for support digs.
+        if ($code !== '' && preg_match('/rc=\d+/', $code)) {
+          $code = $code . ' / ' . $frag_code;
+        } else {
+          $code = $frag_code;
+        }
         $reason = $msg;
+        $known = true;
         break;
       }
     }
   }
   if ($reason === '') {
     $code = 'unknown';
-    $reason = 'Failed — open Log for details';
+    $reason = 'Failed — open Log or use Found a bug?';
+    $known = false;
   }
-  return ['code' => $code, 'reason' => $reason];
+  return ['code' => $code, 'reason' => $reason, 'known' => $known];
 }
 
 /** One-line fail summary for badges / cards. */
 function nbd_job_fail_summary(array $j) {
   $info = nbd_job_fail_info($j);
   return (string)($info['reason'] ?? '');
+}
+
+/**
+ * Plain-text plugin diagnostics for a failed job (forum / GitHub paste).
+ * No secrets — URLs, paths, exit tokens, log tail only.
+ */
+function nbd_job_diagnostics_text(array $j) {
+  $fail = nbd_job_fail_info($j);
+  $unraid = '';
+  if (is_readable('/etc/unraid-version')) {
+    $ini = @parse_ini_file('/etc/unraid-version');
+    $unraid = is_array($ini) && isset($ini['version']) ? (string)$ini['version'] : '';
+  }
+  $tools = function_exists('nbd_detect_tools') ? nbd_detect_tools() : [];
+  $qemu_img = (string)($tools['qemu_img'] ?? '');
+  $qemu_ver = '';
+  if ($qemu_img !== '') {
+    $qemu_ver = trim((string)@shell_exec(escapeshellarg($qemu_img) . ' --version 2>/dev/null | head -n1'));
+  }
+  $out = [];
+  $out[] = '=== NBD Export job diagnostics ===';
+  $out[] = 'plugin_version: ' . (function_exists('nbd_plugin_version') ? nbd_plugin_version() : 'unknown');
+  $out[] = 'hostname: ' . (gethostname() ?: '');
+  $out[] = 'unraid: ' . $unraid;
+  $out[] = 'time: ' . date('c');
+  $out[] = 'job_id: ' . (string)($j['id'] ?? '');
+  $out[] = 'status: ' . (string)($j['status'] ?? '');
+  $out[] = 'fail_code: ' . (string)($fail['code'] ?? '');
+  $out[] = 'fail_reason: ' . (string)($fail['reason'] ?? '');
+  $out[] = 'fail_known: ' . (!empty($fail['known']) ? 'yes' : 'no');
+  $out[] = 'source: ' . (string)($j['url'] ?? '');
+  $out[] = 'output: ' . (string)($j['output'] ?? '');
+  $out[] = 'format: ' . (string)($j['format'] ?? '');
+  $out[] = 'started: ' . (string)($j['started'] ?? '');
+  $out[] = 'finished: ' . (string)($j['finished'] ?? ($j['ended'] ?? ''));
+  $out[] = 'pid: ' . (string)($j['pid'] ?? '');
+  $out[] = 'qemu_img: ' . ($qemu_img !== '' ? $qemu_img : '(not found)');
+  $out[] = 'qemu_version: ' . ($qemu_ver !== '' ? $qemu_ver : '(unknown)');
+  $log = (string)($j['log'] ?? '');
+  $out[] = '--- job log (tail) ---';
+  if ($log !== '' && is_file($log)) {
+    $tail = function_exists('nbd_log_tail_display')
+      ? nbd_log_tail_display($log, 40)
+      : '';
+    if ($tail === '') {
+      $raw = (string)@file_get_contents($log);
+      if (strlen($raw) > 12000) {
+        $raw = substr($raw, -12000);
+      }
+      $tail = $raw;
+    }
+    $out[] = rtrim($tail) !== '' ? rtrim($tail) : '(empty)';
+  } else {
+    $out[] = '(no log file)';
+  }
+  $out[] = '=== end ===';
+  return implode("\n", $out) . "\n";
 }
 
 /** True if path is Unraid array-like (parity contention under concurrent writes). */
@@ -1860,6 +2011,7 @@ function nbd_jobs_state() {
           $fi = nbd_job_fail_info($j + ['log' => $log]);
           $j['fail_code'] = $fi['code'];
           $j['fail_reason'] = $fi['reason'];
+          $j['fail_known'] = !empty($fi['known']);
         }
         $j['finished_at'] = date('c');
         $j['status'] = !empty($j['ok']) ? 'done' : 'failed';
@@ -1881,6 +2033,9 @@ function nbd_jobs_state() {
         $fi = nbd_job_fail_info($j);
         $j['fail_code'] = $fi['code'];
         $j['fail_reason'] = $fi['reason'];
+        $j['fail_known'] = !empty($fi['known']);
+      } elseif (!array_key_exists('fail_known', $j)) {
+        $j['fail_known'] = nbd_fail_reason_is_known((string)($j['fail_code'] ?? ''), (string)$j['fail_reason']);
       }
     }
     $list[] = $j;

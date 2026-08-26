@@ -81,21 +81,62 @@ UI is **tabs** (Status · Host · Pull · Settings), not numbered sections. Upda
 
 ## Pull job failure codes (Status “Reason”)
 
-Status maps wrapper tokens, exit codes, and common qemu messages to a short **Reason**.
-Useful ones:
+Status maps wrapper tokens, exit codes, and common qemu messages to a short **Reason**
+so the basic cause is clear without digging the log. Full map:
+`nbd_fail_reason_table()` in `include/nbd-lib.php`.
+
+### Wrapper / user actions
 
 | Code / marker | Meaning |
 |---------------|---------|
 | `wait_src` | Could not open NBD/source (peer down, wrong port, no route) |
-| `convert rc=138` | Killed by SIGUSR1 (old progress bug — update + Retry) |
-| `convert rc=137` | SIGKILL (OOM or manual kill) |
-| `convert rc=143` | SIGTERM (Stop / shutdown) |
 | `stopped_by_user` | Stop/Cancel from Status |
 | `cancelled_while_queued` | Removed from queue before start |
-| `no space left` / ENOSPC | Destination full |
-| `connection refused` / `no route to host` | Network path to NBD peer |
+| `process_exited` | Wrapper/process exited without a clearer marker |
+| `convert` (no mapped rc) | Convert failed — open Log or **Found a bug?** |
 
-Full map: `nbd_fail_reason_table()` in `include/nbd-lib.php`.
+### Exit codes (convert / signals)
+
+| Code / marker | Meaning |
+|---------------|---------|
+| `convert rc=138` | Killed by SIGUSR1 (old progress bug — update + Retry) |
+| `convert rc=137` / `9` | SIGKILL (OOM or manual kill) |
+| `convert rc=143` / `15` | SIGTERM (Stop / shutdown) |
+| `convert rc=139` | SIGSEGV crash |
+| `convert rc=134` | SIGABRT |
+| `convert rc=130` | SIGINT / Ctrl-C |
+| `convert rc=129` | SIGHUP |
+
+### Network / disk (log fragments)
+
+| Code / marker | Meaning |
+|---------------|---------|
+| `no route to host` | Network / VPN / firewall to NBD host |
+| `connection refused` | Export down or wrong port |
+| `connection reset by peer` | Peer stopped mid-pull |
+| `connection timed out` | Timed out reaching NBD |
+| `network is unreachable` / `host is down` | Path to peer is dead |
+| `no space left` / `disk quota exceeded` | Destination full / quota |
+| `permission denied` / `read-only file system` | Output path permissions |
+| `input/output error` | I/O on source or destination |
+| `could not open` / `no such file or directory` | Missing path/device |
+| `failed to connect` / `export not found` | NBD peer / export name |
+| `broken pipe` | Peer closed mid-transfer |
+
+### Unknown reasons — Found a bug?
+
+If Reason is **outside** that map, the Failed card shows a right-anchored
+**Found a bug?** button. It opens a panel with:
+
+1. **Plugin diagnostics** (copy/paste) — version, Unraid, job id, source/output,
+   fail code/reason, qemu version, log tail  
+2. Links to the [Unraid support forum](https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/),
+   [GitHub Issues](https://github.com/ibigsnet/NBDExport/issues), and the
+   [repository](https://github.com/ibigsnet/NBDExport)  
+3. A pointer to Unraid **Tools → Diagnostics** for the full system zip (same idea as
+   Thunderbolt Net’s empty-state diagnostics)
+
+Paste the plugin blob (and attach the Unraid zip when filing) so we can dig further.
 
 ## Uninstall left something behind
 

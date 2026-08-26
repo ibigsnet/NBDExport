@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ao
+
+- **Found a bug?** When a Failed job’s Reason is **outside** the known map, Status shows a
+  right-anchored **Found a bug?** button (separate from Retry / Edit). It expands plugin
+  diagnostics (copy/paste), links to the Unraid forum + GitHub repo/issues, and points at
+  Unraid **Tools → Diagnostics** for the full system zip (Thunderbolt Net–style).
+- **Broader Reason map:** more network/disk fragments (reset by peer, ENOSPC, DNS, broken
+  pipe, …); vague `convert rc=N` still refined from log text when possible.
+- Docs: `docs/troubleshooting.md` failure table + Found a bug section.
+
 ## 2026.08.26an
 
 - **Failure reasons:** Failed History cards show a short **Reason** line (and badge hint)
