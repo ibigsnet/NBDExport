@@ -438,6 +438,14 @@ function nbd_job_ui_status(array $j) {
       'hint' => (string)($j['queue_hint'] ?? 'Waiting for a free Pull slot — Play to start'),
     ];
   }
+  if ($status === 'paused') {
+    return [
+      'key' => 'paused',
+      'label' => 'Paused',
+      'class' => 'nbd-badge-rw',
+      'hint' => 'SIGSTOP — Resume when ready (e.g. after parity). Slot stays reserved.',
+    ];
+  }
   if ($alive || $status === 'running') {
     $hint = 'qemu-img convert in progress';
     if (!empty($j['orphaned'])) {
@@ -462,6 +470,147 @@ function nbd_job_ui_status(array $j) {
 function nbd_path_is_array_like($path) {
   $path = (string)$path;
   return (bool)preg_match('#^/mnt/(disk\d+|user0?|disks)(/|$)#', $path);
+}
+
+/**
+ * Parse ISO / epoch / common date strings → unix timestamp or null.
+ */
+function nbd_parse_when($when) {
+  if ($when === null || $when === '' || $when === '—') {
+    return null;
+  }
+  if (is_int($when) || (is_string($when) && ctype_digit($when))) {
+    $n = (int)$when;
+    return $n > 0 ? $n : null;
+  }
+  $s = trim((string)$when);
+  $ts = @strtotime($s);
+  return ($ts !== false && $ts > 0) ? $ts : null;
+}
+
+/**
+ * Format stored time using Unraid Display → Date and Time prefs (same idea as Thunderbolt Net).
+ */
+function nbd_format_when($when) {
+  $ts = nbd_parse_when($when);
+  if ($ts === null) {
+    $raw = is_scalar($when) ? trim((string)$when) : '';
+    return ($raw === '' || $raw === '—') ? '—' : $raw;
+  }
+  if (function_exists('my_time')) {
+    $out = my_time($ts);
+    if (is_string($out) && $out !== '' && strtolower($out) !== 'unknown') {
+      return $out;
+    }
+  }
+  $date_fmt = '%c';
+  $time_fmt = '%R';
+  if (isset($GLOBALS['display']) && is_array($GLOBALS['display'])) {
+    $date_fmt = (string)($GLOBALS['display']['date'] ?? $date_fmt);
+    $time_fmt = (string)($GLOBALS['display']['time'] ?? $time_fmt);
+  } elseif (is_readable('/boot/config/plugins/dynamix/dynamix.cfg')) {
+    $ini = @parse_ini_file('/boot/config/plugins/dynamix/dynamix.cfg', true);
+    if (is_array($ini) && !empty($ini['display'])) {
+      $date_fmt = (string)($ini['display']['date'] ?? $date_fmt);
+      $time_fmt = (string)($ini['display']['time'] ?? $time_fmt);
+    }
+  }
+  $legacy = [
+    '%c' => 'D j M Y h:i A', '%A' => 'l', '%Y' => 'Y', '%B' => 'F', '%e' => 'j',
+    '%d' => 'd', '%m' => 'm', '%I' => 'h', '%H' => 'H', '%M' => 'i', '%S' => 's',
+    '%p' => 'A', '%R' => 'H:i', '%F' => 'Y-m-d', '%T' => 'H:i:s',
+  ];
+  $fmt = ($date_fmt !== '%c') ? ($date_fmt . ', ' . $time_fmt) : $date_fmt;
+  return date(strtr($fmt, $legacy), $ts);
+}
+
+function nbd_format_when_html($when) {
+  $pretty = nbd_format_when($when);
+  $raw = is_scalar($when) ? trim((string)$when) : '';
+  if ($pretty === '—' || $raw === '') {
+    return '—';
+  }
+  $title = $raw;
+  if ($title === '' || $title === $pretty) {
+    $ts = nbd_parse_when($when);
+    $title = $ts ? date('c', $ts) : $pretty;
+  }
+  return '<span class="nbd-when" title="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '">'
+    . htmlspecialchars($pretty, ENT_QUOTES, 'UTF-8') . '</span>';
+}
+
+/**
+ * Latest Pull progress percent (0–100) from .progress sidecar or log, or null.
+ */
+function nbd_job_progress_pct(array $j) {
+  $id = (string)($j['id'] ?? '');
+  if ($id !== '') {
+    $pf = NBDEXPORT_RUN . '/' . $id . '.progress';
+    if (is_file($pf)) {
+      $raw = trim((string)@file_get_contents($pf));
+      if (preg_match('/(\d+(?:\.\d+)?)\s*\/\s*100/', $raw, $m) || preg_match('/^(\d+(?:\.\d+)?)$/', $raw, $m)) {
+        return (float)$m[1];
+      }
+    }
+  }
+  $log = (string)($j['log'] ?? '');
+  if ($log === '' || !is_file($log)) {
+    return null;
+  }
+  // Read tail only — full logs can be huge with old percent spam
+  $fh = @fopen($log, 'rb');
+  if (!$fh) {
+    return null;
+  }
+  $size = @filesize($log);
+  if ($size > 8192) {
+    @fseek($fh, -8192, SEEK_END);
+  }
+  $tail = (string)@stream_get_contents($fh);
+  @fclose($fh);
+  if (!preg_match_all('/\((\d+(?:\.\d+)?)\/100%\)/', $tail, $mm) || empty($mm[1])) {
+    return null;
+  }
+  return (float)end($mm[1]);
+}
+
+/**
+ * Log tail for UI: keep history, but collapse runs of bare (N/100%) spam.
+ */
+function nbd_log_tail_display($path, $lines = 12) {
+  $raw = nbd_log_tail($path, max(40, $lines * 4));
+  if ($raw === '') {
+    return '';
+  }
+  // Normalize CR progress into lines
+  $raw = str_replace("\r", "\n", $raw);
+  $out = [];
+  $last_pct_line = null;
+  foreach (preg_split('/\n/', $raw) as $line) {
+    $t = trim($line);
+    if ($t === '') {
+      continue;
+    }
+    if (preg_match('/^\((\d+(?:\.\d+)?)\/100%\)$/', $t) || preg_match('/^\s*\((\d+(?:\.\d+)?)\/100%\)\s*$/', $t)) {
+      $last_pct_line = $t;
+      continue;
+    }
+    // Old spam: many (n%) on one line
+    if (substr_count($t, '/100%)') >= 3 && strpos($t, 'progress') === false) {
+      if (preg_match_all('/\((\d+(?:\.\d+)?)\/100%\)/', $t, $mm) && !empty($mm[0])) {
+        $last_pct_line = end($mm[0]);
+      }
+      continue;
+    }
+    $out[] = $line;
+  }
+  if ($last_pct_line !== null) {
+    $out[] = $last_pct_line;
+  }
+  if (count($out) > $lines) {
+    $out = array_slice($out, -$lines);
+  }
+  return implode("\n", $out);
 }
 
 function nbd_plugin_version() {
@@ -1252,7 +1401,21 @@ function nbd_jobs_state() {
     if (!$wrapper_alive && empty($j['finished']) && $status !== 'queued') {
       $orphan_pid = nbd_find_orphan_qemu_img($j);
     }
-    if ($wrapper_alive) {
+    $paused_proc = ($status === 'paused');
+    if ($wrapper_alive && nbd_pid_is_stopped($pid)) {
+      $paused_proc = true;
+    }
+    if ($orphan_pid > 0 && nbd_pid_is_stopped($orphan_pid)) {
+      $paused_proc = true;
+    }
+    if ($paused_proc && empty($j['finished'])) {
+      $j['alive'] = true; // still occupies a slot
+      $j['status'] = 'paused';
+      $j['orphaned'] = ($orphan_pid > 0 && !$wrapper_alive);
+      if ($orphan_pid > 0) {
+        $j['orphan_pid'] = $orphan_pid;
+      }
+    } elseif ($wrapper_alive) {
       $j['alive'] = true;
       $j['orphaned'] = false;
       $j['status'] = 'running';
@@ -1303,6 +1466,136 @@ function nbd_jobs_state() {
     nbd_pull_queue_kick();
   }
   return $list;
+}
+
+/** True if /proc/PID is in stopped state (T) after SIGSTOP. */
+function nbd_pid_is_stopped($pid) {
+  $pid = (int)$pid;
+  if ($pid <= 1 || !@file_exists('/proc/' . $pid)) {
+    return false;
+  }
+  $stat = @file_get_contents('/proc/' . $pid . '/stat');
+  if (!is_string($stat) || $stat === '') {
+    return false;
+  }
+  // comm may contain spaces/parens — state is after the last ')'
+  $rparen = strrpos($stat, ')');
+  if ($rparen === false) {
+    return false;
+  }
+  $rest = trim(substr($stat, $rparen + 1));
+  $state = $rest[0] ?? '';
+  return ($state === 'T' || $state === 't');
+}
+
+/**
+ * Collect PIDs for a Pull job (wrapper, children, orphan convert).
+ *
+ * @return int[]
+ */
+function nbd_job_pids(array $j) {
+  $pids = [];
+  $pid = (int)($j['pid'] ?? 0);
+  if ($pid > 1 && @file_exists('/proc/' . $pid)) {
+    $pids[] = $pid;
+    $kids = (string)@shell_exec('pgrep -P ' . $pid . ' 2>/dev/null || true');
+    foreach (preg_split('/\s+/', trim($kids)) as $k) {
+      if ($k !== '' && ctype_digit($k)) {
+        $pids[] = (int)$k;
+      }
+    }
+  }
+  $orphan = nbd_find_orphan_qemu_img($j);
+  if ($orphan > 1) {
+    $pids[] = $orphan;
+  }
+  $out = (string)($j['output'] ?? '');
+  if ($out !== '') {
+    $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
+    foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+      if (preg_match('/^(\d+)\s+(.*)$/', trim($line), $m) && strpos($m[2], $out) !== false) {
+        $pids[] = (int)$m[1];
+      }
+    }
+  }
+  return array_values(array_unique(array_filter($pids, function ($p) {
+    return $p > 1;
+  })));
+}
+
+/**
+ * Pause a running Pull (SIGSTOP) — frees disk IO for parity etc. Slot stays reserved.
+ */
+function nbd_image_pause($id) {
+  $j = nbd_job_load($id);
+  if (!$j) {
+    return ['ok' => false, 'error' => 'Unknown job'];
+  }
+  $st = nbd_job_ui_status($j);
+  // Refresh from live state
+  foreach (nbd_jobs_state() as $live) {
+    if (($live['id'] ?? '') === ($j['id'] ?? '')) {
+      $j = $live;
+      $st = nbd_job_ui_status($j);
+      break;
+    }
+  }
+  if (($st['key'] ?? '') === 'paused') {
+    return ['ok' => true, 'id' => $id, 'already' => true];
+  }
+  if (($st['key'] ?? '') !== 'running') {
+    return ['ok' => false, 'error' => 'Only a Running job can be paused'];
+  }
+  $pids = nbd_job_pids($j);
+  if (!$pids) {
+    return ['ok' => false, 'error' => 'No process to pause'];
+  }
+  foreach ($pids as $p) {
+    @posix_kill($p, 19); // SIGSTOP
+  }
+  $j['status'] = 'paused';
+  $j['paused_at'] = date('c');
+  $log = (string)($j['log'] ?? '');
+  if ($log !== '') {
+    @file_put_contents($log, date('c') . " paused (SIGSTOP)\n", FILE_APPEND);
+  }
+  nbd_job_persist($j);
+  return ['ok' => true, 'id' => $id, 'pids' => $pids];
+}
+
+/**
+ * Resume a paused Pull (SIGCONT).
+ */
+function nbd_image_resume($id) {
+  $j = nbd_job_load($id);
+  if (!$j) {
+    return ['ok' => false, 'error' => 'Unknown job'];
+  }
+  foreach (nbd_jobs_state() as $live) {
+    if (($live['id'] ?? '') === ($j['id'] ?? '')) {
+      $j = $live;
+      break;
+    }
+  }
+  if (($j['status'] ?? '') !== 'paused' && empty(array_filter(nbd_job_pids($j), 'nbd_pid_is_stopped'))) {
+    return ['ok' => false, 'error' => 'Job is not paused'];
+  }
+  $pids = nbd_job_pids($j);
+  if (!$pids) {
+    return ['ok' => false, 'error' => 'No process to resume'];
+  }
+  foreach ($pids as $p) {
+    @posix_kill($p, 18); // SIGCONT
+  }
+  $j['status'] = 'running';
+  $j['resumed_at'] = date('c');
+  unset($j['paused_at']);
+  $log = (string)($j['log'] ?? '');
+  if ($log !== '') {
+    @file_put_contents($log, date('c') . " resumed (SIGCONT)\n", FILE_APPEND);
+  }
+  nbd_job_persist($j);
+  return ['ok' => true, 'id' => $id, 'pids' => $pids];
 }
 
 /**
@@ -1376,7 +1669,7 @@ function nbd_live_snapshot() {
   foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
-    if ($key === 'running') {
+    if ($key === 'running' || $key === 'paused') {
       $live_jobs++;
       $watch = true;
     }
@@ -1385,9 +1678,10 @@ function nbd_live_snapshot() {
       $watch = true;
     }
     $log_tail = '';
-    if (!empty($j['log']) && is_file($j['log']) && in_array($key, ['failed', 'done', 'running', 'queued'], true)) {
-      $log_tail = nbd_log_tail($j['log'], 6);
+    if (!empty($j['log']) && is_file($j['log']) && in_array($key, ['failed', 'done', 'running', 'queued', 'paused'], true)) {
+      $log_tail = nbd_log_tail_display($j['log'], 8);
     }
+    $pct = nbd_job_progress_pct($j);
     $jobs[] = [
       'id' => (string)($j['id'] ?? ''),
       'key' => $key,
@@ -1399,6 +1693,9 @@ function nbd_live_snapshot() {
       'ok' => !empty($j['ok']),
       'orphaned' => !empty($j['orphaned']),
       'array_like' => !empty($j['array_like']),
+      'progress_pct' => $pct,
+      'started' => (string)($j['started'] ?? ''),
+      'started_h' => nbd_format_when($j['started'] ?? ''),
       'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
       'output_size_h' => (string)($j['output_size_h'] ?? '—'),
       'log_tail' => $log_tail,
@@ -1415,12 +1712,16 @@ function nbd_live_snapshot() {
   ];
 }
 
-/** Count Running Pull jobs (wrapper or orphaned qemu-img). */
+/**
+ * Count Pull jobs that occupy a concurrency slot (Running or Paused).
+ * Paused keeps the slot so Resume does not fight a newly kicked queue job.
+ */
 function nbd_count_running_pull_jobs() {
   $n = 0;
   foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
-    if (($st['key'] ?? '') === 'running') {
+    $k = $st['key'] ?? '';
+    if ($k === 'running' || $k === 'paused') {
       $n++;
     }
   }
@@ -1658,8 +1959,12 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     $nice = 19;
   }
   $ionice_args = ($io_class === 'idle') ? '-c3' : '-c2 -n7';
+  $progressfile = NBDEXPORT_RUN . '/' . $id . '.progress';
+  // Progress: qemu-img -p uses CR updates. We turn CR→NL, log only when integer %
+  // changes (timestamped history), and keep .progress as the latest field for UI.
   $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
+    . 'PROG=' . escapeshellarg($progressfile) . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
@@ -1675,9 +1980,28 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . '  sleep 5' . "\n"
     . '  if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . 'done' . "\n"
-    . 'if ! run_img "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>&1; then' . "\n"
-    . '  fail convert' . "\n"
-    . 'fi' . "\n"
+    . 'LAST_PCT=-1' . "\n"
+    . 'set +e' . "\n"
+    . 'run_img "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" 2> >(tr "\\r" "\\n" | while IFS= read -r line; do' . "\n"
+    . '  case "$line" in' . "\n"
+    . '    *"/100%)"*)' . "\n"
+    . '      pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
+    . '      ipct=${pct%%.*}' . "\n"
+    . '      echo "$line" >"$PROG"' . "\n"
+    . '      if [ "$ipct" != "$LAST_PCT" ]; then' . "\n"
+    . '        echo "$(date -Iseconds) progress ($ipct/100%)" >>"$LOG"' . "\n"
+    . '        LAST_PCT=$ipct' . "\n"
+    . '      fi' . "\n"
+    . '      ;;' . "\n"
+    . '    "") ;;' . "\n"
+    . '    *) echo "$(date -Iseconds) $line" >>"$LOG" ;;' . "\n"
+    . '  esac' . "\n"
+    . 'done)' . "\n"
+    . 'CONV_RC=$?' . "\n"
+    . 'set -e' . "\n"
+    . 'if [ "${CONV_RC}" -ne 0 ]; then fail convert; fi' . "\n"
+    . 'echo "$(date -Iseconds) progress (100/100%)" >>"$LOG"' . "\n"
+    . 'echo "(100.00/100%)" >"$PROG"' . "\n"
     . 'run_img "$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
     . 'run_img "$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
     . 'echo NBD_JOB_OK >>"$LOG"' . "\n"

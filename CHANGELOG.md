@@ -6,6 +6,18 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.25ac
+
+- **Dashboard:** custom tile in column3 (same column as Array/Cache/Parity — not a fixed
+  vertical slot; coexists with other plugins; hide/reorder via Tile Management). Shows live
+  Host exports (RO/RW) and active/queued/paused Pulls with %.
+- **Pause / Resume:** SIGSTOP/CONT on Pull converts (slot stays reserved) for parity or other
+  heavy array work.
+- **Progress logging:** integer-% lines get ISO timestamps; `.progress` sidecar holds the
+  latest percent for Status/Dashboard (no more endless `(1%)(2%)…` spam on one line). Status
+  log view collapses old spam; **Started** uses Unraid Date and Time display prefs (Thunderbolt
+  Net–style).
+
 ## 2026.08.25ab
 
 - **Pull queue:** when at max concurrent (default 1), new Pulls are **Queued** with an

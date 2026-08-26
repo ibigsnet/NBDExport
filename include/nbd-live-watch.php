@@ -47,7 +47,7 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     }
     list = snap.jobs || [];
     for (i = 0; i < list.length; i++) {
-      if (list[i].key === 'running' || list[i].key === 'queued') return true;
+      if (list[i].key === 'running' || list[i].key === 'queued' || list[i].key === 'paused') return true;
     }
     return false;
   }
@@ -91,15 +91,29 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var size = row.querySelector('.nbd-live-job-size');
     if (size && item.output_size_h) size.textContent = item.output_size_h;
     var running = item.key === 'running';
+    var paused = item.key === 'paused';
     var queued = item.key === 'queued';
+    var pause = row.querySelector('.nbd-live-job-pause-form');
+    if (pause) pause.style.display = running ? 'inline' : 'none';
+    var resume = row.querySelector('.nbd-live-job-resume-form');
+    if (resume) resume.style.display = paused ? 'inline' : 'none';
     var stop = row.querySelector('.nbd-live-job-stop-form');
-    if (stop) stop.style.display = running ? 'inline' : 'none';
+    if (stop) stop.style.display = (running || paused) ? 'inline' : 'none';
     var play = row.querySelector('.nbd-live-job-play-form');
     if (play) play.style.display = queued ? 'inline' : 'none';
     var force = row.querySelector('.nbd-live-job-force-form');
     if (force) force.style.display = queued ? 'inline' : 'none';
     var cancel = row.querySelector('.nbd-live-job-cancel-form');
     if (cancel) cancel.style.display = queued ? 'inline' : 'none';
+    var pctEl = row.querySelector('.nbd-live-job-pct');
+    if (pctEl && item.progress_pct != null && item.progress_pct !== '') {
+      var p = Number(item.progress_pct);
+      pctEl.textContent = isFinite(p) ? (Math.round(p * 10) / 10) + '%' : '—';
+    }
+    var size = row.querySelector('.nbd-live-job-size');
+    if (size && item.output_size_h) size.textContent = ' · ' + item.output_size_h;
+    var started = row.querySelector('.nbd-live-job-started');
+    if (started && item.started_h) started.textContent = item.started_h;
     var logRow = document.querySelector('tr[data-nbd-job-log="' + cssEscape(item.id) + '"]');
     if (logRow && item.log_tail != null) {
       var pre = logRow.querySelector('.nbd-live-job-log, pre.nbd-log');

@@ -196,6 +196,18 @@ try {
       }
       break;
 
+    case 'image_pause':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $r = nbd_image_pause($id);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'pause failed')) : ('Paused job ' . $id));
+      break;
+
+    case 'image_resume':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $r = nbd_image_resume($id);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'resume failed')) : ('Resumed job ' . $id));
+      break;
+
     case 'preset_save_host':
       $name = trim((string)($_POST['preset_name'] ?? ''));
       $bind_raw = $_POST['bind'] ?? [];
