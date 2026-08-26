@@ -6,6 +6,11 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26aq
+
+- **UI prose:** History toolbar tip → short Unraid `inline_help` (no muted essay).
+  Logs tab lead trimmed the same way.
+
 ## 2026.08.26ap
 
 - **Logs tab:** new tab lists full plugin logs under `/var/log/nbdexport/` (Pull, Host,

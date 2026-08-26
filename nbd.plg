@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ap">
+<!ENTITY version "2026.08.26aq">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,9 @@
 
 <CHANGES>
 ###&version;
+- History/Logs help: short inline_help (no essay tips under the toolbar).
+
+###2026.08.26ap
 - Logs tab: full /var/log/nbdexport history (survives History clear); Clear log top and bottom.
 
 ###2026.08.26ao–an

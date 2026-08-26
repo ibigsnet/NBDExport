@@ -23,8 +23,7 @@ $n_live = $n_logs - $n_clearable;
   <div class="nbd-section" style="margin-top:0">
     <h3>Logs</h3>
     <p class="nbd-section-lead">
-      Full plugin logs under <code>/var/log/nbdexport/</code> (Pull jobs, Host exports, beacon).
-      These survive <strong>Status → History → Remove from list</strong>. Use <strong>Clear log</strong> to wipe finished logs; live job/host logs are kept.
+      Plugin logs under <code>/var/log/nbdexport/</code>. Survive History clear; <strong>Clear log</strong> removes finished only.
     </p>
   </div>
 
@@ -37,14 +36,11 @@ $n_live = $n_logs - $n_clearable;
         <input type="hidden" name="nbd_action" value="logs_clear">
         <input type="submit" name="#apply" value="Clear log"
           <?= $n_clearable < 1 ? 'disabled title="No finished logs to clear"' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.5em;font-size:0.9em">
-          <?= (int)$n_clearable ?> finished · <?= (int)$n_live ?> live kept
-        </span>
       </form>
     </div>
 
 <?php if (!$logs): ?>
-    <p class="nbd-empty">No log files yet. Run a Host or Pull — logs appear here and remain after History clear.</p>
+    <p class="nbd-empty">No log files yet.</p>
 <?php else: ?>
     <div class="nbd-log-list">
 <?php foreach ($logs as $L):
@@ -88,9 +84,6 @@ $n_live = $n_logs - $n_clearable;
         <input type="hidden" name="nbd_action" value="logs_clear">
         <input type="submit" name="#apply" value="Clear log"
           <?= $n_clearable < 1 ? 'disabled title="No finished logs to clear"' : '' ?>>
-        <span class="nbd-muted" style="margin-left:0.5em;font-size:0.9em">
-          <?= (int)$n_clearable ?> finished · <?= (int)$n_live ?> live kept
-        </span>
       </form>
     </div>
 <?php endif; ?>

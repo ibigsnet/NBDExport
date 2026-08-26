@@ -137,12 +137,11 @@ foreach ($jobs_history as $j) {
               onclick="return nbdJobsClearClick(true);">
           </span>
         </form>
-        <p class="nbd-muted" style="margin:0.35em 0 0;font-size:0.9em">
-          <strong>Checkboxes / Remove from list</strong> only hide History rows (qcow2/raw and log files stay).
-          Full logs remain on the <strong>Logs</strong> tab until you Clear log there.
-          <strong>Delete image</strong> on a card frees the qcow2/raw.
-          <strong>Retry</strong> starts over: drops that History row, and deletes the incomplete file when the output path is unchanged.
-        </p>
+        <blockquote class="inline_help">
+          <strong>Remove from list</strong> — Status cards only (images and logs stay; see <strong>Logs</strong>).
+          <strong>Delete image</strong> — frees the qcow2/raw.
+          <strong>Retry</strong> — new Pull; same path deletes the incomplete file.
+        </blockquote>
       </div>
 <?php endif; ?>
       <div class="nbd-job-list">
