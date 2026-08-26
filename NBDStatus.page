@@ -80,17 +80,30 @@ nbd_page_styles();
   $tail = !empty($j['log']) ? nbd_log_tail_display($j['log'], 8) : '';
   $open_log = ($running || $paused) ? ' open' : '';
 ?>
+<?php
+  $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
+  $elapsed_h = ($elapsed !== null) ? nbd_format_duration($elapsed) : '';
+  $rates = ($running && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : ['net_h' => '', 'disk_h' => ''];
+  $net_h = (string)($rates['net_h'] ?? '');
+  $disk_h = (string)($rates['disk_h'] ?? '');
+  if ($running && $eta_h === '' && function_exists('nbd_job_progress_eta')) {
+    $eta_h = 'ETA…';
+  }
+?>
         <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>">
           <div class="nbd-job-card-top">
             <span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
               data-nbd-key="<?= htmlspecialchars($jkey) ?>"
               title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span>
-            <span class="nbd-live-job-progress">
+            <span class="nbd-live-job-metrics">
               <span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
+              <span class="nbd-muted nbd-live-job-elapsed"><?= $elapsed_h !== '' ? (' · ' . htmlspecialchars($elapsed_h) . ' elapsed') : '' ?></span>
               <span class="nbd-muted nbd-live-job-eta"><?= $eta_h !== '' ? (' · ' . htmlspecialchars($eta_h)) : '' ?></span>
               <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span>
+              <span class="nbd-muted nbd-live-job-net"><?= $net_h !== '' ? (' · net ' . htmlspecialchars($net_h)) : '' ?></span>
+              <span class="nbd-muted nbd-live-job-disk"><?= $disk_h !== '' ? (' · disk ' . htmlspecialchars($disk_h)) : '' ?></span>
             </span>
-            <span class="nbd-muted nbd-live-job-started"><?= nbd_format_when_html($j['started'] ?? '') ?></span>
+            <span class="nbd-muted nbd-live-job-started">started <?= nbd_format_when_html($j['started'] ?? '') ?></span>
           </div>
           <div class="nbd-job-card-meta">
             <code class="nbd-job-path" title="<?= htmlspecialchars($src) ?>"><?= htmlspecialchars($src_short) ?></code>

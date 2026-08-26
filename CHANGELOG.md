@@ -6,6 +6,17 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ag
+
+- **Progress `%` (real fix):** drop fragile `qemu-img -p` CR + process-substitution. Convert
+  without `-p`; poll **SIGUSR1** every ~4s and parse `(N/100%)` into `.progress` /
+  `.progress.hist` (works under ionice/nice).
+- **Status metrics:** `% · elapsed · ETA · size · net …/s · disk …/s` (nowrap units). Live
+  poll updates rates from peer-route RX + output file growth.
+- **Busy upgrade refuse:** louder Plugins-tab message (Pause/Stop first; protects scheduled
+  updates). Post-install **reconcile** when a busy upgrade was allowed.
+- **Uninstall:** explicitly stop managed Hosts/Pulls before wipe (no orphan converts).
+
 ## 2026.08.26af
 
 - **Dashboard tile fix:** do not emit `<style>` before the `<tbody>` — that split the parent

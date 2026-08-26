@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26af">
+<!ENTITY version "2026.08.26ag">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,13 @@
 
 <CHANGES>
 ###&version;
+- Reliable Pull progress via SIGUSR1; Status shows % / elapsed / ETA / net / disk rates; clearer busy-upgrade refuse; post-install reconcile.
+
+###2026.08.26af
 - Fix Dashboard tile (no style before tbody); Status job cards with truncated paths and collapsed logs.
 
 ###2026.08.26ae
-- Fix Pull progress %; ETA from recent rate; clearer /mnt/user ENOSPC warn.
+- Attempted progress via stdbuf (insufficient); /mnt/user ENOSPC warn.
 
 ###2026.08.26ad
 - Robust uninstall: always exit 0 (CA no-op fix); wipe legacy dirs/packages; stop beacon/jobs.
@@ -65,13 +68,15 @@ if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
     $c=nbd_load_cfg(); echo (($c["allow_upgrade_while_busy"]??"no")==="yes")?"1":"0";
   ' 2>/dev/null || echo 0)
   if [ "$BUSY" = "1" ] && [ "${NBD_FORCE_UPGRADE:-0}" != "1" ] && [ "$ALLOW" != "1" ]; then
-    echo "NBD Export: REFUSING upgrade — busy ($SUMMARY)."
-    echo "NBD Export: Pause/Stop Hosts and Pulls first, or set Settings → Allow upgrade while busy = Yes,"
-    echo "NBD Export: or run: NBD_FORCE_UPGRADE=1 plugin update …"
+    echo "NBD Export: REFUSING plugin update while busy ($SUMMARY)."
+    echo "NBD Export: Pause or Stop Hosts/Pulls on the Status tab, then Update again."
+    echo "NBD Export: (Protects scheduled/CA auto-updates from swapping code under a live convert.)"
+    echo "NBD Export: Or: Settings → Allow upgrade while busy = Yes — or: NBD_FORCE_UPGRADE=1 plugin update …"
     exit 1
   fi
   if [ "$BUSY" = "1" ]; then
-    echo "NBD Export: WARNING — upgrading while busy ($SUMMARY); live qemu processes are left running."
+    echo "NBD Export: WARNING — upgrading while busy ($SUMMARY); live qemu/Host processes are left running."
+    echo "NBD Export: Post-install will reconcile UI to those processes (in-flight job keeps its old progress wrapper)."
   fi
 fi
 # One-time legacy flash rename (NbdExport → NBDExport)
@@ -122,6 +127,8 @@ if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
 fi
 # Companion marker only. UD HeadInline inject only when user enables overlay (Settings).
 php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); $c=nbd_load_cfg(); if (($c["ud_status_overlay"]??"no")==="yes") { nbd_ud_overlay_inject(); } else { nbd_ud_overlay_uninject(); }' 2>/dev/null || true
+# Reattach live Hosts/Pulls after upgrade (qemu left running when busy-upgrade allowed)
+php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_reconcile_live")) { $r=nbd_reconcile_live(); echo "NBD Export: reconcile hosts=".($r["hosts"]??0)." pulls=".($r["pulls"]??0)." external=".($r["external"]??0)."\n"; }' 2>/dev/null || true
 echo "NBD Export: packages now: $(ls /var/log/packages/NBDExport-* 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
 echo "NBD Export: install complete."
 echo "NBD Export: Settings → Network Services → NBD"
@@ -142,8 +149,9 @@ if [ -f "$LIB" ]; then
   # One-liners only — multiline php -r is fragile under /bin/bash + plugin popen
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_ud_overlay_uninject")) nbd_ud_overlay_uninject();' >/dev/null 2>&1
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_beacon_stop")) nbd_beacon_stop();' >/dev/null 2>&1
+  echo "NBD Export: stopping managed Hosts and Pulls before wipe..."
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_stop_all_exports")) nbd_stop_all_exports();' >/dev/null 2>&1
-  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (!function_exists("nbd_jobs_state")||!function_exists("nbd_image_stop")) exit(0); foreach (nbd_jobs_state() as $j) { if (!empty($j["id"])) nbd_image_stop($j["id"]); }' >/dev/null 2>&1
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (!function_exists("nbd_jobs_state")||!function_exists("nbd_image_stop")) exit(0); foreach (nbd_jobs_state() as $j) { if (!empty($j["id"])) { echo "NBD Export: stop ".$j["id"]."\n"; nbd_image_stop($j["id"]); } }' 2>/dev/null || true
 fi
 
 # Strip UD overlay inject from known layout files (StorageGuard pattern)

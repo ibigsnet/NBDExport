@@ -114,15 +114,31 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
         pctEl.textContent = '—';
       }
     }
+    var elEl = row.querySelector('.nbd-live-job-elapsed');
+    if (elEl) {
+      var elh = item.elapsed_h ? String(item.elapsed_h) : '';
+      elEl.textContent = elh ? (' · ' + elh + ' elapsed') : '';
+    }
     var etaEl = row.querySelector('.nbd-live-job-eta');
     if (etaEl) {
       var eh = item.eta_h ? String(item.eta_h) : '';
+      if (!eh && item.key === 'running') eh = 'ETA…';
       etaEl.textContent = eh ? (' · ' + eh) : '';
     }
     var size = row.querySelector('.nbd-live-job-size');
     if (size && item.output_size_h) size.textContent = ' · ' + item.output_size_h;
+    var netEl = row.querySelector('.nbd-live-job-net');
+    if (netEl) {
+      var nh = item.rate_net_h ? String(item.rate_net_h) : '';
+      netEl.textContent = nh ? (' · net ' + nh) : '';
+    }
+    var diskEl = row.querySelector('.nbd-live-job-disk');
+    if (diskEl) {
+      var dh = item.rate_disk_h ? String(item.rate_disk_h) : '';
+      diskEl.textContent = dh ? (' · disk ' + dh) : '';
+    }
     var started = row.querySelector('.nbd-live-job-started');
-    if (started && item.started_h) started.textContent = item.started_h;
+    if (started && item.started_h) started.textContent = 'started ' + item.started_h;
     var logBox = row.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]')
       || document.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]');
     if (logBox && item.log_tail != null) {

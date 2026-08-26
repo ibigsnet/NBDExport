@@ -240,6 +240,18 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-job-card-top {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.45em 0.75em; margin-bottom: 0.35em;
 }
+.nbd-wrap .nbd-live-job-metrics {
+  display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.15em;
+  font-variant-numeric: tabular-nums; white-space: normal;
+}
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-size,
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-pct,
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-elapsed,
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-eta,
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-net,
+.nbd-wrap .nbd-live-job-metrics .nbd-live-job-disk {
+  white-space: nowrap;
+}
 .nbd-wrap .nbd-job-card-meta { font-size: 0.92em; line-height: 1.45; }
 .nbd-wrap .nbd-job-card-meta .nbd-job-path {
   display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font-size: 0.9em;
