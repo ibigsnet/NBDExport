@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26al">
+<!ENTITY version "2026.08.26am">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- History toolbar wording: Checkboxes vs Remove from list (no Clear selection/selected clash).
+- Fix convert killed by SIGUSR1 (rc=138); progress via -p file poll; keep exec PID fix.
+
+###2026.08.26al
+- History toolbar wording: Checkboxes vs Remove from list.
 
 ###2026.08.26ak
 - Retry auto-clears History and same-path output; Clear is list-only.
