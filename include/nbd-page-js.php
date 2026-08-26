@@ -538,32 +538,71 @@ if (!isset($presets) || !is_array($presets)) {
     } catch (e) { /* ignore */ }
   };
 
-  /** Local-file source: VM-style tree via hidden pick field (keeps nbd:// field free of /mnt tree). */
+  /**
+   * Stock fileTreeAttach registers document mousedown to dismiss overlays.
+   * That race makes absolute trees flash open/closed. Keep the tree open when
+   * the gesture starts on the input or its tree (Browse.page pattern).
+   */
+  function nbdGuardFileTreeDismiss(inputEl) {
+    if (!inputEl || inputEl.dataset.nbdFtGuard === '1') return;
+    var stop = function (e) {
+      e.stopPropagation();
+    };
+    inputEl.addEventListener('mousedown', stop, true);
+    inputEl.addEventListener('click', stop, true);
+    var tree = inputEl.nextElementSibling;
+    if (tree && tree.classList && tree.classList.contains('fileTree')) {
+      tree.addEventListener('mousedown', stop, true);
+    }
+    inputEl.dataset.nbdFtGuard = '1';
+  }
+
+  function nbdAttachFileTreeOnce(inputEl, onFile, onFolder) {
+    if (!inputEl || typeof window.jQuery === 'undefined' || typeof jQuery.fn.fileTreeAttach !== 'function') {
+      return false;
+    }
+    if (inputEl.dataset.nbdFt === '1') {
+      nbdGuardFileTreeDismiss(inputEl);
+      return true;
+    }
+    // Drop a stale tree node from a previous attach (tab re-entry)
+    var next = inputEl.nextElementSibling;
+    if (next && next.classList && next.classList.contains('fileTree')) {
+      next.parentNode.removeChild(next);
+    }
+    jQuery(inputEl).fileTreeAttach(null, onFile || null, onFolder || null);
+    inputEl.dataset.nbdFt = '1';
+    nbdGuardFileTreeDismiss(inputEl);
+    // Guard the tree node created by fileTreeAttach
+    var tree = inputEl.nextElementSibling;
+    if (tree && tree.classList && tree.classList.contains('fileTree')) {
+      tree.addEventListener('mousedown', function (e) { e.stopPropagation(); }, true);
+    }
+    return true;
+  }
+
+  /** Local-file source: VM-style tree via pick field (keeps nbd:// field free of /mnt tree). */
   window.nbdBrowseLocalSource = function () {
     var pick = document.getElementById('nbd_src_pick');
     var url = document.getElementById('nbd_url');
     if (!pick || !url) return;
-    if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.fileTreeAttach !== 'function') {
+    var ok = nbdAttachFileTreeOnce(
+      pick,
+      function (file) {
+        url.value = String(file || '');
+        try { jQuery(url).trigger('change'); } catch (e) { /* ignore */ }
+      },
+      function (folder) {
+        var next = String(folder || '');
+        if (/\.(qcow2|qcow|img|raw|dd|bin)$/i.test(next.split('/').pop() || '')) {
+          url.value = next;
+          try { jQuery(url).trigger('change'); } catch (e) { /* ignore */ }
+        }
+      }
+    );
+    if (!ok) {
       window.alert('Folder browser unavailable (jquery.filetree.js not loaded). Type the /mnt path instead.');
       return;
-    }
-    if (!pick.dataset.nbdFt) {
-      jQuery(pick).fileTreeAttach(
-        null,
-        function (file) {
-          url.value = String(file || '');
-          try { jQuery(url).trigger('change'); } catch (e) { /* ignore */ }
-        },
-        function (folder) {
-          // Expanding folders fills the pick field; only copy into source when it looks like a file
-          var next = String(folder || '');
-          if (/\.(qcow2|qcow|img|raw|dd|bin)$/i.test(next.split('/').pop() || '')) {
-            url.value = next;
-            try { jQuery(url).trigger('change'); } catch (e) { /* ignore */ }
-          }
-        }
-      );
-      pick.dataset.nbdFt = '1';
     }
     jQuery(pick).trigger('click');
   };
@@ -598,23 +637,25 @@ if (!isset($presets) || !is_array($presets)) {
     var fmt = document.getElementById('nbd_format');
     if (!out && !fmt) return;
     if (out) {
-      out.addEventListener('input', window.nbdUpdateExtHint);
-      out.addEventListener('change', window.nbdUpdateExtHint);
-      // Stock Unraid browse-from-/mnt (same jquery.filetree.js as VM templates / Docker)
-      if (typeof window.jQuery !== 'undefined' && typeof jQuery.fn.fileTreeAttach === 'function') {
-        jQuery(out).fileTreeAttach(null, function (file) {
-          out.value = String(file || '');
-          try { jQuery(out).trigger('change'); } catch (e) { /* ignore */ }
-          window.nbdUpdateExtHint();
-        }, function (folder) {
-          nbdApplyFolderPick(out, folder);
-        });
-      } else if (window.console && console.warn) {
+      if (!out.dataset.nbdHintWired) {
+        out.addEventListener('input', window.nbdUpdateExtHint);
+        out.addEventListener('change', window.nbdUpdateExtHint);
+        out.dataset.nbdHintWired = '1';
+      }
+      // Same jquery.filetree.js as VM/Docker; CSS makes it in-flow like VM templates
+      if (!nbdAttachFileTreeOnce(out, function (file) {
+        out.value = String(file || '');
+        try { jQuery(out).trigger('change'); } catch (e) { /* ignore */ }
+        window.nbdUpdateExtHint();
+      }, function (folder) {
+        nbdApplyFolderPick(out, folder);
+      }) && window.console && console.warn) {
         console.warn('NBD Export: jquery.filetree.js missing — output path click-browse disabled');
       }
     }
-    if (fmt) {
+    if (fmt && !fmt.dataset.nbdHintWired) {
       fmt.addEventListener('change', window.nbdUpdateExtHint);
+      fmt.dataset.nbdHintWired = '1';
     }
     if (typeof window.nbdSourceTypeChanged === 'function') {
       window.nbdSourceTypeChanged();

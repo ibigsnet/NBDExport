@@ -6,6 +6,12 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ab
+
+- **Pull fileTree layout:** match VM templates — `position: relative` in-flow tree that
+  pushes the page down (not the stock absolute overlay). Stop document-mousedown from
+  dismissing the tree on the same click that opens it (flash open/close). Attach once only.
+
 ## 2026.08.26aa
 
 - **Pull path browser fix:** load stock Unraid `jquery.filetree.js` (CSS was present but the
