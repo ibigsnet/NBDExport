@@ -6,6 +6,14 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ap
+
+- **Logs tab:** new tab lists full plugin logs under `/var/log/nbdexport/` (Pull, Host,
+  beacon) with expand-to-read and **Clear log** at top and bottom (live logs kept).
+- **History Clear keeps logs:** Status → Remove from list no longer deletes job `.log`
+  files — only run JSON/sidecars. Wipe logs from the Logs tab.
+- Tab order: Status · Host · Pull · **Logs** · Settings · Help.
+
 ## 2026.08.26ao
 
 - **Found a bug?** When a Failed job’s Reason is **outside** the known map, Status shows a

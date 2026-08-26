@@ -1,4 +1,4 @@
-Menu="NBDExport:5"
+Menu="NBDExport:6"
 Title="Help"
 Tag="question-circle"
 Markdown="false"
@@ -23,7 +23,8 @@ nbd_page_styles();
     <h3>Safe Mode / offline (this Unraid)</h3>
     <p class="nbd-muted">
       In <strong>Safe Mode</strong> the plugin UI does not load. Use the console or SSH.
-      Plugin-managed hosts store state under <code>/var/run/nbdexport/</code>; pull job logs under <code>/var/log/nbdexport/</code>.
+      Plugin-managed hosts store state under <code>/var/run/nbdexport/</code>;
+      logs under <code>/var/log/nbdexport/</code> (also the <strong>Logs</strong> tab — survives History clear).
     </p>
     <pre class="nbd-cli"># Stop every plugin-managed Host export
 /usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop all

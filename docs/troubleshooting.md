@@ -79,6 +79,13 @@ If a client can **modify** sectors on a Host you believe is read-only:
 
 UI is **tabs** (Status · Host · Pull · Settings), not numbered sections. Update the plugin and hard-refresh. Docs live in this repo under `docs/`.
 
+## Logs tab vs Status History
+
+- **Status → History** shows job **cards** (run JSON under `/var/run/nbdexport/`).
+  **Remove from list** drops those cards only — **log files stay** under `/var/log/nbdexport/`.
+- **Logs** tab lists every `*.log` there (Pull, Host, beacon), including after History clear.
+  **Clear log** (top and bottom) deletes finished logs; live job/host/beacon logs are kept.
+
 ## Pull job failure codes (Status “Reason”)
 
 Status maps wrapper tokens, exit codes, and common qemu messages to a short **Reason**

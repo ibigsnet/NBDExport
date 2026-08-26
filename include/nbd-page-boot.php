@@ -309,6 +309,27 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-bug-actions { margin: 0.45em 0 0; }
 .nbd-wrap .nbd-job-card details.nbd-job-log { margin-top: 0.45em; font-size: 0.9em; }
 .nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
+.nbd-wrap .nbd-logs-toolbar {
+  margin: 0 0 0.75em; padding: 0.55em 0.65em;
+  border: 1px solid rgba(128,128,128,0.3); border-radius: 6px;
+  background: rgba(128,128,128,0.06);
+}
+.nbd-wrap .nbd-logs-toolbar-bottom { margin: 0.85em 0 0; }
+.nbd-wrap .nbd-logs-clear-form {
+  display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; margin: 0;
+}
+.nbd-wrap .nbd-log-list { display: flex; flex-direction: column; gap: 0.55em; margin: 0.5em 0 0; }
+.nbd-wrap details.nbd-log-file {
+  border: 1px solid rgba(128,128,128,0.35); border-radius: 6px;
+  padding: 0.45em 0.65em; background: rgba(128,128,128,0.05);
+}
+.nbd-wrap details.nbd-log-file summary {
+  cursor: pointer; font-size: 0.95em; line-height: 1.45;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35em 0.55em;
+}
+.nbd-wrap details.nbd-log-file pre.nbd-log-full {
+  max-height: 28em; overflow: auto; margin: 0.45em 0 0.15em;
+}
 .nbd-wrap .nbd-job-section-title { margin: 1.1em 0 0.45em; font-size: 1.05em; }
 .nbd-wrap .nbd-jobs-toolbar {
   margin: 0 0 0.65em; padding: 0.55em 0.65em;

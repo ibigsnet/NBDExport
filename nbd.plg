@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ao">
+<!ENTITY version "2026.08.26ap">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Unknown Failures: Found a bug? (plugin diagnostics, forum/GitHub, Tools → Diagnostics); broader Reason map.
+- Logs tab: full /var/log/nbdexport history (survives History clear); Clear log top and bottom.
 
-###2026.08.26an
-- Failed jobs show a short Reason (exit code / NBD_JOB_FAIL / qemu message map).
+###2026.08.26ao–an
+- Failure Reason map; Found a bug? diagnostics (forum/GitHub/Tools → Diagnostics).
 
 ###2026.08.26am–aj
 - Convert PID and SIGUSR1 (rc=138) fixes; History Clear/Retry/Delete wording; net Gb/s.

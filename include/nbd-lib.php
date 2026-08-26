@@ -2925,7 +2925,9 @@ function nbd_job_is_clearable(array $j) {
 }
 
 /**
- * Remove one finished job's run-state (+ log). Does not delete the output image.
+ * Remove one finished job's run-state from Status History.
+ * Keeps /var/log/nbdexport/<id>.log for the Logs tab (Clear log wipes those).
+ * Does not delete the output image.
  */
 function nbd_job_clear_one($id) {
   $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
@@ -2938,7 +2940,6 @@ function nbd_job_clear_one($id) {
   } elseif (!nbd_job_is_clearable($j)) {
     return ['ok' => false, 'error' => 'Stop or cancel the job before clearing'];
   }
-  $log = is_array($j) ? (string)($j['log'] ?? '') : '';
   foreach ([
     NBDEXPORT_RUN . '/' . $id . '.json',
     NBDEXPORT_RUN . '/' . $id . '.pid',
@@ -2950,13 +2951,163 @@ function nbd_job_clear_one($id) {
       @unlink($f);
     }
   }
-  if ($log === '') {
-    $log = NBDEXPORT_LOG . '/' . $id . '.log';
-  }
-  if ($log !== '' && is_file($log)) {
-    @unlink($log);
-  }
+  // Log file intentionally kept — see Logs tab / nbd_logs_clear().
   return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * Basename → whether that log is tied to a live Host/Pull (must not Clear).
+ * @return array<string,true>
+ */
+function nbd_logs_in_use_basenames() {
+  $live = [];
+  foreach (function_exists('nbd_jobs_state') ? nbd_jobs_state() : [] as $j) {
+    $st = nbd_job_ui_status($j);
+    $k = $st['key'] ?? '';
+    if (!in_array($k, ['running', 'paused', 'queued'], true)) {
+      continue;
+    }
+    $log = (string)($j['log'] ?? '');
+    if ($log === '') {
+      $id = (string)($j['id'] ?? '');
+      if ($id !== '') {
+        $log = NBDEXPORT_LOG . '/' . $id . '.log';
+      }
+    }
+    if ($log !== '' && is_file($log)) {
+      $live[basename($log)] = true;
+    }
+  }
+  foreach (function_exists('nbd_exports_state') ? nbd_exports_state() : [] as $e) {
+    $alive = !empty($e['alive']) || !empty($e['listening']);
+    if (!$alive) {
+      continue;
+    }
+    $id = (string)($e['id'] ?? '');
+    if ($id === '') {
+      continue;
+    }
+    $log = (string)($e['log'] ?? (NBDEXPORT_LOG . '/' . $id . '.log'));
+    if ($log !== '' && is_file($log)) {
+      $live[basename($log)] = true;
+    }
+  }
+  // Beacon while its process is up
+  $beacon_pidfile = function_exists('nbd_beacon_pidfile') ? nbd_beacon_pidfile() : (NBDEXPORT_RUN . '/beacon-http.pid');
+  $beacon_log = function_exists('nbd_beacon_logfile') ? nbd_beacon_logfile() : (NBDEXPORT_LOG . '/beacon-http.log');
+  $bpid = 0;
+  if (is_file($beacon_pidfile)) {
+    $bpid = (int)trim((string)@file_get_contents($beacon_pidfile));
+  }
+  if ($bpid > 0 && @file_exists('/proc/' . $bpid) && is_file($beacon_log)) {
+    $live[basename($beacon_log)] = true;
+  }
+  return $live;
+}
+
+/**
+ * List plugin log files under /var/log/nbdexport (newest first).
+ * @return list<array{name:string,path:string,kind:string,size:int,size_h:string,mtime:int,mtime_h:string,in_use:bool}>
+ */
+function nbd_list_log_files() {
+  nbd_ensure_runtime_dirs();
+  $live = nbd_logs_in_use_basenames();
+  $out = [];
+  foreach (glob(NBDEXPORT_LOG . '/*.log') ?: [] as $path) {
+    if (!is_file($path)) {
+      continue;
+    }
+    $name = basename($path);
+    $kind = 'other';
+    if (strpos($name, 'job-') === 0) {
+      $kind = 'job';
+    } elseif ($name === 'beacon-http.log') {
+      $kind = 'beacon';
+    } elseif (preg_match('/^[A-Za-z0-9._-]+\.log$/', $name)) {
+      $kind = 'host';
+    }
+    $size = (int)@filesize($path);
+    $mtime = (int)@filemtime($path);
+    $out[] = [
+      'name' => $name,
+      'path' => $path,
+      'kind' => $kind,
+      'size' => $size,
+      'size_h' => function_exists('nbd_format_bytes') ? nbd_format_bytes($size) : ((string)$size . ' B'),
+      'mtime' => $mtime,
+      'mtime_h' => $mtime > 0 ? date('Y-m-d H:i:s', $mtime) : '—',
+      'in_use' => !empty($live[$name]),
+    ];
+  }
+  usort($out, function ($a, $b) {
+    return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
+  });
+  return $out;
+}
+
+/**
+ * Read log for Logs tab (full file, or last $max_bytes if larger).
+ * @return array{text:string,truncated:bool,size:int}
+ */
+function nbd_log_read_display($path, $max_bytes = 204800) {
+  $path = (string)$path;
+  $max_bytes = max(4096, (int)$max_bytes);
+  if ($path === '' || !is_file($path)) {
+    return ['text' => '', 'truncated' => false, 'size' => 0];
+  }
+  // Only allow files under our log dir
+  $real = realpath($path);
+  $root = realpath(NBDEXPORT_LOG);
+  if ($real === false || $root === false || strpos($real, $root . DIRECTORY_SEPARATOR) !== 0) {
+    return ['text' => '', 'truncated' => false, 'size' => 0];
+  }
+  $size = (int)@filesize($real);
+  if ($size <= $max_bytes) {
+    $text = (string)@file_get_contents($real);
+    return ['text' => $text, 'truncated' => false, 'size' => $size];
+  }
+  $fh = @fopen($real, 'rb');
+  if (!$fh) {
+    return ['text' => '', 'truncated' => true, 'size' => $size];
+  }
+  @fseek($fh, -$max_bytes, SEEK_END);
+  $text = (string)@stream_get_contents($fh);
+  @fclose($fh);
+  // Drop partial first line after seek
+  $nl = strpos($text, "\n");
+  if ($nl !== false && $nl < 512) {
+    $text = substr($text, $nl + 1);
+  }
+  return ['text' => $text, 'truncated' => true, 'size' => $size];
+}
+
+/**
+ * Wipe finished plugin logs (keep live job/host/beacon logs).
+ * @return array{ok:bool,deleted:string[],kept:string[],error?:string}
+ */
+function nbd_logs_clear() {
+  nbd_ensure_runtime_dirs();
+  $live = nbd_logs_in_use_basenames();
+  $deleted = [];
+  $kept = [];
+  foreach (glob(NBDEXPORT_LOG . '/*.log') ?: [] as $path) {
+    if (!is_file($path)) {
+      continue;
+    }
+    $name = basename($path);
+    if (!empty($live[$name])) {
+      $kept[] = $name;
+      continue;
+    }
+    if (@unlink($path)) {
+      $deleted[] = $name;
+    }
+  }
+  return [
+    'ok' => true,
+    'deleted' => $deleted,
+    'kept' => $kept,
+  ];
 }
 
 /**
