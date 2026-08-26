@@ -23,7 +23,7 @@ Legend: **Done** · **Partial** · **Open** · **Won’t** (decided against)
 |---|------|--------|-------|
 | P1 | Progress % / ETA sticky `ETA…` / 0% vs log | **Partial** | `26ar`: max(sidecar,raw,log); hide ETA until move. Soak on live multi-TiB pulls still needed. |
 | P2 | Pause/Stop button height mismatch | **Partial** | `26ar` CSS + `inline-flex`. Confirm after hard-refresh. |
-| P3 | Status / Dashboard formatting (cards, metrics, sections) | **Partial** | Tip3 shipped Active/Queued/History; Dashboard body still ad-hoc inline styles, truncated paths. |
+| P3 | Status / Dashboard formatting (cards, metrics, sections) | **Partial** | Tip3 shipped Active/Queued/History; Dashboard paths full+wrap as of `26at` (no hard truncate). |
 | P4 | Units: GB/TB, Mb/s / MB/s, Gb/s ≥ 1G | **Done** | Shipped; confirm Dashboard uses same helpers. |
 | P5 | Failure Reason map + Found a bug? | **Done** | `26an`/`26ao`. |
 | P6 | Logs tab + History clear keeps logs | **Done** | `26ap`/`26aq`. |

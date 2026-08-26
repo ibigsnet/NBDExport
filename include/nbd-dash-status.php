@@ -5,6 +5,8 @@
  *
  * Intentionally uses nbd_jobs_state() only (no full external qemu-img ps scan
  * on every poll). Status tab still shows External converts.
+ *
+ * Paths/URLs: full text, CSS wrap — no hard PHP truncation.
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -40,21 +42,20 @@ try {
     $watch = true;
     $pct = nbd_job_progress_pct($j);
     $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
+    $eta_h = trim((string)($eta['label'] ?? ''));
+    // Never show sticky placeholders on the tile
+    if ($eta_h === '' || $eta_h === 'ETA…' || $eta_h === 'ETA...' || strcasecmp($eta_h, 'estimating…') === 0) {
+      $eta_h = '';
+    }
     $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
     $rates = ($key === 'running' && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : [];
-    $out = (string)($j['output'] ?? '');
-    $short = $out;
-    if (strlen($short) > 42) {
-      $short = '…' . substr($short, -40);
-    }
     $pulls[] = [
       'url' => (string)($j['url'] ?? ''),
-      'out' => $out,
-      'short' => $short,
+      'out' => (string)($j['output'] ?? ''),
       'key' => $key,
       'label' => (string)($st['label'] ?? $key),
       'pct' => $pct,
-      'eta' => (string)($eta['label'] ?? ''),
+      'eta' => $eta_h,
       'elapsed' => ($elapsed !== null) ? nbd_format_duration($elapsed) : '',
       'net' => (string)($rates['net_h'] ?? ''),
       'disk' => (string)($rates['disk_h'] ?? ''),
@@ -71,14 +72,17 @@ try {
     ? ($n_host . ' host' . ($n_host === 1 ? '' : 's') . ' · ' . $n_pull . ' pull' . ($n_pull === 1 ? '' : 's'))
     : 'Plugin disabled';
 
+  // Wrap long paths/URLs; browser only clips if the tile is truly narrow.
+  $path_style = 'display:block;margin:0.1em 0 0;font-size:0.88em;line-height:1.3;'
+    . 'overflow-wrap:anywhere;word-break:break-word;white-space:normal;max-width:100%';
+
   ob_start();
   if (!$enabled) {
     echo '<span class="orange-text">Disabled</span>';
   } elseif (!$hosts && !$pulls) {
-    // Empty body — summary line is enough (no second “No active…” essay).
     echo '';
   } else {
-    echo '<div style="font-size:0.92em;line-height:1.35">';
+    echo '<div style="font-size:0.92em;line-height:1.35;max-width:100%;overflow:hidden">';
     foreach ($hosts as $h) {
       $badge = $h['ro'] ? 'RO' : 'RW';
       $bg = $h['ro'] ? 'rgba(46,160,90,0.4)' : 'rgba(220,140,40,0.45)';
@@ -87,6 +91,9 @@ try {
         . $bg . '">' . htmlspecialchars($badge) . '</span> ';
       echo '<code>' . htmlspecialchars($h['device']) . '</code>';
       echo ' <span style="opacity:0.75">' . htmlspecialchars($h['label']) . '</span>';
+      if ($h['url'] !== '') {
+        echo '<code style="' . $path_style . 'opacity:0.8">' . htmlspecialchars($h['url']) . '</code>';
+      }
       echo '</div>';
     }
     foreach ($pulls as $p) {
@@ -117,9 +124,16 @@ try {
       if ($p['net'] !== '') {
         echo ' <span style="opacity:0.75">· ' . htmlspecialchars($p['net']) . '</span>';
       }
-      echo '</span><br>';
-      echo '<code style="opacity:0.8;font-size:0.88em" title="' . htmlspecialchars($p['out']) . '">'
-        . htmlspecialchars($p['short']) . '</code>';
+      if ($p['disk'] !== '') {
+        echo ' <span style="opacity:0.75">· ' . htmlspecialchars($p['disk']) . '</span>';
+      }
+      echo '</span>';
+      if ($p['url'] !== '') {
+        echo '<code style="' . $path_style . '">' . htmlspecialchars($p['url']) . '</code>';
+      }
+      if ($p['out'] !== '') {
+        echo '<code style="' . $path_style . 'opacity:0.85">' . htmlspecialchars($p['out']) . '</code>';
+      }
       echo '</div>';
     }
     echo '</div>';

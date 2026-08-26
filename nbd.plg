@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26as">
+<!ENTITY version "2026.08.26at">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Dashboard: stock single-cell tile (no header stretch); cheaper async load (no Loading flash / no ps-scan).
+- Dashboard: full paths (CSS wrap, no hard truncate); hide empty ETA… on tile.
 
-###2026.08.26ar
-- Progress/ETA: no sticky ETA…; pct from sidecar+raw+log; Pause/Stop button heights aligned.
+###2026.08.26as–ar
+- Dashboard stock single-cell tile; cheaper async load; progress/ETA and Pause/Stop align.
 
 ###2026.08.26aq–ap
 - Logs tab (survives History clear); History/Logs short inline_help.

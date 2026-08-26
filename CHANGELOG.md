@@ -6,6 +6,12 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26at
+
+- **Dashboard paths:** show full source URL and output path (CSS `overflow-wrap`, no
+  `…tail` PHP truncate). Tile only wraps when the column is narrow.
+- Suppress sticky `ETA…` on the Dashboard tile; restore disk rate on the metrics line.
+
 ## 2026.08.26as
 
 - **Dashboard tile:** stock single-cell icon+section (no dual-row `tile-header` stretch).
