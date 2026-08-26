@@ -106,9 +106,18 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var cancel = row.querySelector('.nbd-live-job-cancel-form');
     if (cancel) cancel.style.display = queued ? 'inline' : 'none';
     var pctEl = row.querySelector('.nbd-live-job-pct');
-    if (pctEl && item.progress_pct != null && item.progress_pct !== '') {
-      var p = Number(item.progress_pct);
-      pctEl.textContent = isFinite(p) ? (Math.round(p * 10) / 10) + '%' : '—';
+    if (pctEl) {
+      if (item.progress_pct != null && item.progress_pct !== '') {
+        var p = Number(item.progress_pct);
+        pctEl.textContent = isFinite(p) ? (Math.round(p * 10) / 10) + '%' : '—';
+      } else {
+        pctEl.textContent = '—';
+      }
+    }
+    var etaEl = row.querySelector('.nbd-live-job-eta');
+    if (etaEl) {
+      var eh = item.eta_h ? String(item.eta_h) : '';
+      etaEl.textContent = eh ? (' · ' + eh) : '';
     }
     var size = row.querySelector('.nbd-live-job-size');
     if (size && item.output_size_h) size.textContent = ' · ' + item.output_size_h;

@@ -555,7 +555,10 @@ function nbd_job_progress_pct(array $j) {
     $pf = NBDEXPORT_RUN . '/' . $id . '.progress';
     if (is_file($pf)) {
       $raw = trim((string)@file_get_contents($pf));
-      if (preg_match('/(\d+(?:\.\d+)?)\s*\/\s*100/', $raw, $m) || preg_match('/^(\d+(?:\.\d+)?)$/', $raw, $m)) {
+      // "12.5" or "(12.50/100%)" or "pct=12.5 ts=..."
+      if (preg_match('/pct=(\d+(?:\.\d+)?)/', $raw, $m)
+        || preg_match('/(\d+(?:\.\d+)?)\s*\/\s*100/', $raw, $m)
+        || preg_match('/^(\d+(?:\.\d+)?)$/', $raw, $m)) {
         return (float)$m[1];
       }
     }
@@ -579,6 +582,144 @@ function nbd_job_progress_pct(array $j) {
     return null;
   }
   return (float)end($mm[1]);
+}
+
+/**
+ * Collect recent (unix_ts, pct) samples for ETA — hist sidecar, else timestamped log lines.
+ * @return array<int,array{0:int,1:float}>
+ */
+function nbd_job_progress_samples(array $j, $max = 40) {
+  $samples = [];
+  $id = (string)($j['id'] ?? '');
+  if ($id !== '') {
+    $hf = NBDEXPORT_RUN . '/' . $id . '.progress.hist';
+    if (is_file($hf)) {
+      $lines = @file($hf, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+      if (is_array($lines)) {
+        foreach ($lines as $line) {
+          if (preg_match('/^(\d+)\s+(\d+(?:\.\d+)?)\s*$/', trim($line), $m)) {
+            $samples[] = [(int)$m[1], (float)$m[2]];
+          }
+        }
+      }
+    }
+  }
+  if (count($samples) < 2) {
+    $log = (string)($j['log'] ?? '');
+    if ($log !== '' && is_file($log)) {
+      $fh = @fopen($log, 'rb');
+      if ($fh) {
+        $size = @filesize($log);
+        if ($size > 32768) {
+          @fseek($fh, -32768, SEEK_END);
+        }
+        $tail = (string)@stream_get_contents($fh);
+        @fclose($fh);
+        foreach (preg_split('/\r\n|\r|\n/', $tail) as $line) {
+          // 2026-08-26T01:00:00-04:00 progress (12/100%)
+          if (preg_match('/^(\d{4}-\d{2}-\d{2}T[^\s]+)\s+progress\s+\((\d+(?:\.\d+)?)\/100%\)/', trim($line), $m)) {
+            $ts = @strtotime($m[1]);
+            if ($ts) {
+              $samples[] = [(int)$ts, (float)$m[2]];
+            }
+          }
+        }
+      }
+    }
+  }
+  if (count($samples) > $max) {
+    $samples = array_slice($samples, -$max);
+  }
+  return $samples;
+}
+
+/**
+ * Human ETA from recent progress rate, or null if unknown.
+ * Uses the last ~10 minutes of samples when available (more stable than first %).
+ *
+ * @return array{seconds:?int,label:string,rate_pct_per_min:?float}
+ */
+function nbd_job_progress_eta(array $j) {
+  $st = nbd_job_ui_status($j);
+  $key = $st['key'] ?? '';
+  if ($key === 'paused') {
+    return ['seconds' => null, 'label' => 'paused', 'rate_pct_per_min' => null];
+  }
+  if ($key !== 'running') {
+    return ['seconds' => null, 'label' => '', 'rate_pct_per_min' => null];
+  }
+  $pct = nbd_job_progress_pct($j);
+  if ($pct === null || $pct >= 99.9) {
+    return [
+      'seconds' => ($pct !== null && $pct >= 99.9) ? 0 : null,
+      'label' => ($pct !== null && $pct >= 99.9) ? 'finishing…' : '',
+      'rate_pct_per_min' => null,
+    ];
+  }
+  $samples = nbd_job_progress_samples($j);
+  if (count($samples) < 2) {
+    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  }
+  $now = time();
+  // Prefer recent window (≥60s span, last 15 min)
+  $window = [];
+  foreach ($samples as $s) {
+    if ($s[0] >= $now - 900) {
+      $window[] = $s;
+    }
+  }
+  if (count($window) < 2) {
+    $window = $samples;
+  }
+  $first = $window[0];
+  $last = $window[count($window) - 1];
+  // If last sample is stale vs current pct sidecar, anchor end to now/pct
+  if ($pct > $last[1]) {
+    $last = [$now, $pct];
+  }
+  $dt = $last[0] - $first[0];
+  $dp = $last[1] - $first[1];
+  if ($dt < 20 || $dp < 0.3) {
+    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  }
+  $pct_per_sec = $dp / $dt;
+  $remain = 100.0 - $pct;
+  if ($pct_per_sec <= 0) {
+    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  }
+  $sec = (int)round($remain / $pct_per_sec);
+  // Clamp absurd projections (e.g. early sparse sprint)
+  if ($sec < 0) {
+    $sec = 0;
+  }
+  if ($sec > 14 * 86400) {
+    $sec = 14 * 86400;
+  }
+  return [
+    'seconds' => $sec,
+    'label' => '~' . nbd_format_duration($sec),
+    'rate_pct_per_min' => round($pct_per_sec * 60, 2),
+  ];
+}
+
+/** Format seconds as 45s / 12m / 2h 15m / 1d 3h */
+function nbd_format_duration($seconds) {
+  $s = max(0, (int)$seconds);
+  if ($s < 60) {
+    return $s . 's';
+  }
+  if ($s < 3600) {
+    $m = (int)round($s / 60);
+    return $m . 'm';
+  }
+  if ($s < 86400) {
+    $h = intdiv($s, 3600);
+    $m = (int)round(($s % 3600) / 60);
+    return $m > 0 ? ($h . 'h ' . $m . 'm') : ($h . 'h');
+  }
+  $d = intdiv($s, 86400);
+  $h = intdiv($s % 86400, 3600);
+  return $h > 0 ? ($d . 'd ' . $h . 'h') : ($d . 'd');
 }
 
 /**
@@ -1714,6 +1855,7 @@ function nbd_live_snapshot() {
       $log_tail = nbd_log_tail_display($j['log'], 8);
     }
     $pct = nbd_job_progress_pct($j);
+    $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['seconds' => null, 'label' => ''];
     $jobs[] = [
       'id' => (string)($j['id'] ?? ''),
       'key' => $key,
@@ -1726,6 +1868,8 @@ function nbd_live_snapshot() {
       'orphaned' => !empty($j['orphaned']),
       'array_like' => !empty($j['array_like']),
       'progress_pct' => $pct,
+      'eta_seconds' => $eta['seconds'] ?? null,
+      'eta_h' => (string)($eta['label'] ?? ''),
       'started' => (string)($j['started'] ?? ''),
       'started_h' => nbd_format_when($j['started'] ?? ''),
       'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
@@ -2012,11 +2156,13 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   }
   $ionice_args = ($io_class === 'idle') ? '-c3' : '-c2 -n7';
   $progressfile = NBDEXPORT_RUN . '/' . $id . '.progress';
-  // Progress: qemu-img -p uses CR updates. We turn CR→NL, log only when integer %
-  // changes (timestamped history), and keep .progress as the latest field for UI.
+  $progresshist = NBDEXPORT_RUN . '/' . $id . '.progress.hist';
+  // Progress: qemu-img -p uses CR on stderr. Piped stderr is fully buffered unless
+  // stdbuf -e0; without that, Status shows "— · N GiB" until the buffer fills.
   $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
     . 'PROG=' . escapeshellarg($progressfile) . "\n"
+    . 'PROGHIST=' . escapeshellarg($progresshist) . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
@@ -2025,18 +2171,22 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'IONICE_ARGS=' . escapeshellarg($ionice_args) . "\n"
     . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
     . 'if command -v ionice >/dev/null 2>&1; then WRAP=(ionice $IONICE_ARGS nice -n "$NICE_N"); else WRAP=(nice -n "$NICE_N"); fi' . "\n"
-    . 'run_img() { "${WRAP[@]}" "$@"; }' . "\n"
-    . 'echo "$(date -Iseconds) job start type=' . $source_type . ' wrap=${WRAP[*]}" >>"$LOG"' . "\n"
+    . '# Unbuffered qemu stderr so -p CR updates reach the pipe immediately' . "\n"
+    . 'if command -v stdbuf >/dev/null 2>&1; then STDBUF=(stdbuf -o0 -e0); else STDBUF=(); fi' . "\n"
+    . 'run_img() { "${WRAP[@]}" "${STDBUF[@]}" "$@"; }' . "\n"
+    . 'echo "$(date -Iseconds) job start type=' . $source_type . ' wrap=${WRAP[*]} stdbuf=${STDBUF[*]:-none}" >>"$LOG"' . "\n"
     . 'if [[ "$SRC" == nbd://* ]]; then' . "\n"
     . '  for i in $(seq 1 60); do' . "\n"
     . '    if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
     . '    sleep 5' . "\n"
     . '    if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . '  done' . "\n"
+    . '  echo "$(date -Iseconds) note: disk size unavailable on nbd:// is normal — virtual size is the device size" >>"$LOG"' . "\n"
     . 'else' . "\n"
     . '  run_img "$IMG" info -f raw "$SRC" >>"$LOG" 2>&1 || run_img "$IMG" info "$SRC" >>"$LOG" 2>&1 || true' . "\n"
     . 'fi' . "\n"
     . 'LAST_PCT=-1' . "\n"
+    . ': >"$PROGHIST"' . "\n"
     . 'set +e' . "\n"
     . 'if [[ "$SRC" == nbd://* ]]; then SRC_FMT=raw; else SRC_FMT=raw; fi' . "\n"
     . 'run_img "$IMG" convert -p -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT" 2> >(tr "\\r" "\\n" | while IFS= read -r line; do' . "\n"
@@ -2044,9 +2194,10 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . '    *"/100%)"*)' . "\n"
     . '      pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
     . '      ipct=${pct%%.*}' . "\n"
-    . '      echo "$line" >"$PROG"' . "\n"
+    . '      echo "pct=$pct" >"$PROG"' . "\n"
     . '      if [ "$ipct" != "$LAST_PCT" ]; then' . "\n"
     . '        echo "$(date -Iseconds) progress ($ipct/100%)" >>"$LOG"' . "\n"
+    . '        echo "$(date +%s) $ipct" >>"$PROGHIST"' . "\n"
     . '        LAST_PCT=$ipct' . "\n"
     . '      fi' . "\n"
     . '      ;;' . "\n"
@@ -2058,7 +2209,8 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'set -e' . "\n"
     . 'if [ "${CONV_RC}" -ne 0 ]; then fail convert; fi' . "\n"
     . 'echo "$(date -Iseconds) progress (100/100%)" >>"$LOG"' . "\n"
-    . 'echo "(100.00/100%)" >"$PROG"' . "\n"
+    . 'echo "pct=100" >"$PROG"' . "\n"
+    . 'echo "$(date +%s) 100" >>"$PROGHIST"' . "\n"
     . 'run_img "$IMG" check "$OUT" >>"$LOG" 2>&1 || true' . "\n"
     . 'run_img "$IMG" info "$OUT" >>"$LOG" 2>&1' . "\n"
     . 'echo NBD_JOB_OK >>"$LOG"' . "\n"

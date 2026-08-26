@@ -81,6 +81,8 @@ nbd_page_styles();
   $jid = htmlspecialchars($j['id'] ?? '');
   $pct = nbd_job_progress_pct($j);
   $pct_h = ($pct !== null) ? (rtrim(rtrim(number_format($pct, 1, '.', ''), '0'), '.') . '%') : '—';
+  $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
+  $eta_h = trim((string)($eta['label'] ?? ''));
   $size_h = htmlspecialchars($j['output_size_h'] ?? '—');
 ?>
           <tr data-nbd-job-id="<?= $jid ?>">
@@ -90,6 +92,7 @@ nbd_page_styles();
             <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
             <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
             <td class="nbd-live-job-progress"><span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
+              <span class="nbd-muted nbd-live-job-eta"><?= $eta_h !== '' ? (' · ' . htmlspecialchars($eta_h)) : '' ?></span>
               <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span></td>
             <td class="nbd-live-job-started"><?= nbd_format_when_html($j['started'] ?? '') ?></td>
             <td class="nbd-live-job-actions">
