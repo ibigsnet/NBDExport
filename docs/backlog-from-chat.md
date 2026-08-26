@@ -11,7 +11,7 @@ Legend: **Done** · **Partial** · **Open** · **Won’t** (decided against)
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | D1 | **Dashboard header stretch** — full-width “NBD Export” bar; Dashboard looks wrong | **Fixing in 26as** | Replaced dual-row `tile-header` with stock single-cell icon+section (like Array/Docker). Verify after update. |
-| D2 | **Dashboard slows Main → Dashboard load** | **Fixing in 26as** | No Loading… flash; `requestIdleCallback` defer; no external `ps` scan on dash poll; idle poll 15s / active 5s. |
+| D2 | **Dashboard / live-watch WebUI load** | **Partial (`26as`/`26av`)** | No Loading… flash; `requestIdleCallback` defer; no external `ps` scan on dash poll; idle poll 15s / active 5s. |
 | D3 | **In-flight jobs keep old wrapper** after update | **Partial** | UI/%/ETA fixes apply after Pause→Update; hist/poll improvements need **new** jobs. Live PLUSH/NIROG converts may still show 0%/no ETA until Retry. |
 | D4 | **Browser verify** Dashboard + Status after ships | **Open** | House rule: verify in browser; often shipped without exercising Dashboard end-to-end on a box. |
 

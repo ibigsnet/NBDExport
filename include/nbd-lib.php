@@ -1083,9 +1083,18 @@ function nbd_job_io_rates(array $j) {
   $url = (string)($j['url'] ?? '');
   if (preg_match('#^nbd://([^/:]+)#', $url, $m)) {
     $peer = $m[1];
-    $route = (string)@shell_exec('ip -o route get ' . escapeshellarg($peer) . ' 2>/dev/null');
-    if (preg_match('/\bdev\s+(\S+)/', $route, $mm)) {
-      $iface = $mm[1];
+    static $iface_cache = [];
+    $iface = $iface_cache[$peer] ?? '';
+    if ($iface === '') {
+      $route = (string)@shell_exec('ip -o route get ' . escapeshellarg($peer) . ' 2>/dev/null');
+      if (preg_match('/\bdev\s+(\S+)/', $route, $mm)) {
+        $iface = $mm[1];
+        $iface_cache[$peer] = $iface;
+      } else {
+        $iface_cache[$peer] = '-';
+      }
+    }
+    if ($iface !== '' && $iface !== '-') {
       $rxf = '/sys/class/net/' . $iface . '/statistics/rx_bytes';
       if (is_file($rxf)) {
         $net_bytes = (int)@file_get_contents($rxf);
@@ -1629,7 +1638,10 @@ function nbd_exports_state() {
     $alive = $pid > 0 && @file_exists('/proc/' . $pid);
     $j['alive'] = $alive;
     $j['listening'] = false;
-    if (!empty($j['bind']) && !empty($j['port'])) {
+    if ($alive) {
+      // Process up ⇒ treat as listening (skip ss under load).
+      $j['listening'] = true;
+    } elseif (!empty($j['bind']) && !empty($j['port'])) {
       $j['listening'] = nbd_port_listening($j['bind'], (int)$j['port']);
     }
     if (!$alive && empty($j['listening'])) {
@@ -1647,21 +1659,68 @@ function nbd_exports_state() {
   return $list;
 }
 
+/**
+ * Cached listening TCP ports from `ss -lnt` (no -p — cheaper under load).
+ * @return list<string> raw ss lines
+ */
+function nbd_ss_lnt_lines() {
+  static $ts = 0.0;
+  static $lines = null;
+  $now = microtime(true);
+  if (is_array($lines) && ($now - $ts) < 2.5) {
+    return $lines;
+  }
+  $lines = [];
+  @exec('ss -lnt 2>/dev/null', $lines);
+  $ts = $now;
+  return is_array($lines) ? $lines : [];
+}
+
 function nbd_port_listening($bind, $port) {
   $port = (int)$port;
   if ($port <= 0) {
     return false;
   }
-  $out = [];
-  @exec('ss -lntp 2>/dev/null | grep -F ' . escapeshellarg(':' . $port) . ' || true', $out);
+  $out = nbd_ss_lnt_lines();
   if (!$out) {
     return false;
   }
   $blob = implode("\n", $out);
-  if ($bind === '0.0.0.0' || $bind === '*') {
+  $needle = ':' . $port;
+  if (strpos($blob, $needle) === false) {
+    return false;
+  }
+  $bind = trim((string)$bind);
+  if ($bind === '' || $bind === '0.0.0.0' || $bind === '*') {
     return true;
   }
-  return strpos($blob, $bind . ':' . $port) !== false || strpos($blob, '*:' . $port) !== false;
+  return strpos($blob, $bind . ':' . $port) !== false
+    || strpos($blob, '0.0.0.0:' . $port) !== false
+    || strpos($blob, '*:' . $port) !== false
+    || strpos($blob, '[::]:' . $port) !== false;
+}
+
+/**
+ * Cached qemu-img convert process lines (orphan / external scans).
+ * @return list<string>
+ */
+function nbd_ps_qemu_img_lines() {
+  static $ts = 0.0;
+  static $lines = null;
+  $now = microtime(true);
+  if (is_array($lines) && ($now - $ts) < 3.0) {
+    return $lines;
+  }
+  $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
+  $lines = [];
+  foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+    $line = trim($line);
+    if ($line !== '') {
+      $lines[] = $line;
+    }
+  }
+  $ts = $now;
+  return $lines;
 }
 
 function nbd_new_export_id() {
@@ -2262,9 +2321,8 @@ function nbd_job_pids(array $j) {
   }
   $out = (string)($j['output'] ?? '');
   if ($out !== '') {
-    $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
-    foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
-      if (preg_match('/^(\d+)\s+(.*)$/', trim($line), $m) && strpos($m[2], $out) !== false) {
+    foreach (nbd_ps_qemu_img_lines() as $line) {
+      if (preg_match('/^(\d+)\s+(.*)$/', $line, $m) && strpos($m[2], $out) !== false) {
         $pids[] = (int)$m[1];
       }
     }
@@ -2374,14 +2432,8 @@ function nbd_find_orphan_qemu_img(array $j) {
   if ($out === '' && $id === '') {
     return 0;
   }
-  $out_esc = str_replace(["'", '\\'], ["'\\''", '\\\\'], $out);
-  $cmd = "ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true";
-  $raw = (string)@shell_exec($cmd);
-  foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
-    $line = trim($line);
-    if ($line === '') {
-      continue;
-    }
+  $lines = function_exists('nbd_ps_qemu_img_lines') ? nbd_ps_qemu_img_lines() : [];
+  foreach ($lines as $line) {
     if (!preg_match('/^(\d+)\s+(.*)$/', $line, $m)) {
       continue;
     }
@@ -2399,14 +2451,17 @@ function nbd_find_orphan_qemu_img(array $j) {
 
 /**
  * Compact live snapshot for WebUI polling (in-place badge updates).
- * @return array{exports:array,jobs:array,watch:bool,live_exports:int,live_jobs:int,queued_jobs:int}
+ * Kept light under load: managed jobs only (no external ps merge every tick),
+ * no log tails for running jobs, throttled queue kick.
+ *
+ * @return array{exports:array,jobs:array,watch:bool,live_exports:int,live_jobs:int,queued_jobs:int,ts:int}
  */
 function nbd_live_snapshot() {
-  // Kick queue when a slot is free (poller path)
-  nbd_pull_queue_kick();
+  static $last_kick = 0;
   $exports = [];
   $watch = false;
   $live_exports = 0;
+  $queued_jobs = 0;
   foreach (nbd_exports_state() as $e) {
     $st = nbd_export_ui_status($e);
     $key = $st['key'] ?? 'down';
@@ -2432,9 +2487,8 @@ function nbd_live_snapshot() {
   }
   $jobs = [];
   $live_jobs = 0;
-  $queued_jobs = 0;
-  $job_list = function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state();
-  foreach ($job_list as $j) {
+  // Managed jobs only — Status page still merges External when rendered.
+  foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
     if ($key === 'running' || $key === 'paused') {
@@ -2445,9 +2499,10 @@ function nbd_live_snapshot() {
       $queued_jobs++;
       $watch = true;
     }
+    // Skip log tails on the hot poll path (Status cards already have them on paint).
     $log_tail = '';
-    if (!empty($j['log']) && is_file($j['log']) && in_array($key, ['failed', 'done', 'running', 'queued', 'paused'], true)) {
-      $log_tail = nbd_log_tail_display($j['log'], 8);
+    if (!empty($j['log']) && is_file($j['log']) && in_array($key, ['failed', 'done'], true)) {
+      $log_tail = nbd_log_tail_display($j['log'], 6);
     }
     $pct = nbd_job_progress_pct($j);
     $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['seconds' => null, 'label' => ''];
@@ -2477,6 +2532,11 @@ function nbd_live_snapshot() {
       'output_size_h' => (string)($j['output_size_h'] ?? '—'),
       'log_tail' => $log_tail,
     ];
+  }
+  // Queue kick at most every 8s, and only if something is queued.
+  if ($queued_jobs > 0 && (time() - $last_kick) >= 8) {
+    $last_kick = time();
+    nbd_pull_queue_kick();
   }
   return [
     'exports' => $exports,
@@ -3049,12 +3109,11 @@ function nbd_image_stop($id) {
       $pids[] = $orphan;
     }
   }
-  // Also match qemu-img by job script path / output
+  // Also match qemu-img by job output path
   $out = is_array($j) ? (string)($j['output'] ?? '') : '';
   if ($out !== '') {
-    $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
-    foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
-      if (preg_match('/^(\d+)\s+(.*)$/', trim($line), $m) && strpos($m[2], $out) !== false) {
+    foreach (nbd_ps_qemu_img_lines() as $line) {
+      if (preg_match('/^(\d+)\s+(.*)$/', $line, $m) && strpos($m[2], $out) !== false) {
         $pids[] = (int)$m[1];
       }
     }

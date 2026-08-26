@@ -2,16 +2,16 @@
 /**
  * Live status poller: updates badges in place (no full page reload on
  * Active→Idle/Failed). Stop/Cancel forms stay usable.
- * Included from nbd_page_footer on every NBD tab.
+ *
+ * Kept light under load:
+ * - No synchronous nbd_live_snapshot() on page paint (that blocked WebUI
+ *   while dual Pulls + array finds were already saturating the box).
+ * - Slower polls; pause when the tab is hidden.
  */
 if (defined('NBDEXPORT_LIVE_WATCH')) {
   return;
 }
 define('NBDEXPORT_LIVE_WATCH', 1);
-
-$nbd_live_baseline = function_exists('nbd_live_snapshot')
-  ? nbd_live_snapshot()
-  : ['exports' => [], 'jobs' => [], 'watch' => false, 'ts' => time()];
 ?>
 <script>
 (function () {
@@ -20,11 +20,13 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   window.__nbdLiveWatchStarted = true;
 
   var URL = '/plugins/NBDExport/include/nbd-live-status.php';
-  var POLL_ACTIVE_MS = 1500;
-  var POLL_IDLE_MS = 8000;
-  var baseline = <?= json_encode($nbd_live_baseline, JSON_UNESCAPED_SLASHES) ?> || null;
+  var POLL_ACTIVE_MS = 4000;
+  var POLL_IDLE_MS = 15000;
+  var POLL_HIDDEN_MS = 30000;
+  var baseline = null;
   var timer = null;
   var fails = 0;
+  var inFlight = false;
 
   var BADGE_CLASSES = [
     'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw', 'nbd-badge-run', 'nbd-badge-paused'
@@ -56,7 +58,6 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     if (!el || !item) return;
     var prev = el.getAttribute('data-nbd-key') || '';
     if (prev === item.key && el.textContent === item.label) {
-      // Still refresh size/log even if key same
       return false;
     }
     BADGE_CLASSES.forEach(function (c) { el.classList.remove(c); });
@@ -84,7 +85,6 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   }
 
   function applyJob(item) {
-    // Cards (Status) or legacy table rows
     var row = document.querySelector('.nbd-job-card[data-nbd-job-id="' + cssEscape(item.id) + '"]')
       || document.querySelector('tr[data-nbd-job-id="' + cssEscape(item.id) + '"]');
     if (!row) return;
@@ -122,7 +122,6 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var etaEl = row.querySelector('.nbd-live-job-eta');
     if (etaEl) {
       var eh = item.eta_h ? String(item.eta_h) : '';
-      // Hide until we have a real estimate (no sticky ETA…)
       etaEl.textContent = eh ? (' · ' + eh) : '';
     }
     var size = row.querySelector('.nbd-live-job-size');
@@ -141,16 +140,13 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     if (started && item.started_h) started.textContent = 'started ' + item.started_h;
     var logBox = row.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]')
       || document.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]');
-    if (logBox && item.log_tail != null) {
+    if (logBox && item.log_tail != null && item.log_tail !== '') {
       var pre = logBox.querySelector('.nbd-live-job-log, pre.nbd-log');
-      if (pre && item.log_tail !== '') {
-        pre.textContent = item.log_tail;
-      }
+      if (pre) pre.textContent = item.log_tail;
     }
   }
 
   function cssEscape(s) {
-    // Simple attr selector escape for our ids (alphanumeric + - . _)
     return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
@@ -170,10 +166,6 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     el.textContent = t;
   }
 
-  /**
-   * Patch badges/controls in place. Returns true if anything meaningful changed.
-   * Does NOT reload the page — keeps Stop/Cancel forms and user focus.
-   */
   function applySnapshot(snap) {
     if (!snap) return false;
     var changed = false;
@@ -187,7 +179,6 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
       }
       applyExport(ex);
     });
-    // Exports that vanished from snapshot — mark stopped in UI if row remains
     Object.keys(prevE).forEach(function (id) {
       if (mapById(snap.exports)[id]) return;
       var row = document.querySelector('tr[data-nbd-export-id="' + cssEscape(id) + '"]');
@@ -233,7 +224,17 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     return changed;
   }
 
+  function pollMs(active) {
+    if (typeof document !== 'undefined' && document.hidden) return POLL_HIDDEN_MS;
+    return active ? POLL_ACTIVE_MS : POLL_IDLE_MS;
+  }
+
   function poll() {
+    if (inFlight) {
+      schedule(hasActive(baseline));
+      return;
+    }
+    inFlight = true;
     fetch(URL + '?_=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
         if (!r.ok) throw new Error('http ' + r.status);
@@ -252,29 +253,45 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
       .catch(function () {
         fails++;
         schedule(fails < 8 || hasActive(baseline));
-      });
+      })
+      .finally(function () { inFlight = false; });
   }
 
   function schedule(active) {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(poll, active ? POLL_ACTIVE_MS : POLL_IDLE_MS);
+    timer = setTimeout(poll, pollMs(!!active));
   }
 
-  // After Host/Pull POST, poll soon so Stop / Start reflect without full reload
   document.addEventListener('submit', function (ev) {
     var f = ev.target;
     if (!f || !f.querySelector) return;
     if (!f.querySelector('[name="nbd_action"]')) return;
     setTimeout(function () {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(poll, 500);
+      timer = setTimeout(poll, 600);
     }, 400);
   }, true);
 
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(poll, 200);
+    }
+  });
+
+  // Defer first poll past paint (same idea as Dashboard tile).
+  function start() {
+    var kick = function () { setTimeout(poll, 150); };
+    if (window.requestIdleCallback) {
+      requestIdleCallback(kick, { timeout: 1500 });
+    } else {
+      setTimeout(kick, 300);
+    }
+  }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { poll(); });
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    poll();
+    start();
   }
 })();
 </script>

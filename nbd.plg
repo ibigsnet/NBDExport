@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26au">
+<!ENTITY version "2026.08.26av">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Notifications: Pull done (normal), Pull failed (warning/alert), Host down unexpected; Settings dropdowns.
+- WebUI load: lighter live poll (deferred, 4s/15s, pause when hidden); cache ss/ps; no sync snapshot on paint.
+
+###2026.08.26au
+- Notifications: Pull done / failed / Host down unexpected (Settings dropdowns).
 
 ###2026.08.26at–ar
 - Dashboard full paths + stock tile; progress/ETA; Pause/Stop align.

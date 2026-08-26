@@ -6,6 +6,14 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26av
+
+- **WebUI under load:** live-watch no longer runs a full snapshot on every Status/Host/Pull
+  paint (that competed with dual Pulls + Folder Caching `find` on PLUSH). First poll is
+  deferred; active poll **4s**, idle **15s**, hidden tab **30s**; overlap-guarded.
+- **Cheaper probes:** cache `ss -lnt` and `qemu-img` `ps` (~2.5–3s); skip `ss` when Host
+  PID is alive; live snapshot skips external merge + running log tails; queue kick ≤1/8s.
+
 ## 2026.08.26au
 
 - **Notifications (Settings):** Unraid agents via `notify` (Storage Guard–style).
