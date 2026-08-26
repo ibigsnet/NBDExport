@@ -649,12 +649,11 @@ function nbd_job_progress_eta(array $j) {
     return ['seconds' => null, 'label' => '', 'rate_pct_per_min' => null];
   }
   $pct = nbd_job_progress_pct($j);
-  if ($pct === null || $pct >= 99.9) {
-    return [
-      'seconds' => ($pct !== null && $pct >= 99.9) ? 0 : null,
-      'label' => ($pct !== null && $pct >= 99.9) ? 'finishing…' : '',
-      'rate_pct_per_min' => null,
-    ];
+  if ($pct === null) {
+    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  }
+  if ($pct >= 99.9) {
+    return ['seconds' => 0, 'label' => 'finishing…', 'rate_pct_per_min' => null];
   }
   $samples = nbd_job_progress_samples($j);
   if (count($samples) < 2) {
@@ -720,6 +719,102 @@ function nbd_format_duration($seconds) {
   $d = intdiv($s, 86400);
   $h = intdiv($s % 86400, 3600);
   return $h > 0 ? ($d . 'd ' . $h . 'h') : ($d . 'd');
+}
+
+/** Elapsed seconds for a job (running clock), or null. */
+function nbd_job_elapsed_seconds(array $j) {
+  $raw = (string)($j['started_run'] ?? $j['started'] ?? '');
+  $ts = nbd_parse_when($raw);
+  if (!$ts) {
+    return null;
+  }
+  $k = nbd_job_ui_status($j)['key'] ?? '';
+  if ($k === 'paused') {
+    // Freeze display at pause time if recorded
+    $pt = nbd_parse_when((string)($j['paused_at'] ?? ''));
+    if ($pt && $pt >= $ts) {
+      return max(0, $pt - $ts);
+    }
+  }
+  if (!in_array($k, ['running', 'paused'], true)) {
+    $fin = nbd_parse_when((string)($j['finished_at'] ?? ''));
+    if ($fin && $fin >= $ts) {
+      return max(0, $fin - $ts);
+    }
+  }
+  return max(0, time() - $ts);
+}
+
+/**
+ * Sample net RX (to peer) + output disk write rates for a live job.
+ * @return array{net_bps:?int,disk_bps:?int,net_h:string,disk_h:string}
+ */
+function nbd_job_io_rates(array $j) {
+  $empty = ['net_bps' => null, 'disk_bps' => null, 'net_h' => '', 'disk_h' => ''];
+  $id = (string)($j['id'] ?? '');
+  if ($id === '') {
+    return $empty;
+  }
+  $k = nbd_job_ui_status($j)['key'] ?? '';
+  if ($k !== 'running') {
+    return $empty;
+  }
+  $now = microtime(true);
+  $net_bytes = null;
+  $url = (string)($j['url'] ?? '');
+  if (preg_match('#^nbd://([^/:]+)#', $url, $m)) {
+    $peer = $m[1];
+    $route = (string)@shell_exec('ip -o route get ' . escapeshellarg($peer) . ' 2>/dev/null');
+    if (preg_match('/\bdev\s+(\S+)/', $route, $mm)) {
+      $iface = $mm[1];
+      $rxf = '/sys/class/net/' . $iface . '/statistics/rx_bytes';
+      if (is_file($rxf)) {
+        $net_bytes = (int)@file_get_contents($rxf);
+      }
+    }
+  }
+  $disk_bytes = null;
+  $out = (string)($j['output'] ?? '');
+  if ($out !== '' && is_file($out)) {
+    $disk_bytes = @filesize($out);
+    if ($disk_bytes === false) {
+      $disk_bytes = null;
+    }
+  }
+  $rf = NBDEXPORT_RUN . '/' . $id . '.rates.json';
+  $prev = [];
+  if (is_file($rf)) {
+    $prev = @json_decode((string)@file_get_contents($rf), true) ?: [];
+  }
+  $sample = [
+    't' => $now,
+    'net' => $net_bytes,
+    'disk' => $disk_bytes,
+  ];
+  @file_put_contents($rf, json_encode($sample) . "\n");
+  $net_bps = null;
+  $disk_bps = null;
+  if (!empty($prev['t']) && ($now - (float)$prev['t']) >= 0.8) {
+    $dt = $now - (float)$prev['t'];
+    if ($net_bytes !== null && isset($prev['net']) && $prev['net'] !== null) {
+      $net_bps = (int)max(0, round(($net_bytes - (int)$prev['net']) / $dt));
+    }
+    if ($disk_bytes !== null && isset($prev['disk']) && $prev['disk'] !== null) {
+      $disk_bps = (int)max(0, round(($disk_bytes - (int)$prev['disk']) / $dt));
+    }
+  }
+  $fmt = function ($bps) {
+    if ($bps === null) {
+      return '';
+    }
+    return nbd_format_bytes($bps) . '/s';
+  };
+  return [
+    'net_bps' => $net_bps,
+    'disk_bps' => $disk_bps,
+    'net_h' => $fmt($net_bps),
+    'disk_h' => $fmt($disk_bps),
+  ];
 }
 
 /**
@@ -1856,6 +1951,8 @@ function nbd_live_snapshot() {
     }
     $pct = nbd_job_progress_pct($j);
     $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['seconds' => null, 'label' => ''];
+    $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
+    $rates = ($key === 'running' && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : ['net_h' => '', 'disk_h' => ''];
     $jobs[] = [
       'id' => (string)($j['id'] ?? ''),
       'key' => $key,
@@ -1870,6 +1967,10 @@ function nbd_live_snapshot() {
       'progress_pct' => $pct,
       'eta_seconds' => $eta['seconds'] ?? null,
       'eta_h' => (string)($eta['label'] ?? ''),
+      'elapsed_seconds' => $elapsed,
+      'elapsed_h' => ($elapsed !== null) ? nbd_format_duration($elapsed) : '',
+      'rate_net_h' => (string)($rates['net_h'] ?? ''),
+      'rate_disk_h' => (string)($rates['disk_h'] ?? ''),
       'started' => (string)($j['started'] ?? ''),
       'started_h' => nbd_format_when($j['started'] ?? ''),
       'output_size' => isset($j['output_size']) ? (int)$j['output_size'] : 0,
@@ -2157,12 +2258,14 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   $ionice_args = ($io_class === 'idle') ? '-c3' : '-c2 -n7';
   $progressfile = NBDEXPORT_RUN . '/' . $id . '.progress';
   $progresshist = NBDEXPORT_RUN . '/' . $id . '.progress.hist';
-  // Progress: qemu-img -p uses CR on stderr. Piped stderr is fully buffered unless
-  // stdbuf -e0; without that, Status shows "— · N GiB" until the buffer fills.
+  // Progress: do NOT use qemu-img -p + process-substitution (CR + pipe buffering never
+  // reached Status). Convert without -p; SIGUSR1 every few seconds dumps (N/100%) to a
+  // raw stderr file we parse into .progress / .progress.hist.
   $sh = "#!/bin/bash\nset -uo pipefail\n"
     . 'LOG=' . escapeshellarg($logfile) . "\n"
     . 'PROG=' . escapeshellarg($progressfile) . "\n"
     . 'PROGHIST=' . escapeshellarg($progresshist) . "\n"
+    . 'PROGRAW=' . escapeshellarg($progressfile . '.raw') . "\n"
     . 'SRC=' . escapeshellarg($url) . "\n"
     . 'OUT=' . escapeshellarg($output) . "\n"
     . 'IMG=' . escapeshellarg($tools['qemu_img']) . "\n"
@@ -2171,10 +2274,9 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'IONICE_ARGS=' . escapeshellarg($ionice_args) . "\n"
     . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
     . 'if command -v ionice >/dev/null 2>&1; then WRAP=(ionice $IONICE_ARGS nice -n "$NICE_N"); else WRAP=(nice -n "$NICE_N"); fi' . "\n"
-    . '# Unbuffered qemu stderr so -p CR updates reach the pipe immediately' . "\n"
     . 'if command -v stdbuf >/dev/null 2>&1; then STDBUF=(stdbuf -o0 -e0); else STDBUF=(); fi' . "\n"
     . 'run_img() { "${WRAP[@]}" "${STDBUF[@]}" "$@"; }' . "\n"
-    . 'echo "$(date -Iseconds) job start type=' . $source_type . ' wrap=${WRAP[*]} stdbuf=${STDBUF[*]:-none}" >>"$LOG"' . "\n"
+    . 'echo "$(date -Iseconds) job start type=' . $source_type . ' wrap=${WRAP[*]} progress=SIGUSR1" >>"$LOG"' . "\n"
     . 'if [[ "$SRC" == nbd://* ]]; then' . "\n"
     . '  for i in $(seq 1 60); do' . "\n"
     . '    if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
@@ -2187,24 +2289,29 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'fi' . "\n"
     . 'LAST_PCT=-1' . "\n"
     . ': >"$PROGHIST"' . "\n"
+    . ': >"$PROGRAW"' . "\n"
+    . 'echo "pct=0" >"$PROG"' . "\n"
     . 'set +e' . "\n"
-    . 'if [[ "$SRC" == nbd://* ]]; then SRC_FMT=raw; else SRC_FMT=raw; fi' . "\n"
-    . 'run_img "$IMG" convert -p -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT" 2> >(tr "\\r" "\\n" | while IFS= read -r line; do' . "\n"
-    . '  case "$line" in' . "\n"
-    . '    *"/100%)"*)' . "\n"
-    . '      pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
-    . '      ipct=${pct%%.*}' . "\n"
-    . '      echo "pct=$pct" >"$PROG"' . "\n"
-    . '      if [ "$ipct" != "$LAST_PCT" ]; then' . "\n"
-    . '        echo "$(date -Iseconds) progress ($ipct/100%)" >>"$LOG"' . "\n"
-    . '        echo "$(date +%s) $ipct" >>"$PROGHIST"' . "\n"
-    . '        LAST_PCT=$ipct' . "\n"
-    . '      fi' . "\n"
-    . '      ;;' . "\n"
-    . '    "") ;;' . "\n"
-    . '    *) echo "$(date -Iseconds) $line" >>"$LOG" ;;' . "\n"
-    . '  esac' . "\n"
-    . 'done)' . "\n"
+    . 'SRC_FMT=raw' . "\n"
+    . '# No -p: ask for progress via SIGUSR1 (writes to stderr → PROGRAW)' . "\n"
+    . 'run_img "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>>"$PROGRAW" &' . "\n"
+    . 'CPID=$!' . "\n"
+    . 'echo "$(date -Iseconds) convert pid=$CPID" >>"$LOG"' . "\n"
+    . 'while kill -0 "$CPID" 2>/dev/null; do' . "\n"
+    . '  kill -USR1 "$CPID" 2>/dev/null || true' . "\n"
+    . '  sleep 4' . "\n"
+    . '  line=$(tr "\\r" "\\n" <"$PROGRAW" 2>/dev/null | grep -E "/100%\\)" | tail -1)' . "\n"
+    . '  [ -n "$line" ] || continue' . "\n"
+    . '  pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
+    . '  ipct=${pct%%.*}' . "\n"
+    . '  echo "pct=$pct" >"$PROG"' . "\n"
+    . '  if [ "$ipct" != "$LAST_PCT" ]; then' . "\n"
+    . '    echo "$(date -Iseconds) progress ($ipct/100%)" >>"$LOG"' . "\n"
+    . '    echo "$(date +%s) $ipct" >>"$PROGHIST"' . "\n"
+    . '    LAST_PCT=$ipct' . "\n"
+    . '  fi' . "\n"
+    . 'done' . "\n"
+    . 'wait "$CPID"' . "\n"
     . 'CONV_RC=$?' . "\n"
     . 'set -e' . "\n"
     . 'if [ "${CONV_RC}" -ne 0 ]; then fail convert; fi' . "\n"
@@ -2375,6 +2482,180 @@ function nbd_image_stop($id) {
   }
   nbd_pull_queue_kick();
   return ['ok' => true, 'killed' => $pids];
+}
+
+/**
+ * True if a job card may be cleared from history (not live work).
+ */
+function nbd_job_is_clearable(array $j) {
+  if (!empty($j['external'])) {
+    return false;
+  }
+  $id = (string)($j['id'] ?? '');
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return false;
+  }
+  $k = nbd_job_ui_status($j)['key'] ?? '';
+  return !in_array($k, ['running', 'paused', 'queued'], true);
+}
+
+/**
+ * Remove one finished job's run-state (+ log). Does not delete the output image.
+ */
+function nbd_job_clear_one($id) {
+  $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return ['ok' => false, 'error' => 'Invalid job id'];
+  }
+  $j = nbd_job_load($id);
+  if (!is_array($j)) {
+    // Still scrub orphan sidecars
+  } elseif (!nbd_job_is_clearable($j)) {
+    return ['ok' => false, 'error' => 'Stop or cancel the job before clearing'];
+  }
+  $log = is_array($j) ? (string)($j['log'] ?? '') : '';
+  foreach ([
+    NBDEXPORT_RUN . '/' . $id . '.json',
+    NBDEXPORT_RUN . '/' . $id . '.pid',
+    NBDEXPORT_RUN . '/' . $id . '.sh',
+    NBDEXPORT_RUN . '/' . $id . '.progress',
+    NBDEXPORT_RUN . '/' . $id . '.progress.hist',
+  ] as $f) {
+    if (is_file($f)) {
+      @unlink($f);
+    }
+  }
+  if ($log === '') {
+    $log = NBDEXPORT_LOG . '/' . $id . '.log';
+  }
+  if ($log !== '' && is_file($log)) {
+    @unlink($log);
+  }
+  return ['ok' => true, 'id' => $id];
+}
+
+/**
+ * Clear selected job ids and/or all finished jobs.
+ *
+ * @param string[] $ids
+ * @param bool $all_finished
+ * @return array{ok:bool,cleared:string[],skipped:string[],error?:string}
+ */
+function nbd_jobs_clear(array $ids, $all_finished = false) {
+  $cleared = [];
+  $skipped = [];
+  $want = [];
+  foreach ($ids as $id) {
+    $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+    if ($id !== '' && strpos($id, 'job-') === 0) {
+      $want[$id] = true;
+    }
+  }
+  if ($all_finished) {
+    foreach (nbd_jobs_state() as $j) {
+      if (nbd_job_is_clearable($j) && !empty($j['id'])) {
+        $want[(string)$j['id']] = true;
+      }
+    }
+  }
+  if (!$want) {
+    return ['ok' => false, 'error' => 'Nothing selected to clear', 'cleared' => [], 'skipped' => []];
+  }
+  foreach (array_keys($want) as $id) {
+    $r = nbd_job_clear_one($id);
+    if (!empty($r['ok'])) {
+      $cleared[] = $id;
+    } else {
+      $skipped[] = $id . ': ' . ($r['error'] ?? 'skipped');
+    }
+  }
+  return [
+    'ok' => count($cleared) > 0,
+    'cleared' => $cleared,
+    'skipped' => $skipped,
+    'error' => count($cleared) ? null : ('Nothing cleared' . ($skipped ? (' — ' . implode('; ', $skipped)) : '')),
+  ];
+}
+
+/**
+ * Delete a finished job's output image on disk (incomplete/failed pulls cannot resume).
+ * Never deletes outside /mnt or /tmp. Does not remove the job card (use Clear for that).
+ */
+function nbd_job_delete_output($id) {
+  $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return ['ok' => false, 'error' => 'Invalid job id'];
+  }
+  $j = nbd_job_load($id);
+  if (!is_array($j)) {
+    return ['ok' => false, 'error' => 'Job not found'];
+  }
+  if (!nbd_job_is_clearable($j)) {
+    return ['ok' => false, 'error' => 'Stop the job before deleting its output file'];
+  }
+  $out = trim((string)($j['output'] ?? ''));
+  if ($out === '' || $out === '(unknown)') {
+    return ['ok' => false, 'error' => 'No output path on this job'];
+  }
+  if (strpos($out, '/mnt/') !== 0 && strpos($out, '/tmp/') !== 0) {
+    return ['ok' => false, 'error' => 'Refusing to delete outside /mnt or /tmp'];
+  }
+  if (is_dir($out)) {
+    return ['ok' => false, 'error' => 'Output path is a directory'];
+  }
+  if (!file_exists($out)) {
+    return ['ok' => true, 'id' => $id, 'missing' => true, 'path' => $out];
+  }
+  if (!is_file($out) && !is_link($out)) {
+    return ['ok' => false, 'error' => 'Not a regular file: ' . $out];
+  }
+  $sz = @filesize($out);
+  if (!@unlink($out)) {
+    return ['ok' => false, 'error' => 'unlink failed: ' . $out];
+  }
+  // Best-effort sidecars
+  @unlink($out . '.progress');
+  return ['ok' => true, 'id' => $id, 'path' => $out, 'bytes' => $sz !== false ? (int)$sz : null];
+}
+
+/**
+ * Start a new Pull using a prior job's (or edited) source/output/format.
+ * Optionally remove an existing incomplete output file first.
+ *
+ * @param array{url?:string,output?:string,format?:string,remove_output?:bool} $overrides
+ */
+function nbd_image_retry($id, array $overrides = []) {
+  $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  if ($id === '' || strpos($id, 'job-') !== 0) {
+    return ['ok' => false, 'error' => 'Invalid job id'];
+  }
+  $j = nbd_job_load($id);
+  if (!is_array($j)) {
+    return ['ok' => false, 'error' => 'Job not found'];
+  }
+  $k = nbd_job_ui_status($j)['key'] ?? '';
+  if (in_array($k, ['running', 'paused', 'queued'], true)) {
+    return ['ok' => false, 'error' => 'Stop or cancel the live job before retrying'];
+  }
+  $url = trim((string)($overrides['url'] ?? $j['url'] ?? ''));
+  $output = trim((string)($overrides['output'] ?? $j['output'] ?? ''));
+  $format = trim((string)($overrides['format'] ?? $j['format'] ?? 'qcow2'));
+  if ($url === '' || $output === '') {
+    return ['ok' => false, 'error' => 'Missing source or output path'];
+  }
+  $remove = !empty($overrides['remove_output']);
+  if ($remove && is_file($output)) {
+    if (!@unlink($output)) {
+      return ['ok' => false, 'error' => 'Could not remove existing output: ' . $output];
+    }
+  } elseif (is_file($output) && !$remove) {
+    // Allow overwrite — qemu-img convert replaces; warn via flash only
+  }
+  $r = nbd_image_start($url, $output, $format);
+  if (!empty($r['ok'])) {
+    $r['retried_from'] = $id;
+  }
+  return $r;
 }
 
 function nbd_write_companion_marker() {

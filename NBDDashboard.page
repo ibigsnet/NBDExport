@@ -42,6 +42,8 @@ try {
     }
     $pct = nbd_job_progress_pct($j);
     $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
+    $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
+    $rates = ($key === 'running' && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : [];
     $out = (string)($j['output'] ?? '');
     $short = $out;
     if (strlen($short) > 36) {
@@ -55,6 +57,9 @@ try {
       'label' => (string)($st['label'] ?? $key),
       'pct' => $pct,
       'eta' => (string)($eta['label'] ?? ''),
+      'elapsed' => ($elapsed !== null) ? nbd_format_duration($elapsed) : '',
+      'net' => (string)($rates['net_h'] ?? ''),
+      'disk' => (string)($rates['disk_h'] ?? ''),
       'size' => (string)($j['output_size_h'] ?? '—'),
     ];
   }
@@ -94,14 +99,27 @@ try {
       echo '<div style="margin:0.35em 0;padding:0.35em 0;border-bottom:1px solid rgba(128,128,128,0.25)">';
       echo '<span style="display:inline-block;padding:0.1em 0.45em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
         . $bg . '">' . htmlspecialchars($p['label']) . '</span> ';
+      echo '<span style="white-space:nowrap;font-variant-numeric:tabular-nums">';
       if ($p['pct'] !== null) {
         $ph = rtrim(rtrim(number_format((float)$p['pct'], 1, '.', ''), '0'), '.');
         echo '<strong>' . htmlspecialchars($ph) . '%</strong> ';
+      } else {
+        echo '<strong>—</strong> ';
+      }
+      if ($p['elapsed'] !== '') {
+        echo '<span style="opacity:0.75">' . htmlspecialchars($p['elapsed']) . '</span> ';
       }
       if ($p['eta'] !== '') {
-        echo '<span style="opacity:0.75">' . htmlspecialchars($p['eta']) . '</span> ';
+        echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['eta']) . '</span> ';
       }
-      echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['size']) . '</span><br>';
+      echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['size']) . '</span>';
+      if ($p['net'] !== '') {
+        echo '<span style="opacity:0.75"> · net ' . htmlspecialchars($p['net']) . '</span>';
+      }
+      if ($p['disk'] !== '') {
+        echo '<span style="opacity:0.75"> · disk ' . htmlspecialchars($p['disk']) . '</span>';
+      }
+      echo '</span><br>';
       echo '<code style="font-size:0.9em" title="' . htmlspecialchars($p['url']) . '">'
         . htmlspecialchars($p['url']) . '</code><br>';
       echo '<code style="opacity:0.75;font-size:0.9em" title="' . htmlspecialchars($p['out']) . '">'
