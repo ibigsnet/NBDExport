@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26af
+
+- **Dashboard tile fix:** do not emit `<style>` before the `<tbody>` — that split the parent
+  Dashboard `<table>` and left a full-width “NBD EXPORT” bar with blank columns. Match
+  Disk Location / Docker tile markup; wrap tile build in try/catch so a fault cannot blank
+  the whole Dashboard.
+- **Status layout:** Pull jobs are compact **cards** (badge · % · ETA · size · started),
+  truncated source/output with full path on hover, logs in a collapsed `<details>` (open
+  while running). Host table still uses word-break so long URLs wrap.
+
 ## 2026.08.26ae
 
 - **Pull progress % fixed:** `qemu-img -p` stderr was fully buffered when piped, so Status showed
