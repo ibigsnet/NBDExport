@@ -60,18 +60,7 @@ nbd_page_styles();
         Extra Pulls wait in <strong>Queued</strong>. <strong>Play</strong> / <strong>Force start</strong> / <strong>Cancel</strong> for the queue.
         <strong>Pause</strong> (SIGSTOP) frees disk IO for parity without losing the job — <strong>Resume</strong> continues.
       </p>
-      <table class="nbd-data tablesorter">
-        <thead>
-          <tr>
-            <th>Status</th>
-            <th>Source</th>
-            <th>Output</th>
-            <th>Progress</th>
-            <th>Started</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
+      <div class="nbd-job-list">
 <?php foreach ($jobs as $j):
   $jst = nbd_job_ui_status($j);
   $jkey = $jst['key'] ?? '';
@@ -84,18 +73,30 @@ nbd_page_styles();
   $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
   $eta_h = trim((string)($eta['label'] ?? ''));
   $size_h = htmlspecialchars($j['output_size_h'] ?? '—');
+  $src = (string)($j['url'] ?? '');
+  $out = (string)($j['output'] ?? '');
+  $src_short = (strlen($src) > 56) ? (substr($src, 0, 28) . '…' . substr($src, -24)) : $src;
+  $out_short = (strlen($out) > 56) ? ('…' . substr($out, -52)) : $out;
+  $tail = !empty($j['log']) ? nbd_log_tail_display($j['log'], 8) : '';
+  $open_log = ($running || $paused) ? ' open' : '';
 ?>
-          <tr data-nbd-job-id="<?= $jid ?>">
-            <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
+        <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>">
+          <div class="nbd-job-card-top">
+            <span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
               data-nbd-key="<?= htmlspecialchars($jkey) ?>"
-              title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
-            <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
-            <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
-            <td class="nbd-live-job-progress"><span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
+              title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span>
+            <span class="nbd-live-job-progress">
+              <span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
               <span class="nbd-muted nbd-live-job-eta"><?= $eta_h !== '' ? (' · ' . htmlspecialchars($eta_h)) : '' ?></span>
-              <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span></td>
-            <td class="nbd-live-job-started"><?= nbd_format_when_html($j['started'] ?? '') ?></td>
-            <td class="nbd-live-job-actions">
+              <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span>
+            </span>
+            <span class="nbd-muted nbd-live-job-started"><?= nbd_format_when_html($j['started'] ?? '') ?></span>
+          </div>
+          <div class="nbd-job-card-meta">
+            <code class="nbd-job-path" title="<?= htmlspecialchars($src) ?>"><?= htmlspecialchars($src_short) ?></code>
+            <code class="nbd-job-path nbd-muted" title="<?= htmlspecialchars($out) ?>">→ <?= htmlspecialchars($out_short) ?></code>
+          </div>
+          <div class="nbd-job-card-actions nbd-live-job-actions">
               <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline' : 'none' ?>" class="nbd-live-job-pause-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
@@ -141,17 +142,16 @@ nbd_page_styles();
                 <input type="hidden" name="job_id" value="<?= $jid ?>">
                 <input type="submit" name="#apply" value="Cancel">
               </form>
-            </td>
-          </tr>
-          <tr data-nbd-job-log="<?= $jid ?>">
-            <td colspan="6"><pre class="nbd-log nbd-live-job-log"><?php
-  $tail = !empty($j['log']) ? nbd_log_tail_display($j['log'], 8) : '';
-  echo htmlspecialchars($tail);
-?></pre></td>
-          </tr>
+          </div>
+<?php if ($tail !== ''): ?>
+          <details class="nbd-job-log" data-nbd-job-log="<?= $jid ?>"<?= $open_log ?>>
+            <summary>Log</summary>
+            <pre class="nbd-log nbd-live-job-log"><?= htmlspecialchars($tail) ?></pre>
+          </details>
+<?php endif; ?>
+        </div>
 <?php endforeach; ?>
-        </tbody>
-      </table>
+      </div>
 <?php endif; ?>
     </div>
   </div>

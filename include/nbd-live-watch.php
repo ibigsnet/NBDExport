@@ -84,12 +84,12 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   }
 
   function applyJob(item) {
-    var row = document.querySelector('tr[data-nbd-job-id="' + cssEscape(item.id) + '"]');
+    // Cards (Status) or legacy table rows
+    var row = document.querySelector('.nbd-job-card[data-nbd-job-id="' + cssEscape(item.id) + '"]')
+      || document.querySelector('tr[data-nbd-job-id="' + cssEscape(item.id) + '"]');
     if (!row) return;
     var badge = row.querySelector('.nbd-live-job-badge');
     if (badge) setBadge(badge, item);
-    var size = row.querySelector('.nbd-live-job-size');
-    if (size && item.output_size_h) size.textContent = item.output_size_h;
     var running = item.key === 'running';
     var paused = item.key === 'paused';
     var queued = item.key === 'queued';
@@ -123,9 +123,10 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     if (size && item.output_size_h) size.textContent = ' · ' + item.output_size_h;
     var started = row.querySelector('.nbd-live-job-started');
     if (started && item.started_h) started.textContent = item.started_h;
-    var logRow = document.querySelector('tr[data-nbd-job-log="' + cssEscape(item.id) + '"]');
-    if (logRow && item.log_tail != null) {
-      var pre = logRow.querySelector('.nbd-live-job-log, pre.nbd-log');
+    var logBox = row.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]')
+      || document.querySelector('[data-nbd-job-log="' + cssEscape(item.id) + '"]');
+    if (logBox && item.log_tail != null) {
+      var pre = logBox.querySelector('.nbd-live-job-log, pre.nbd-log');
       if (pre && item.log_tail !== '') {
         pre.textContent = item.log_tail;
       }

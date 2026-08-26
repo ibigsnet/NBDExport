@@ -111,7 +111,7 @@ function nbd_page_styles() {
   max-width: 100%;
   margin: 0 auto;
 }
-.nbd-wrap { max-width: 54em; margin-left: auto; margin-right: auto; }
+.nbd-wrap { max-width: 64em; margin-left: auto; margin-right: auto; }
 /* VM-template style: in-flow tree (pushes page), not absolute overlay (glitchy dismiss) */
 .nbd-wrap .fileTree {
   position: relative !important;
@@ -223,13 +223,31 @@ function nbd_page_styles() {
   white-space: pre-wrap; font-size: 0.88em; opacity: 0.85; margin: 0.5em 0 0;
   padding: 0.5em 0.65em; border-radius: 4px; background: rgba(0, 0, 0, 0.06);
 }
-.nbd-wrap pre.nbd-log { white-space: pre-wrap; margin: 0; font-size: 0.85em; opacity: 0.8; }
-.nbd-wrap table.nbd-data { width: 100%; margin: 0.5em 0 0.75em; }
+.nbd-wrap pre.nbd-log { white-space: pre-wrap; margin: 0; font-size: 0.85em; opacity: 0.8; max-height: 12em; overflow: auto; }
+.nbd-wrap table.nbd-data { width: 100%; margin: 0.5em 0 0.75em; table-layout: fixed; }
 .nbd-wrap table.nbd-data th,
 .nbd-wrap table.nbd-data td {
   text-align: left; padding: 0.35em 0.5em; vertical-align: top;
   border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  word-break: break-word; overflow-wrap: anywhere;
 }
+.nbd-wrap table.nbd-data code { word-break: break-all; font-size: 0.9em; }
+.nbd-wrap .nbd-job-list { margin: 0.5em 0 0.75em; display: flex; flex-direction: column; gap: 0.65em; }
+.nbd-wrap .nbd-job-card {
+  border: 1px solid rgba(128,128,128,0.35); border-radius: 6px;
+  padding: 0.55em 0.75em; background: rgba(128,128,128,0.06);
+}
+.nbd-wrap .nbd-job-card-top {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.45em 0.75em; margin-bottom: 0.35em;
+}
+.nbd-wrap .nbd-job-card-meta { font-size: 0.92em; line-height: 1.45; }
+.nbd-wrap .nbd-job-card-meta .nbd-job-path {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font-size: 0.9em;
+}
+.nbd-wrap .nbd-job-card-actions { margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.35em; }
+.nbd-wrap .nbd-job-card-actions form { display: inline; margin: 0; }
+.nbd-wrap .nbd-job-card details.nbd-job-log { margin-top: 0.45em; font-size: 0.9em; }
+.nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
 .nbd-wrap details.nbd-cli-box { margin-top: 1.25em; font-size: 0.95em; }
 .nbd-wrap details.nbd-cli-box summary { cursor: pointer; font-weight: 600; }
 /* Shared header block (all tabs) */

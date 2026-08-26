@@ -6,133 +6,114 @@ Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.12.0',
 /**
  * Dashboard tile — Hosts + Pull jobs.
  *
- * Uses stock $mytiles[plugin]['column3'] so we land in the same *column* as
- * Array / Cache / Parity (DashStats customTiles('column3')). We do **not** hard-code
- * a vertical slot: Unraid appends each plugin's <tbody> in page-load order, and the
- * user can show/hide/reorder via Dashboard → Tile Management. Other plugins adding
- * column1/2/3 tiles coexist fine.
+ * Uses stock $mytiles[plugin]['column3'] (same column as Array/Cache/Parity).
+ * Markup must be a clean <tbody> only — never emit <style>/junk before it or the
+ * parent Dashboard <table> splits and the header stretches full-width.
  */
 $docroot = $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
-require_once "$docroot/plugins/NBDExport/include/nbd-lib.php";
 
-$pluginname = 'NBDExport';
-$cfg = nbd_load_cfg();
-$enabled = (($cfg['enabled'] ?? 'yes') === 'yes');
+try {
+  require_once "$docroot/plugins/NBDExport/include/nbd-lib.php";
 
-$hosts = [];
-foreach (nbd_exports_state() as $e) {
-  if (empty($e['alive']) && empty($e['listening'])) {
-    continue;
+  $pluginname = 'NBDExport';
+  $cfg = nbd_load_cfg();
+  $enabled = (($cfg['enabled'] ?? 'yes') === 'yes');
+
+  $hosts = [];
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['alive']) && empty($e['listening'])) {
+      continue;
+    }
+    $st = nbd_export_ui_status($e);
+    $hosts[] = [
+      'device' => (string)($e['device'] ?? ''),
+      'url' => (string)($e['url'] ?? ''),
+      'ro' => !empty($e['read_only']),
+      'label' => (string)($st['label'] ?? ''),
+    ];
   }
-  $st = nbd_export_ui_status($e);
-  $hosts[] = [
-    'device' => (string)($e['device'] ?? ''),
-    'url' => (string)($e['url'] ?? ''),
-    'ro' => !empty($e['read_only']),
-    'label' => (string)($st['label'] ?? ''),
-    'key' => (string)($st['key'] ?? ''),
-  ];
-}
 
-$pulls = [];
-foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state()) as $j) {
-  $st = nbd_job_ui_status($j);
-  $key = $st['key'] ?? 'idle';
-  if (!in_array($key, ['running', 'queued', 'paused'], true)) {
-    continue;
+  $pulls = [];
+  foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state()) as $j) {
+    $st = nbd_job_ui_status($j);
+    $key = $st['key'] ?? 'idle';
+    if (!in_array($key, ['running', 'queued', 'paused'], true)) {
+      continue;
+    }
+    $pct = nbd_job_progress_pct($j);
+    $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
+    $out = (string)($j['output'] ?? '');
+    $short = $out;
+    if (strlen($short) > 36) {
+      $short = '…' . substr($short, -34);
+    }
+    $pulls[] = [
+      'url' => (string)($j['url'] ?? ''),
+      'out' => $out,
+      'short' => $short,
+      'key' => $key,
+      'label' => (string)($st['label'] ?? $key),
+      'pct' => $pct,
+      'eta' => (string)($eta['label'] ?? ''),
+      'size' => (string)($j['output_size_h'] ?? '—'),
+    ];
   }
-  $pct = nbd_job_progress_pct($j);
-  $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
-  $pulls[] = [
-    'id' => (string)($j['id'] ?? ''),
-    'url' => (string)($j['url'] ?? ''),
-    'out' => (string)($j['output'] ?? ''),
-    'key' => $key,
-    'label' => (string)($st['label'] ?? $key),
-    'pct' => $pct,
-    'eta' => (string)($eta['label'] ?? ''),
-    'size' => (string)($j['output_size_h'] ?? '—'),
-  ];
-}
 
-$n_host = count($hosts);
-$n_pull = count($pulls);
-$summary = $enabled
-  ? ($n_host . ' host' . ($n_host === 1 ? '' : 's') . ' · ' . $n_pull . ' pull' . ($n_pull === 1 ? '' : 's'))
-  : 'Plugin disabled';
+  $n_host = count($hosts);
+  $n_pull = count($pulls);
+  $summary = $enabled
+    ? ($n_host . ' host' . ($n_host === 1 ? '' : 's') . ' · ' . $n_pull . ' pull' . ($n_pull === 1 ? '' : 's'))
+    : 'Plugin disabled';
 
-ob_start();
-?>
-<?php if (!$enabled): ?>
-<span class="orange-text">NBD Export is disabled</span>
-<?php elseif (!$hosts && !$pulls): ?>
-<span class="nbd-dash-muted">No active hosts or pulls</span>
-<?php else: ?>
-<table class="nbd-dash-table" style="width:100%;font-size:0.92em;line-height:1.35">
-<?php foreach ($hosts as $h): ?>
-  <tr>
-    <td style="width:4.5em;vertical-align:top">
-      <span class="nbd-badge <?= $h['ro'] ? 'nbd-badge-ok' : 'nbd-badge-rw' ?>"><?= $h['ro'] ? 'RO' : 'RW' ?></span>
-    </td>
-    <td>
-      <code><?= htmlspecialchars($h['device']) ?></code>
-      <span class="nbd-dash-muted"> · <?= htmlspecialchars($h['label']) ?></span><br>
-      <code class="nbd-dash-muted"><?= htmlspecialchars($h['url']) ?></code>
-    </td>
-  </tr>
-<?php endforeach; ?>
-<?php foreach ($pulls as $p):
-  $short = $p['out'];
-  if (strlen($short) > 42) {
-    $short = '…' . substr($short, -40);
-  }
-  if ($p['key'] === 'running') {
-    $badge = 'nbd-badge-run';
-  } elseif ($p['key'] === 'paused') {
-    $badge = 'nbd-badge-rw';
+  ob_start();
+  if (!$enabled) {
+    echo '<span class="orange-text">NBD Export is disabled</span>';
+  } elseif (!$hosts && !$pulls) {
+    echo '<span style="opacity:0.75">No active hosts or pulls</span>';
   } else {
-    $badge = 'nbd-badge-info';
+    echo '<div style="font-size:0.92em;line-height:1.4">';
+    foreach ($hosts as $h) {
+      $badge = $h['ro'] ? 'RO' : 'RW';
+      $bg = $h['ro'] ? 'rgba(46,160,90,0.4)' : 'rgba(220,140,40,0.45)';
+      echo '<div style="margin:0.35em 0;padding:0.35em 0;border-bottom:1px solid rgba(128,128,128,0.25)">';
+      echo '<span style="display:inline-block;padding:0.1em 0.45em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
+        . $bg . '">' . htmlspecialchars($badge) . '</span> ';
+      echo '<code>' . htmlspecialchars($h['device']) . '</code>';
+      echo ' <span style="opacity:0.75">· ' . htmlspecialchars($h['label']) . '</span><br>';
+      echo '<code style="opacity:0.75;font-size:0.9em">' . htmlspecialchars($h['url']) . '</code>';
+      echo '</div>';
+    }
+    foreach ($pulls as $p) {
+      if ($p['key'] === 'running') {
+        $bg = 'rgba(220,140,40,0.5)';
+      } elseif ($p['key'] === 'paused') {
+        $bg = 'rgba(220,140,40,0.45)';
+      } else {
+        $bg = 'rgba(74,144,217,0.4)';
+      }
+      echo '<div style="margin:0.35em 0;padding:0.35em 0;border-bottom:1px solid rgba(128,128,128,0.25)">';
+      echo '<span style="display:inline-block;padding:0.1em 0.45em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
+        . $bg . '">' . htmlspecialchars($p['label']) . '</span> ';
+      if ($p['pct'] !== null) {
+        $ph = rtrim(rtrim(number_format((float)$p['pct'], 1, '.', ''), '0'), '.');
+        echo '<strong>' . htmlspecialchars($ph) . '%</strong> ';
+      }
+      if ($p['eta'] !== '') {
+        echo '<span style="opacity:0.75">' . htmlspecialchars($p['eta']) . '</span> ';
+      }
+      echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['size']) . '</span><br>';
+      echo '<code style="font-size:0.9em" title="' . htmlspecialchars($p['url']) . '">'
+        . htmlspecialchars($p['url']) . '</code><br>';
+      echo '<code style="opacity:0.75;font-size:0.9em" title="' . htmlspecialchars($p['out']) . '">'
+        . htmlspecialchars($p['short']) . '</code>';
+      echo '</div>';
+    }
+    echo '</div>';
   }
-?>
-  <tr>
-    <td style="width:4.5em;vertical-align:top">
-      <span class="nbd-badge <?= $badge ?>"><?= htmlspecialchars($p['label']) ?></span>
-    </td>
-    <td>
-      <code><?= htmlspecialchars($p['url']) ?></code>
-      <?php if ($p['pct'] !== null): ?>
-        <strong> · <?= htmlspecialchars(rtrim(rtrim(number_format((float)$p['pct'], 1, '.', ''), '0'), '.') . '%') ?></strong>
-      <?php endif; ?>
-      <?php if ($p['eta'] !== ''): ?>
-        <span class="nbd-dash-muted"> · <?= htmlspecialchars($p['eta']) ?></span>
-      <?php endif; ?>
-      <span class="nbd-dash-muted"> · <?= htmlspecialchars($p['size']) ?></span><br>
-      <code class="nbd-dash-muted" title="<?= htmlspecialchars($p['out']) ?>"><?= htmlspecialchars($short) ?></code>
-    </td>
-  </tr>
-<?php endforeach; ?>
-</table>
-<?php endif; ?>
-<?php
-$body = ob_get_clean();
+  $body = ob_get_clean();
 
-$css = <<<'CSS'
-<style>
-.nbd-dash-muted { opacity: 0.75; font-size: 0.9em; }
-.nbd-dash-table td { padding: 0.2em 0.25em; }
-.nbd-dash-table .nbd-badge {
-  display: inline-block; padding: 0.1em 0.45em; border-radius: 4px;
-  font-size: 0.8em; font-weight: 600; background: rgba(128,128,128,0.28);
-}
-.nbd-dash-table .nbd-badge-ok { background: rgba(46,160,90,0.4); }
-.nbd-dash-table .nbd-badge-rw { background: rgba(220,140,40,0.45); }
-.nbd-dash-table .nbd-badge-run { background: rgba(220,140,40,0.5); }
-.nbd-dash-table .nbd-badge-info { background: rgba(74,144,217,0.4); }
-</style>
-CSS;
-
-$mytiles[$pluginname]['column3'] = <<<EOT
-$css
+  // Disk Location / Docker-style header — tbody ONLY (no leading <style>)
+  $mytiles[$pluginname]['column3'] = <<<EOT
 <tbody id="tblNBDExport" title="_(NBD Export)_">
 <tr>
 <td>
@@ -157,4 +138,10 @@ $body
 </td></tr>
 </tbody>
 EOT;
+} catch (Throwable $e) {
+  // Never take down the whole Dashboard if our tile fatals
+  $mytiles['NBDExport']['column3'] = '<tbody id="tblNBDExport" title="NBD Export"><tr><td>'
+    . '<i class="fa fa-database f32"></i><div class="section">NBD Export<br>'
+    . '<span class="orange-text">Tile error — open Settings → NBD</span></div></td></tr></tbody>';
+}
 ?>
