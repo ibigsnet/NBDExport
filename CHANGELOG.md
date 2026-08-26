@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26al
+
+- **History toolbar clarity:** split into **Checkboxes** (Check all / Check failed /
+  Uncheck all) **|** **History list** (Remove checked from list / Remove all finished
+  from list). Avoids “Clear selection” vs “Clear selected” confusion.
+- Help line spells out list vs **Delete image** vs **Retry**.
+
 ## 2026.08.26ak
 
 - **Retry cleanup:** starting a retry **clears the old History card** and, when the output

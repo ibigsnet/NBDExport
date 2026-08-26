@@ -278,12 +278,22 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
 .nbd-wrap .nbd-job-section-title { margin: 1.1em 0 0.45em; font-size: 1.05em; }
 .nbd-wrap .nbd-jobs-toolbar {
-  display: flex; flex-wrap: wrap; gap: 0.45em; align-items: center;
-  margin: 0 0 0.65em; padding: 0.45em 0.55em;
+  margin: 0 0 0.65em; padding: 0.55em 0.65em;
   border: 1px solid rgba(128,128,128,0.3); border-radius: 6px;
   background: rgba(128,128,128,0.06);
 }
-.nbd-wrap .nbd-jobs-delopt { font-size: 0.92em; margin-left: 0.25em; cursor: pointer; }
+.nbd-wrap .nbd-jobs-toolbar form {
+  display: flex; flex-wrap: wrap; gap: 0.45em 0.55em; align-items: center;
+}
+.nbd-wrap .nbd-toolbar-group {
+  display: inline-flex; flex-wrap: wrap; gap: 0.35em; align-items: center;
+}
+.nbd-wrap .nbd-toolbar-label {
+  font-size: 0.85em; font-weight: 700; opacity: 0.85; margin-right: 0.15em;
+}
+.nbd-wrap .nbd-toolbar-sep {
+  opacity: 0.45; font-weight: 700; padding: 0 0.15em; user-select: none;
+}
 .nbd-wrap .nbd-job-sel { display: inline-flex; width: 1.4em; flex: 0 0 auto; }
 .nbd-wrap .nbd-job-sel-spacer { display: inline-block; width: 1.4em; }
 .nbd-wrap .nbd-job-edit {

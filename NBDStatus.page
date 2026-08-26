@@ -122,17 +122,25 @@ foreach ($jobs_history as $j) {
           <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
           <input type="hidden" name="nbd_action" value="jobs_clear">
           <input type="hidden" name="clear_finished" id="nbd_clear_finished" value="no">
-          <button type="button" onclick="nbdJobsSelectByStatus(null)">Select finished</button>
-          <button type="button" onclick="nbdJobsSelectByStatus('failed')">Select failed</button>
-          <button type="button" onclick="nbdJobsSelectByStatus(false)">Clear selection</button>
-          <input type="submit" name="#apply" value="Clear selected"
-            onclick="return nbdJobsClearClick(false);">
-          <input type="submit" name="#apply" value="Clear all finished"
-            onclick="return nbdJobsClearClick(true);">
+          <span class="nbd-toolbar-group" role="group" aria-label="Checkboxes">
+            <span class="nbd-toolbar-label">Checkboxes</span>
+            <button type="button" onclick="nbdJobsSelectByStatus(null)">Check all</button>
+            <button type="button" onclick="nbdJobsSelectByStatus('failed')">Check failed</button>
+            <button type="button" onclick="nbdJobsSelectByStatus(false)">Uncheck all</button>
+          </span>
+          <span class="nbd-toolbar-sep" aria-hidden="true">|</span>
+          <span class="nbd-toolbar-group" role="group" aria-label="History list">
+            <span class="nbd-toolbar-label">History list</span>
+            <input type="submit" name="#apply" value="Remove checked from list"
+              onclick="return nbdJobsClearClick(false);">
+            <input type="submit" name="#apply" value="Remove all finished from list"
+              onclick="return nbdJobsClearClick(true);">
+          </span>
         </form>
         <p class="nbd-muted" style="margin:0.35em 0 0;font-size:0.9em">
-          Clear removes History entries only (keeps files). Use <strong>Delete image</strong> to free disk space.
-          <strong>Retry</strong> removes the old incomplete file when the output path is unchanged, and drops that History card.
+          <strong>Checkboxes / Remove from list</strong> only hide History rows (files stay on disk).
+          <strong>Delete image</strong> on a card frees the qcow2/raw.
+          <strong>Retry</strong> starts over: drops that History row, and deletes the incomplete file when the output path is unchanged.
         </p>
       </div>
 <?php endif; ?>
@@ -169,12 +177,12 @@ foreach ($jobs_history as $j) {
     if (!all) {
       var boxes = document.querySelectorAll('.nbd-job-cb:checked');
       if (!boxes.length) {
-        alert('Select at least one finished job (checkbox), or use Clear all finished.');
+        alert('Check at least one History job first, or use Remove all finished from list.');
         return false;
       }
-      return confirm('Clear ' + boxes.length + ' selected job(s) from History?\n\nImage files under /mnt are kept. Use Delete image on a card to free space.');
+      return confirm('Remove ' + boxes.length + ' checked job(s) from the History list?\n\nFiles under /mnt are kept. Use Delete image on a card to free space.');
     }
-    return confirm('Clear all Done/Failed/Idle jobs from History?\n\nImage files under /mnt are kept. Use Delete image on a card to free space.');
+    return confirm('Remove all Done/Failed/Idle jobs from the History list?\n\nFiles under /mnt are kept. Use Delete image on a card to free space.');
   };
   window.nbdJobsClearSubmit = function () { return true; };
   document.addEventListener('click', function (ev) {

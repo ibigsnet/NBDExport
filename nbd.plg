@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ak">
+<!ENTITY version "2026.08.26al">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Retry auto-clears History card and deletes same-path output; Clear is list-only; remove confusing delete checkbox.
+- History toolbar wording: Checkboxes vs Remove from list (no Clear selection/selected clash).
+
+###2026.08.26ak
+- Retry auto-clears History and same-path output; Clear is list-only.
 
 ###2026.08.26aj
 - Fix false NBD_JOB_FAIL (wait on ionice PID); net shows Gb/s above 1 Gb/s.
