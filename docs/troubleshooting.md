@@ -81,4 +81,19 @@ UI is **tabs** (Status · Host · Pull · Settings), not numbered sections. Upda
 
 ## Uninstall left something behind
 
-Remove stops hosts and deletes plugin trees. Your **qcow2 files under `/mnt/` are kept**. Manually remove `/var/log/nbdexport` if desired. Export config under `/boot/config/nbdexport-config-*.json` is kept if you saved outside the plugin dir.
+CA Apps / Plugins **Remove** runs `plugin remove nbd.plg`. From **2026.08.26ad** the remove
+script always exits 0 and wipes package + emhttp + flash plugin trees + run/log state.
+
+If an older build left leftovers after a failed CA uninstall:
+
+```bash
+plugin remove nbd.plg
+# or, if the plg symlink is already gone but files remain:
+removepkg NBDExport-*-x86_64-1
+rm -rf /usr/local/emhttp/plugins/NBDExport /usr/local/emhttp/plugins/NbdExport
+rm -rf /boot/config/plugins/NBDExport /boot/config/plugins/NbdExport
+rm -rf /var/run/nbdexport /var/log/nbdexport
+```
+
+Your **qcow2/raw under `/mnt/`** are kept. Export JSON under `/boot/config/nbdexport-config-*.json`
+(saved outside the plugin dir) is kept.
