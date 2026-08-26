@@ -464,13 +464,141 @@ function nbd_job_ui_status(array $j) {
     return ['key' => 'done', 'label' => 'Done', 'class' => 'nbd-badge-ok', 'hint' => 'Finished successfully'];
   }
   if ($fin && !$ok) {
-    return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'See log tail'];
+    $why = function_exists('nbd_job_fail_summary') ? nbd_job_fail_summary($j) : '';
+    return [
+      'key' => 'failed',
+      'label' => 'Failed',
+      'class' => 'nbd-badge-bad',
+      'hint' => $why !== '' ? $why : 'See log tail',
+    ];
   }
   // Process gone without a finish marker still means the job ended (usually error).
   if (!$alive && !empty($j['pid']) && $status !== 'queued') {
-    return ['key' => 'failed', 'label' => 'Failed', 'class' => 'nbd-badge-bad', 'hint' => 'Process exited — see log tail'];
+    $why = function_exists('nbd_job_fail_summary') ? nbd_job_fail_summary($j) : '';
+    return [
+      'key' => 'failed',
+      'label' => 'Failed',
+      'class' => 'nbd-badge-bad',
+      'hint' => $why !== '' ? $why : 'Process exited — see log tail',
+    ];
   }
   return ['key' => 'idle', 'label' => 'Idle', 'class' => 'nbd-badge-stale', 'hint' => 'Not running'];
+}
+
+/**
+ * Known failure codes / markers → short Status reasons (maintainer table).
+ * Keys: NBD_JOB_FAIL tokens, qemu log snippets, or signal exit codes (128+N).
+ *
+ * @return array<string,string>
+ */
+function nbd_fail_reason_table() {
+  return [
+    // Wrapper tokens (NBD_JOB_FAIL …)
+    'wait_src' => 'Could not open source (NBD unreachable or device missing)',
+    'convert' => 'Convert failed (see log)',
+    'cancelled_while_queued' => 'Cancelled while queued',
+    'stopped_by_user' => 'Stopped by user',
+    'process_exited' => 'Process exited unexpectedly',
+    // Signal deaths (wait status → 128+signo) seen in the wild
+    '138' => 'Killed by SIGUSR1 (old progress poll bug — update plugin and Retry)',
+    '137' => 'Killed (SIGKILL) — OOM or manual kill',
+    '143' => 'Terminated (SIGTERM) — Stop or system shutdown',
+    '139' => 'Crashed (SIGSEGV)',
+    '134' => 'Aborted (SIGABRT)',
+    '9' => 'Killed (SIGKILL)',
+    '15' => 'Terminated (SIGTERM)',
+    '10' => 'Killed by SIGUSR1',
+    // qemu-img / system message fragments (matched in log)
+    'no route to host' => 'No route to NBD host (network / VPN / firewall)',
+    'connection refused' => 'NBD connection refused (export down or wrong port)',
+    'connection timed out' => 'NBD connection timed out',
+    'network is unreachable' => 'Network unreachable to NBD host',
+    'no space left' => 'No space left on destination',
+    'disk quota exceeded' => 'Disk quota exceeded on destination',
+    'permission denied' => 'Permission denied on source or output',
+    'read-only file system' => 'Destination is read-only',
+    'input/output error' => 'I/O error on source or destination',
+    'could not open' => 'Could not open source or output',
+    'failed to connect' => 'Failed to connect to NBD source',
+    'is not a regular file' => 'Output path is not a regular file',
+  ];
+}
+
+/**
+ * Parse job log / stored fields into a short fail reason for Status.
+ * @return array{code:string,reason:string}
+ */
+function nbd_job_fail_info(array $j) {
+  if (!empty($j['fail_reason']) && is_string($j['fail_reason'])) {
+    $code = (string)($j['fail_code'] ?? '');
+    return ['code' => $code, 'reason' => (string)$j['fail_reason']];
+  }
+  $table = nbd_fail_reason_table();
+  $log = (string)($j['log'] ?? '');
+  $text = '';
+  if ($log !== '' && is_file($log)) {
+    $fh = @fopen($log, 'rb');
+    if ($fh) {
+      $sz = @filesize($log);
+      if ($sz > 16384) {
+        @fseek($fh, -16384, SEEK_END);
+      }
+      $text = (string)@stream_get_contents($fh);
+      @fclose($fh);
+    }
+  }
+  $code = '';
+  $reason = '';
+  // NBD_JOB_FAIL convert rc=138  OR  NBD_JOB_FAIL wait_src
+  if (preg_match('/NBD_JOB_FAIL\s+(\S+)(?:\s+rc=(\d+))?/i', $text, $m)) {
+    $token = strtolower($m[1]);
+    $rc = isset($m[2]) ? $m[2] : '';
+    if ($rc !== '' && isset($table[$rc])) {
+      $code = 'rc=' . $rc;
+      $reason = $table[$rc];
+    } elseif (isset($table[$token])) {
+      $code = $token;
+      $reason = $table[$token];
+      if ($rc !== '') {
+        $code .= ' rc=' . $rc;
+        if ($token === 'convert' && isset($table[$rc])) {
+          $reason = $table[$rc];
+        } elseif ($rc !== '') {
+          $reason .= ' (exit ' . $rc . ')';
+        }
+      }
+    } else {
+      $code = $token . ($rc !== '' ? (' rc=' . $rc) : '');
+      $reason = 'Job failed: ' . $token . ($rc !== '' ? (' (exit ' . $rc . ')') : '');
+    }
+  }
+  if ($reason === '' && $text !== '') {
+    $low = strtolower($text);
+    foreach ($table as $needle => $msg) {
+      if (ctype_digit((string)$needle)) {
+        continue;
+      }
+      if (in_array($needle, ['wait_src', 'convert', 'cancelled_while_queued', 'stopped_by_user', 'process_exited'], true)) {
+        continue;
+      }
+      if (strpos($low, $needle) !== false) {
+        $code = $needle;
+        $reason = $msg;
+        break;
+      }
+    }
+  }
+  if ($reason === '') {
+    $code = 'unknown';
+    $reason = 'Failed — open Log for details';
+  }
+  return ['code' => $code, 'reason' => $reason];
+}
+
+/** One-line fail summary for badges / cards. */
+function nbd_job_fail_summary(array $j) {
+  $info = nbd_job_fail_info($j);
+  return (string)($info['reason'] ?? '');
 }
 
 /** True if path is Unraid array-like (parity contention under concurrent writes). */
@@ -1727,7 +1855,11 @@ function nbd_jobs_state() {
           $j['ok'] = false;
           if (strpos($tail, 'NBD_JOB_FAIL') === false && $tail !== '') {
             @file_put_contents($log, "\nNBD_JOB_FAIL process_exited\n", FILE_APPEND);
+            $tail .= "\nNBD_JOB_FAIL process_exited\n";
           }
+          $fi = nbd_job_fail_info($j + ['log' => $log]);
+          $j['fail_code'] = $fi['code'];
+          $j['fail_reason'] = $fi['reason'];
         }
         $j['finished_at'] = date('c');
         $j['status'] = !empty($j['ok']) ? 'done' : 'failed';
@@ -1743,6 +1875,13 @@ function nbd_jobs_state() {
     } elseif (!empty($j['output'])) {
       // Deleted outfile while orphan still held the inode
       $j['output_size_h'] = !empty($j['orphaned']) ? '(deleted, still writing)' : '—';
+    }
+    if (($j['status'] ?? '') === 'failed' || (!empty($j['finished']) && empty($j['ok']))) {
+      if (empty($j['fail_reason'])) {
+        $fi = nbd_job_fail_info($j);
+        $j['fail_code'] = $fi['code'];
+        $j['fail_reason'] = $fi['reason'];
+      }
     }
     $list[] = $j;
   }

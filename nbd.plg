@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26am">
+<!ENTITY version "2026.08.26an">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Fix convert killed by SIGUSR1 (rc=138); progress via -p file poll; keep exec PID fix.
+- Failed jobs show a short Reason (exit code / NBD_JOB_FAIL / qemu message map).
+
+###2026.08.26am
+- Fix convert killed by SIGUSR1 (rc=138); progress via -p file poll.
 
 ###2026.08.26al
 - History toolbar wording: Checkboxes vs Remove from list.

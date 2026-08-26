@@ -63,6 +63,18 @@ $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
           <div class="nbd-job-card-meta">
             <div><span class="nbd-muted">Source</span> <code class="nbd-job-path"><?= htmlspecialchars($src !== '' ? $src : '—') ?></code></div>
             <div><span class="nbd-muted">Output</span> <code class="nbd-job-path"><?= htmlspecialchars($out !== '' ? $out : '—') ?></code></div>
+<?php if ($jkey === 'failed'):
+  $fail = function_exists('nbd_job_fail_info') ? nbd_job_fail_info($j) : ['code' => '', 'reason' => ''];
+  if ($fail['reason'] !== ''):
+?>
+            <div class="nbd-job-fail">
+              <strong>Reason</strong>
+              <?= htmlspecialchars($fail['reason']) ?>
+<?php if ($fail['code'] !== '' && $fail['code'] !== 'unknown'): ?>
+              <span class="nbd-muted"> (<?= htmlspecialchars($fail['code']) ?>)</span>
+<?php endif; ?>
+            </div>
+<?php endif; endif; ?>
           </div>
           <div class="nbd-job-card-actions nbd-live-job-actions">
               <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline-flex' : 'none' ?>" class="nbd-live-job-pause-form">

@@ -274,6 +274,11 @@ function nbd_page_styles() {
 .nbd-wrap .nbd-job-rmout {
   display: block; margin: 0.4em 0 0.15em; font-size: 0.9em; cursor: pointer;
 }
+.nbd-wrap .nbd-job-fail {
+  margin-top: 0.35em; padding: 0.35em 0.5em; border-radius: 4px;
+  border-left: 3px solid rgba(200, 60, 60, 0.85);
+  background: rgba(200, 60, 60, 0.12); font-size: 0.92em; line-height: 1.35;
+}
 .nbd-wrap .nbd-job-card details.nbd-job-log { margin-top: 0.45em; font-size: 0.9em; }
 .nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
 .nbd-wrap .nbd-job-section-title { margin: 1.1em 0 0.45em; font-size: 1.05em; }
