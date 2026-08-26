@@ -539,30 +539,16 @@ if (!isset($presets) || !is_array($presets)) {
   };
 
   /**
-   * Stock fileTreeAttach registers document mousedown to dismiss overlays.
-   * That race makes absolute trees flash open/closed. Keep the tree open when
-   * the gesture starts on the input or its tree (Browse.page pattern).
+   * Attach stock fileTree once (VM/Docker pattern).
+   * Do NOT capture-stop click/mousedown on the input — that blocks jquery.filetree's
+   * own click handler (26ab regression: click did nothing). In-flow CSS is enough
+   * to avoid the absolute-overlay flash; document dismiss still works when clicking away.
    */
-  function nbdGuardFileTreeDismiss(inputEl) {
-    if (!inputEl || inputEl.dataset.nbdFtGuard === '1') return;
-    var stop = function (e) {
-      e.stopPropagation();
-    };
-    inputEl.addEventListener('mousedown', stop, true);
-    inputEl.addEventListener('click', stop, true);
-    var tree = inputEl.nextElementSibling;
-    if (tree && tree.classList && tree.classList.contains('fileTree')) {
-      tree.addEventListener('mousedown', stop, true);
-    }
-    inputEl.dataset.nbdFtGuard = '1';
-  }
-
   function nbdAttachFileTreeOnce(inputEl, onFile, onFolder) {
     if (!inputEl || typeof window.jQuery === 'undefined' || typeof jQuery.fn.fileTreeAttach !== 'function') {
       return false;
     }
     if (inputEl.dataset.nbdFt === '1') {
-      nbdGuardFileTreeDismiss(inputEl);
       return true;
     }
     // Drop a stale tree node from a previous attach (tab re-entry)
@@ -572,12 +558,6 @@ if (!isset($presets) || !is_array($presets)) {
     }
     jQuery(inputEl).fileTreeAttach(null, onFile || null, onFolder || null);
     inputEl.dataset.nbdFt = '1';
-    nbdGuardFileTreeDismiss(inputEl);
-    // Guard the tree node created by fileTreeAttach
-    var tree = inputEl.nextElementSibling;
-    if (tree && tree.classList && tree.classList.contains('fileTree')) {
-      tree.addEventListener('mousedown', function (e) { e.stopPropagation(); }, true);
-    }
     return true;
   }
 

@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ab">
+<!ENTITY version "2026.08.26ac">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,7 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Pull fileTree: in-flow like VM templates (not absolute overlay); fix flash open/close.
+- Pull fileTree: restore click-to-open (remove capture guard that blocked jquery.filetree).
+
+###2026.08.26ab
+- Pull fileTree: in-flow like VM templates (not absolute overlay).
 
 ###2026.08.26aa
 - Pull path picker: load jquery.filetree.js; Browse for local file source.
