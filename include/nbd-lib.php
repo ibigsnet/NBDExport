@@ -425,7 +425,7 @@ function nbd_export_ui_status(array $e) {
 
 /**
  * Job status for UI: queued | running | done | failed | idle
- * Colors: Running orange, Done green, Failed red, Idle grey, Queued blue.
+ * Colors: Running orange, Paused purple, Queued blue, Done green, Failed red, Idle grey.
  */
 function nbd_job_ui_status(array $j) {
   $status = (string)($j['status'] ?? '');
@@ -444,7 +444,7 @@ function nbd_job_ui_status(array $j) {
     return [
       'key' => 'paused',
       'label' => 'Paused',
-      'class' => 'nbd-badge-rw',
+      'class' => 'nbd-badge-paused',
       'hint' => 'SIGSTOP — Resume when ready (e.g. after parity). Slot stays reserved.',
     ];
   }
@@ -2082,6 +2082,90 @@ function nbd_image_launch($id) {
 }
 
 /**
+ * Queued jobs oldest-first, respecting optional queue_seq (lower = sooner).
+ * @return array<int,array>
+ */
+function nbd_queued_jobs_ordered() {
+  $queued = [];
+  foreach (nbd_jobs_state() as $j) {
+    if (($j['status'] ?? '') === 'queued' && empty($j['finished'])) {
+      $queued[] = $j;
+    }
+  }
+  usort($queued, function ($a, $b) {
+    $sa = isset($a['queue_seq']) ? (int)$a['queue_seq'] : null;
+    $sb = isset($b['queue_seq']) ? (int)$b['queue_seq'] : null;
+    if ($sa !== null && $sb !== null && $sa !== $sb) {
+      return $sa <=> $sb;
+    }
+    if ($sa !== null && $sb === null) {
+      return -1;
+    }
+    if ($sa === null && $sb !== null) {
+      return 1;
+    }
+    return strcmp($a['queued_at'] ?? $a['started'] ?? '', $b['queued_at'] ?? $b['started'] ?? '');
+  });
+  return $queued;
+}
+
+/** Next queue_seq for a newly queued job (append to end). */
+function nbd_queue_next_seq() {
+  $max = 0;
+  foreach (nbd_jobs_state() as $j) {
+    if (($j['status'] ?? '') !== 'queued' || !empty($j['finished'])) {
+      continue;
+    }
+    if (isset($j['queue_seq'])) {
+      $max = max($max, (int)$j['queue_seq']);
+    }
+  }
+  return $max + 10;
+}
+
+/**
+ * Move a queued job up (-1) or down (+1) in the start order.
+ */
+function nbd_queue_move($id, $dir) {
+  $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  $dir = ((int)$dir) < 0 ? -1 : 1;
+  $list = nbd_queued_jobs_ordered();
+  $idx = -1;
+  foreach ($list as $i => $j) {
+    if (($j['id'] ?? '') === $id) {
+      $idx = $i;
+      break;
+    }
+  }
+  if ($idx < 0) {
+    return ['ok' => false, 'error' => 'Not a queued job'];
+  }
+  $swap = $idx + $dir;
+  if ($swap < 0 || $swap >= count($list)) {
+    return ['ok' => true, 'id' => $id, 'noop' => true];
+  }
+  // Assign contiguous seq so order is explicit
+  $ids = [];
+  foreach ($list as $j) {
+    $ids[] = (string)$j['id'];
+  }
+  $tmp = $ids[$idx];
+  $ids[$idx] = $ids[$swap];
+  $ids[$swap] = $tmp;
+  $seq = 10;
+  foreach ($ids as $jid) {
+    $j = nbd_job_load($jid);
+    if (!is_array($j)) {
+      continue;
+    }
+    $j['queue_seq'] = $seq;
+    nbd_job_persist($j);
+    $seq += 10;
+  }
+  return ['ok' => true, 'id' => $id];
+}
+
+/**
  * Start next queued job(s) while under max concurrent.
  */
 function nbd_pull_queue_kick() {
@@ -2097,16 +2181,7 @@ function nbd_pull_queue_kick() {
     $busy = false;
     return ['ok' => true, 'started' => []];
   }
-  $queued = [];
-  foreach (nbd_jobs_state() as $j) {
-    if (($j['status'] ?? '') === 'queued' && empty($j['finished'])) {
-      $queued[] = $j;
-    }
-  }
-  // Oldest first
-  usort($queued, function ($a, $b) {
-    return strcmp($a['queued_at'] ?? $a['started'] ?? '', $b['queued_at'] ?? $b['started'] ?? '');
-  });
+  $queued = nbd_queued_jobs_ordered();
   $started = [];
   foreach ($queued as $j) {
     if ($running >= $max) {
@@ -2361,6 +2436,7 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   ];
   if ($queue) {
     $state['queued_at'] = date('c');
+    $state['queue_seq'] = nbd_queue_next_seq();
     $state['queue_hint'] = $queue_hint;
     @file_put_contents($logfile, date('c') . " queued: " . $queue_hint . "\n", FILE_APPEND);
     nbd_job_persist($state);

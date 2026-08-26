@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ag">
+<!ENTITY version "2026.08.26ah">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,14 @@
 
 <CHANGES>
 ###&version;
-- Reliable Pull progress via SIGUSR1; Status shows % / elapsed / ETA / net / disk rates; clearer busy-upgrade refuse; post-install reconcile.
+- Status: Active/Queued/History sections; clear checkboxes; Retry/Edit/Delete file; queue ↑↓; Paused purple.
+- Dashboard: lazy async tile (no full-width load flash / blocker).
+
+###2026.08.26ag
+- Reliable Pull progress via SIGUSR1; Status % / elapsed / ETA / net / disk; busy-upgrade refuse copy.
 
 ###2026.08.26af
-- Fix Dashboard tile (no style before tbody); Status job cards with truncated paths and collapsed logs.
+- Fix Dashboard tile (no style before tbody); Status job cards.
 
 ###2026.08.26ae
 - Attempted progress via stdbuf (insufficient); /mnt/user ENOSPC warn.

@@ -6,6 +6,29 @@ Markdown="false"
 <?php
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
+
+$jobs_active = [];
+$jobs_queued = [];
+$jobs_history = [];
+foreach ($jobs as $j) {
+  $k = nbd_job_ui_status($j)['key'] ?? 'idle';
+  if ($k === 'running' || $k === 'paused') {
+    $jobs_active[] = $j;
+  } elseif ($k === 'queued') {
+    $jobs_queued[] = $j;
+  } else {
+    $jobs_history[] = $j;
+  }
+}
+if (function_exists('nbd_queued_jobs_ordered')) {
+  $jobs_queued = nbd_queued_jobs_ordered();
+}
+$n_clearable = 0;
+foreach ($jobs_history as $j) {
+  if (function_exists('nbd_job_is_clearable') && nbd_job_is_clearable($j)) {
+    $n_clearable++;
+  }
+}
 ?>
 <div class="nbd-wrap">
 <?php nbd_page_header(); ?>
@@ -41,133 +64,109 @@ nbd_page_styles();
     </div>
 
     <div class="nbd-section">
-      <h3>Recent pull jobs</h3>
+      <h3>Pull jobs</h3>
       <p class="nbd-section-lead">
-        Image jobs from the <strong>Pull</strong> tab (client → file under <code>/mnt/…</code>).
+        Active converts, the start queue, then history (Done / Failed).
+        Stopped converts <strong>cannot resume</strong> — Retry starts over; Delete file frees incomplete output.
       </p>
-<?php if (!$jobs): ?>
-      <p class="nbd-muted">No recent pull jobs.</p>
-<?php else: ?>
       <div class="nbd-status-legend">
         <span><span class="nbd-badge nbd-badge-run">Running</span></span>
-        <span><span class="nbd-badge nbd-badge-rw">Paused</span></span>
+        <span><span class="nbd-badge nbd-badge-paused">Paused</span></span>
         <span><span class="nbd-badge nbd-badge-info">Queued</span></span>
         <span><span class="nbd-badge nbd-badge-ok">Done</span></span>
         <span><span class="nbd-badge nbd-badge-bad">Failed</span></span>
         <span><span class="nbd-badge nbd-badge-stale">Idle</span></span>
       </div>
-      <p class="nbd-muted" style="margin:0 0 0.65em">
-        Extra Pulls wait in <strong>Queued</strong>. <strong>Play</strong> / <strong>Force start</strong> / <strong>Cancel</strong> for the queue.
-        <strong>Pause</strong> (SIGSTOP) frees disk IO for parity without losing the job — <strong>Resume</strong> continues.
-      </p>
+
+<?php if (!$jobs_active && !$jobs_queued && !$jobs_history): ?>
+      <p class="nbd-muted">No pull jobs yet.</p>
+<?php else: ?>
+
+      <h4 class="nbd-job-section-title">Active <span class="nbd-muted">(<?= count($jobs_active) ?>)</span></h4>
+<?php if (!$jobs_active): ?>
+      <p class="nbd-muted">None running or paused.</p>
+<?php else: ?>
       <div class="nbd-job-list">
-<?php foreach ($jobs as $j):
-  $jst = nbd_job_ui_status($j);
-  $jkey = $jst['key'] ?? '';
-  $running = ($jkey === 'running');
-  $paused = ($jkey === 'paused');
-  $queued = ($jkey === 'queued');
-  $jid = htmlspecialchars($j['id'] ?? '');
-  $pct = nbd_job_progress_pct($j);
-  $pct_h = ($pct !== null) ? (rtrim(rtrim(number_format($pct, 1, '.', ''), '0'), '.') . '%') : '—';
-  $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
-  $eta_h = trim((string)($eta['label'] ?? ''));
-  $size_h = htmlspecialchars($j['output_size_h'] ?? '—');
-  $src = (string)($j['url'] ?? '');
-  $out = (string)($j['output'] ?? '');
-  $src_short = (strlen($src) > 56) ? (substr($src, 0, 28) . '…' . substr($src, -24)) : $src;
-  $out_short = (strlen($out) > 56) ? ('…' . substr($out, -52)) : $out;
-  $tail = !empty($j['log']) ? nbd_log_tail_display($j['log'], 8) : '';
-  $open_log = ($running || $paused) ? ' open' : '';
-?>
-<?php
-  $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
-  $elapsed_h = ($elapsed !== null) ? nbd_format_duration($elapsed) : '';
-  $rates = ($running && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : ['net_h' => '', 'disk_h' => ''];
-  $net_h = (string)($rates['net_h'] ?? '');
-  $disk_h = (string)($rates['disk_h'] ?? '');
-  if ($running && $eta_h === '' && function_exists('nbd_job_progress_eta')) {
-    $eta_h = 'ETA…';
-  }
-?>
-        <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>">
-          <div class="nbd-job-card-top">
-            <span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
-              data-nbd-key="<?= htmlspecialchars($jkey) ?>"
-              title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span>
-            <span class="nbd-live-job-metrics">
-              <span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
-              <span class="nbd-muted nbd-live-job-elapsed"><?= $elapsed_h !== '' ? (' · ' . htmlspecialchars($elapsed_h) . ' elapsed') : '' ?></span>
-              <span class="nbd-muted nbd-live-job-eta"><?= $eta_h !== '' ? (' · ' . htmlspecialchars($eta_h)) : '' ?></span>
-              <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span>
-              <span class="nbd-muted nbd-live-job-net"><?= $net_h !== '' ? (' · net ' . htmlspecialchars($net_h)) : '' ?></span>
-              <span class="nbd-muted nbd-live-job-disk"><?= $disk_h !== '' ? (' · disk ' . htmlspecialchars($disk_h)) : '' ?></span>
-            </span>
-            <span class="nbd-muted nbd-live-job-started">started <?= nbd_format_when_html($j['started'] ?? '') ?></span>
-          </div>
-          <div class="nbd-job-card-meta">
-            <code class="nbd-job-path" title="<?= htmlspecialchars($src) ?>"><?= htmlspecialchars($src_short) ?></code>
-            <code class="nbd-job-path nbd-muted" title="<?= htmlspecialchars($out) ?>">→ <?= htmlspecialchars($out_short) ?></code>
-          </div>
-          <div class="nbd-job-card-actions nbd-live-job-actions">
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline' : 'none' ?>" class="nbd-live-job-pause-form">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_pause">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="submit" name="#apply" value="Pause">
-              </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $paused ? 'inline' : 'none' ?>" class="nbd-live-job-resume-form">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_resume">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="submit" name="#apply" value="Resume">
-              </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= ($running || $paused) ? 'inline' : 'none' ?>" class="nbd-live-job-stop-form">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_stop">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="submit" name="#apply" value="Stop">
-              </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-play-form">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_play">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="hidden" name="force" value="no">
-                <input type="submit" name="#apply" value="Play">
-              </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-force-form"
-                onsubmit="return confirm('Force start this Pull while another may still be running?\n\nConcurrent array writes contend for parity and can stall the WebUI.');">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_play">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="hidden" name="force" value="yes">
-                <input type="submit" name="#apply" value="Force start">
-              </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-cancel-form">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="image_stop">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="submit" name="#apply" value="Cancel">
-              </form>
-          </div>
-<?php if ($tail !== ''): ?>
-          <details class="nbd-job-log" data-nbd-job-log="<?= $jid ?>"<?= $open_log ?>>
-            <summary>Log</summary>
-            <pre class="nbd-log nbd-live-job-log"><?= htmlspecialchars($tail) ?></pre>
-          </details>
-<?php endif; ?>
-        </div>
-<?php endforeach; ?>
+<?php foreach ($jobs_active as $j) {
+  include '/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php';
+} ?>
       </div>
+<?php endif; ?>
+
+      <h4 class="nbd-job-section-title">Queued <span class="nbd-muted">(<?= count($jobs_queued) ?>)</span></h4>
+<?php if (!$jobs_queued): ?>
+      <p class="nbd-muted">Queue empty. Extra Pulls wait here when at max concurrent.</p>
+<?php else: ?>
+      <p class="nbd-muted" style="margin:0 0 0.5em">Use <strong>↑ / ↓</strong> to change start order. <strong>Play</strong> takes the next free slot; <strong>Force start</strong> overrides concurrency.</p>
+      <div class="nbd-job-list">
+<?php
+  $nbd_queue_total = count($jobs_queued);
+  foreach ($jobs_queued as $qi => $j) {
+    $nbd_queue_pos = $qi;
+    include '/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php';
+  }
+  unset($nbd_queue_pos, $nbd_queue_total);
+?>
+      </div>
+<?php endif; ?>
+
+      <h4 class="nbd-job-section-title">History <span class="nbd-muted">(<?= count($jobs_history) ?>)</span></h4>
+<?php if (!$jobs_history): ?>
+      <p class="nbd-muted">No finished or failed jobs.</p>
+<?php else: ?>
+<?php if ($n_clearable > 0): ?>
+      <div class="nbd-jobs-toolbar">
+        <form method="POST" action="/update.php" target="progressFrame" id="nbd-jobs-clear-form"
+          onsubmit="return nbdJobsClearSubmit(this);">
+          <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+          <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+          <input type="hidden" name="nbd_action" value="jobs_clear">
+          <input type="hidden" name="clear_finished" id="nbd_clear_finished" value="no">
+          <button type="button" onclick="nbdJobsSelectFinished(true)">Select finished</button>
+          <button type="button" onclick="nbdJobsSelectFinished(false)">Clear selection</button>
+          <input type="submit" name="#apply" value="Clear selected"
+            onclick="document.getElementById('nbd_clear_finished').value='no'; return nbdJobsNeedSelection();">
+          <input type="submit" name="#apply" value="Clear all finished"
+            onclick="document.getElementById('nbd_clear_finished').value='yes'; return confirm('Remove all Done/Failed/Idle jobs from this list?\n\nDoes not delete image files under /mnt.');">
+        </form>
+      </div>
+<?php endif; ?>
+      <div class="nbd-job-list">
+<?php foreach ($jobs_history as $j) {
+  include '/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php';
+} ?>
+      </div>
+<?php endif; ?>
+
 <?php endif; ?>
     </div>
   </div>
 
 <?php nbd_page_footer(true); ?>
 </div>
+<script>
+(function () {
+  window.nbdJobsSelectFinished = function (on) {
+    var boxes = document.querySelectorAll('.nbd-job-cb');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = !!on;
+  };
+  window.nbdJobsNeedSelection = function () {
+    var boxes = document.querySelectorAll('.nbd-job-cb:checked');
+    if (!boxes.length) {
+      alert('Select at least one finished job (checkbox), or use Clear all finished.');
+      return false;
+    }
+    return confirm('Clear ' + boxes.length + ' selected job(s) from the list?\n\nDoes not delete image files.');
+  };
+  window.nbdJobsClearSubmit = function () { return true; };
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
+    if (!btn) return;
+    var id = btn.getAttribute('data-nbd-edit');
+    var box = id ? document.getElementById('nbd-edit-' + id) : null;
+    if (!box) return;
+    box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+  });
+})();
+</script>
+<?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

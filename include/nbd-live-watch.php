@@ -27,7 +27,7 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
   var fails = 0;
 
   var BADGE_CLASSES = [
-    'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw', 'nbd-badge-run'
+    'nbd-badge-ok', 'nbd-badge-info', 'nbd-badge-stale', 'nbd-badge-bad', 'nbd-badge-rw', 'nbd-badge-run', 'nbd-badge-paused'
   ];
 
   function mapById(list) {

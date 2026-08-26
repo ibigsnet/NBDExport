@@ -279,6 +279,15 @@ try {
       }
       break;
 
+    case 'queue_move':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $dir = (int)($_POST['dir'] ?? 0);
+      $r = nbd_queue_move($id, $dir);
+      nbd_flash(empty($r['ok'])
+        ? ('ERROR — ' . ($r['error'] ?? 'move failed'))
+        : ('Queue updated for ' . $id));
+      break;
+
     case 'preset_save_host':
       $name = trim((string)($_POST['preset_name'] ?? ''));
       $bind_raw = $_POST['bind'] ?? [];
