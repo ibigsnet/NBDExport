@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ac">
+<!ENTITY version "2026.08.26ad">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Pull fileTree: restore click-to-open (remove capture guard that blocked jquery.filetree).
+- Robust uninstall: always exit 0 (CA no-op fix); wipe legacy dirs/packages; stop beacon/jobs.
 
-###2026.08.26ab
-- Pull fileTree: in-flow like VM templates (not absolute overlay).
+###2026.08.26ac–ab
+- Pull fileTree: in-flow like VM templates; restore click-to-open after dismiss-guard regression.
 
 ###2026.08.26aa
 - Pull path picker: load jquery.filetree.js; Browse for local file source.
@@ -43,9 +43,6 @@
 
 ###2026.08.25ab
 - Pull queue Play/Force; Stop orphan fix; Running orange.
-
-###2026.08.25aa
-- Pull idle ionice + nice; max concurrent; refuse duplicate nbd://.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
@@ -134,11 +131,22 @@ echo "NBD Export: Hard-refresh the browser (Ctrl+Shift+R)."
 
 <FILE Run="/bin/bash" Method="remove">
 <INLINE><![CDATA[
+#!/bin/bash
+# Best-effort uninstall. Always exit 0 — Unraid restores the plugin symlink if this
+# script returns non-zero (CA Apps "Uninstall" then looks like a no-op).
+set +e
 echo "NBD Export: removing..."
-# Unhook UD overlay (if present)
-if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
-  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_ud_overlay_uninject();' 2>/dev/null || true
+
+LIB="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"
+if [ -f "$LIB" ]; then
+  # One-liners only — multiline php -r is fragile under /bin/bash + plugin popen
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_ud_overlay_uninject")) nbd_ud_overlay_uninject();' >/dev/null 2>&1
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_beacon_stop")) nbd_beacon_stop();' >/dev/null 2>&1
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_stop_all_exports")) nbd_stop_all_exports();' >/dev/null 2>&1
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (!function_exists("nbd_jobs_state")||!function_exists("nbd_image_stop")) exit(0); foreach (nbd_jobs_state() as $j) { if (!empty($j["id"])) nbd_image_stop($j["id"]); }' >/dev/null 2>&1
 fi
+
+# Strip UD overlay inject from known layout files (StorageGuard pattern)
 for f in \
   /usr/local/emhttp/webGui/include/DefaultPageLayout/HeadInlineJS.php \
   /usr/local/emhttp/plugins/dynamix/include/DefaultPageLayout/HeadInlineJS.php \
@@ -146,44 +154,75 @@ for f in \
   /usr/local/emhttp/plugins/dynamix/include/HeadInclude.php
 do
   [ -f "$f" ] || continue
-  sed -i '/NBDExport-inject/d;/NBDExport UD overlay/d' "$f" 2>/dev/null || true
+  sed -i \
+    -e '/NBDExport-inject/d' \
+    -e '/NBDExport UD overlay/d' \
+    -e '/plugins\/NBDExport\/include\/nbd-ud/d' \
+    "$f" >/dev/null 2>&1
 done
-# Stop managed exports/jobs
-if [ -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
-  php -r '
-    require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
-    nbd_stop_all_exports();
-    foreach (nbd_jobs_state() as $j) {
-      if (!empty($j["id"])) { nbd_image_stop($j["id"]); }
-    }
-  ' 2>/dev/null || true
-fi
+
+# Kill anything we tracked under the run dir (hosts, jobs, beacon)
 if [ -d /var/run/nbdexport ]; then
   for pf in /var/run/nbdexport/*.pid; do
     [ -f "$pf" ] || continue
-    pid=$(tr -cd '0-9' <"$pf" 2>/dev/null || true)
-    if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
-      kill "$pid" 2>/dev/null || true
+    pid=$(tr -cd '0-9' <"$pf" 2>/dev/null)
+    [ -n "$pid" ] || continue
+    if [ -d "/proc/$pid" ]; then
+      kill -TERM -$pid >/dev/null 2>&1
+      kill -TERM "$pid" >/dev/null 2>&1
       sleep 0.2
-      kill -9 "$pid" 2>/dev/null || true
+      kill -KILL -$pid >/dev/null 2>&1
+      kill -KILL "$pid" >/dev/null 2>&1
     fi
   done
 fi
-rm -rf /var/run/nbdexport /var/log/nbdexport
-# Package + emhttp
-for p in /var/log/packages/NBDExport-*; do
+# Beacon php -S can outlive a missing pidfile
+pkill -f 'nbd-beacon-server.php' >/dev/null 2>&1
+pkill -f 'php -S .*10808' >/dev/null 2>&1
+
+rm -rf /var/run/nbdexport /var/log/nbdexport >/dev/null 2>&1
+
+# Packages (current + legacy names)
+for p in /var/log/packages/NBDExport-* /var/log/packages/NbdExport-* /var/log/packages/nbdexport-*; do
   [ -e "$p" ] || continue
-  removepkg "$(basename "$p")" 2>/dev/null || true
+  echo "NBD Export: removepkg $(basename "$p")"
+  removepkg "$(basename "$p")" >/dev/null 2>&1
 done
-rm -rf /usr/local/emhttp/plugins/NBDExport
-# Flash (config + cached package); legacy rename dir if any
-rm -rf /boot/config/plugins/NBDExport /boot/config/plugins/NbdExport
-rm -f /boot/config/plugins/nbdexport.plg /boot/config/plugins/install.plg 2>/dev/null || true
-rm -f /tmp/plugins/nbd.txt /tmp/plugins/nbdexport.plg 2>/dev/null || true
-# Note: do not delete /tmp/plugins/nbd.plg here — Unraid install working copy during remove
+
+# Emhttp plugin trees (current + legacy)
+rm -rf \
+  /usr/local/emhttp/plugins/NBDExport \
+  /usr/local/emhttp/plugins/NbdExport \
+  /usr/local/emhttp/plugins/nbdexport >/dev/null 2>&1
+
+# Flash config + cached .txz (full wipe — reinstall starts clean)
+rm -rf \
+  /boot/config/plugins/NBDExport \
+  /boot/config/plugins/NbdExport \
+  /boot/config/plugins/nbdexport >/dev/null 2>&1
+
+# Orphan / misnamed plg copies on flash (keep Unraid working copy in /tmp during remove)
+rm -f \
+  /boot/config/plugins/nbdexport.plg \
+  /boot/config/plugins/NBDExport.plg \
+  /boot/config/plugins/NbdExport.plg \
+  /boot/config/plugins/install.plg >/dev/null 2>&1
+
+rm -f \
+  /tmp/plugins/nbd.txt \
+  /tmp/plugins/nbdexport.plg \
+  /tmp/plugins/NBDExport.plg \
+  /var/log/plugins/nbdexport.plg \
+  /var/log/plugins/NBDExport.plg \
+  /var/log/plugins/install.plg >/dev/null 2>&1
+
+# Note: do not delete /tmp/plugins/nbd.plg here — Unraid install/remove working copy
 # Note: do not touch /boot/config/plugins-removed/ (Unraid-owned)
-# Note: user-exported JSON under /boot/config/nbdexport-config-*.json is left alone (export, not plugin state)
+# Note: user-exported JSON under /boot/config/nbdexport-config-*.json is left alone
+# Note: user qcow2/raw under /mnt/ are never deleted
+
 echo "NBD Export: removed."
+exit 0
 ]]></INLINE>
 </FILE>
 

@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ad
+
+- **Robust uninstall:** remove script always `exit 0` (Unraid/CA restores the plugin symlink if
+  Method=remove returns non-zero — looked like “uninstall did nothing”). Broader wipe: legacy
+  `NbdExport`/`nbdexport` packages and emhttp dirs, beacon `php -S`, tracked PIDs, run/log dirs,
+  flash config tree. Still leaves user images under `/mnt/` and `nbdexport-config-*.json` exports.
+
 ## 2026.08.26ac
 
 - **Pull fileTree click restored:** the 26ab capture-phase `stopPropagation` on the input

@@ -167,9 +167,9 @@ A malicious or mistaken `nbd://` can fill a share or pull unexpected content —
 
 | Action | Result |
 |--------|--------|
-| Stop managed Host / Pull jobs | Yes — via plugin pid/state under `/var/run/nbdexport` |
+| Stop managed Host / Pull jobs / beacon | Yes — via plugin pid/state under `/var/run/nbdexport` |
 | Global `pkill qemu-nbd` | **No** — does not kill unrelated qemu-nbd |
-| Remove emhttp plugin tree | Yes |
+| Remove emhttp plugin tree (incl. legacy names) | Yes |
 | Remove flash plugin config | Yes (export config first if you want settings later) |
 | Delete user qcow2/raw under `/mnt/` | **No** |
 | Touch Thunderbolt Net / Fabric Routing / `network.cfg` | **No** |
