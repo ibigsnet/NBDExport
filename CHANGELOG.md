@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26an
+
+- **Failure reasons:** Failed History cards show a short **Reason** line (and badge hint)
+  from `nbd_fail_reason_table()` — maps `NBD_JOB_FAIL` tokens, exit codes (e.g. 138 =
+  SIGUSR1), and common qemu/network messages so you need not dig the log first.
+- Table documented in `docs/troubleshooting.md`.
+
 ## 2026.08.26am
 
 - **Fix rc=138:** SIGUSR1 without `-p` terminates `qemu-img` on QEMU 10 (exit 128+10).

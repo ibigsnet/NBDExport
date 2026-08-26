@@ -79,6 +79,24 @@ If a client can **modify** sectors on a Host you believe is read-only:
 
 UI is **tabs** (Status · Host · Pull · Settings), not numbered sections. Update the plugin and hard-refresh. Docs live in this repo under `docs/`.
 
+## Pull job failure codes (Status “Reason”)
+
+Status maps wrapper tokens, exit codes, and common qemu messages to a short **Reason**.
+Useful ones:
+
+| Code / marker | Meaning |
+|---------------|---------|
+| `wait_src` | Could not open NBD/source (peer down, wrong port, no route) |
+| `convert rc=138` | Killed by SIGUSR1 (old progress bug — update + Retry) |
+| `convert rc=137` | SIGKILL (OOM or manual kill) |
+| `convert rc=143` | SIGTERM (Stop / shutdown) |
+| `stopped_by_user` | Stop/Cancel from Status |
+| `cancelled_while_queued` | Removed from queue before start |
+| `no space left` / ENOSPC | Destination full |
+| `connection refused` / `no route to host` | Network path to NBD peer |
+
+Full map: `nbd_fail_reason_table()` in `include/nbd-lib.php`.
+
 ## Uninstall left something behind
 
 CA Apps / Plugins **Remove** runs `plugin remove nbd.plg`. From **2026.08.26ad** the remove
