@@ -42,6 +42,7 @@ foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() :
     continue;
   }
   $pct = nbd_job_progress_pct($j);
+  $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
   $pulls[] = [
     'id' => (string)($j['id'] ?? ''),
     'url' => (string)($j['url'] ?? ''),
@@ -49,6 +50,7 @@ foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() :
     'key' => $key,
     'label' => (string)($st['label'] ?? $key),
     'pct' => $pct,
+    'eta' => (string)($eta['label'] ?? ''),
     'size' => (string)($j['output_size_h'] ?? '—'),
   ];
 }
@@ -99,7 +101,10 @@ ob_start();
     <td>
       <code><?= htmlspecialchars($p['url']) ?></code>
       <?php if ($p['pct'] !== null): ?>
-        <strong> · <?= htmlspecialchars((string)$p['pct']) ?>%</strong>
+        <strong> · <?= htmlspecialchars(rtrim(rtrim(number_format((float)$p['pct'], 1, '.', ''), '0'), '.') . '%') ?></strong>
+      <?php endif; ?>
+      <?php if ($p['eta'] !== ''): ?>
+        <span class="nbd-dash-muted"> · <?= htmlspecialchars($p['eta']) ?></span>
       <?php endif; ?>
       <span class="nbd-dash-muted"> · <?= htmlspecialchars($p['size']) ?></span><br>
       <code class="nbd-dash-muted" title="<?= htmlspecialchars($p['out']) ?>"><?= htmlspecialchars($short) ?></code>

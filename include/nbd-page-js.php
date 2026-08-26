@@ -406,9 +406,9 @@ if (!isset($presets) || !is_array($presets)) {
     if (window.nbdIsUserSharePath(path)) {
       hint.style.display = 'block';
       hint.className = 'nbd-ext-hint nbd-ext-warn';
-      hint.textContent = 'Path is under /mnt/user or /mnt/user0 (FUSE/array). '
-        + 'Large sparse pulls are usually faster on /mnt/cache/…, /mnt/diskN/…, or a pool mount. '
-        + 'Allowed — continue if that is what you want.';
+      hint.textContent = 'Path is under /mnt/user or /mnt/user0 (FUSE). '
+        + 'A single qcow2/raw does not spill across cache→array mid-write — if that pool/disk fills, the Pull fails (ENOSPC). '
+        + 'Prefer /mnt/cache/…, a pool, or /mnt/diskN/… with enough free space for the final image.';
       return;
     }
     if (/^\/mnt\/(cache|disk\d+|disks)\b/.test(path) || /^\/mnt\/[^\/]+(\/|$)/.test(path)) {
@@ -474,7 +474,9 @@ if (!isset($presets) || !is_array($presets)) {
     if (window.nbdIsUserSharePath(path)) {
       if (!window.confirm(
         'Output is under /mnt/user or /mnt/user0.\n\n'
-        + 'For large images, /mnt/cache/… or /mnt/diskN/… is usually better.\n\n'
+        + 'One image file stays on whichever disk the share picks at create time.\n'
+        + 'It will NOT auto-move/split onto the array when cache fills — the job fails instead.\n'
+        + 'Prefer /mnt/cache/…, a pool, or /mnt/diskN/… with enough free space.\n\n'
         + 'Continue with:\n  ' + path + '\n?'
       )) return false;
     }

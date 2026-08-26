@@ -99,7 +99,8 @@ nbd_page_styles();
         field; type a path anytime). Pick a folder then append a filename (e.g. <code>disk.qcow2</code>),
         or click an existing image.
         File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
-        Prefer cache/disk/pool for multi-TB pulls; <code>/mnt/user</code> and <code>/mnt/user0</code> are allowed with a soft warning.
+        Prefer cache/disk/pool for multi-TB pulls. <code>/mnt/user</code> soft-warns: one file does not
+        spill cache→array mid-write (ENOSPC if that disk fills).
         Match the extension to the format: <strong>.qcow2</strong> for qcow2, <strong>.img</strong> or <strong>.raw</strong> for raw.
       </blockquote>
       <p id="nbd_path_hint" class="nbd-ext-hint" style="display:none;margin:0.35em 0 0.6em;padding:0.45em 0.65em;border-radius:4px;font-size:0.92em;line-height:1.35"></p>

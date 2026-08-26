@@ -6,6 +6,17 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ae
+
+- **Pull progress % fixed:** `qemu-img -p` stderr was fully buffered when piped, so Status showed
+  `— · N GiB` with no percent. Job wrapper runs convert under `stdbuf -o0 -e0` so CR progress
+  reaches `.progress` / the log.
+- **ETA:** Status/Dashboard show an estimate from recent `%` samples (`.progress.hist`), e.g.
+  `12% · ~2h 15m · 13 GiB`. Early/`paused` jobs show `ETA…` / `paused`.
+- **`/mnt/user` warning:** clarify a single qcow2/raw does **not** spill cache→array mid-write;
+  if that pool/disk fills, the Pull fails (ENOSPC). Prefer a real disk/pool path with free space.
+- Log note: `disk size: unavailable` on `nbd://` info is normal — **virtual size** is the device size.
+
 ## 2026.08.26ad
 
 - **Robust uninstall:** remove script always `exit 0` (Unraid/CA restores the plugin symlink if

@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ad">
+<!ENTITY version "2026.08.26ae">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,9 @@
 
 <CHANGES>
 ###&version;
+- Fix Pull progress % (unbuffered qemu stderr); ETA from recent rate; clearer /mnt/user ENOSPC warn.
+
+###2026.08.26ad
 - Robust uninstall: always exit 0 (CA no-op fix); wipe legacy dirs/packages; stop beacon/jobs.
 
 ###2026.08.26ac–ab
@@ -40,9 +43,6 @@
 
 ###2026.08.25ac
 - Dashboard tile; Pause/Resume; progress timestamps + latest %.
-
-###2026.08.25ab
-- Pull queue Play/Force; Stop orphan fix; Running orange.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
