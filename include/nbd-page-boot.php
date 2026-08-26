@@ -27,6 +27,11 @@ $pull_io_class = (($cfg['pull_io_class'] ?? 'idle') === 'best-effort') ? 'best-e
 $max_concurrent_pulls = (string)max(1, min(4, (int)($cfg['max_concurrent_pulls'] ?? 1)));
 $pull_nice = (string)max(0, min(19, (int)($cfg['pull_nice'] ?? 10)));
 $allow_upgrade_busy = (($cfg['allow_upgrade_while_busy'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$notify_pull_done = (($cfg['notify_pull_done'] ?? 'off') === 'normal') ? 'normal' : 'off';
+$npf = strtolower((string)($cfg['notify_pull_failed'] ?? 'warning'));
+$notify_pull_failed = in_array($npf, ['warning', 'alert'], true) ? $npf : 'off';
+$nhd = strtolower((string)($cfg['notify_host_down'] ?? 'off'));
+$notify_host_down = in_array($nhd, ['warning', 'alert'], true) ? $nhd : 'off';
 $ud_plugin_present = is_dir('/usr/local/emhttp/plugins/unassigned.devices');
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['fabricrouting']);

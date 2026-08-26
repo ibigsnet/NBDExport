@@ -1188,6 +1188,130 @@ function nbd_plugin_version() {
   return 'dev';
 }
 
+/**
+ * Unraid notification (Storage Guard–style).
+ * $priority: normal | warning | alert
+ */
+function nbd_notify($subject, $desc, $priority = 'warning', $link = '/Settings/NBDExport') {
+  $script = '/usr/local/emhttp/webGui/scripts/notify';
+  if (!is_executable($script)) {
+    return false;
+  }
+  $priority = strtolower(trim((string)$priority));
+  if (!in_array($priority, ['normal', 'warning', 'alert'], true)) {
+    $priority = 'warning';
+  }
+  $cmd = $script
+    . ' -e ' . escapeshellarg('NBD Export')
+    . ' -s ' . escapeshellarg((string)$subject)
+    . ' -d ' . escapeshellarg((string)$desc)
+    . ' -i ' . escapeshellarg($priority)
+    . ' -l ' . escapeshellarg((string)$link);
+  @shell_exec($cmd . ' >/dev/null 2>&1 &');
+  return true;
+}
+
+/** Normalize notify_* cfg values. */
+function nbd_notify_cfg_get($key, $default = 'off') {
+  $cfg = function_exists('nbd_load_cfg') ? nbd_load_cfg() : [];
+  $v = strtolower(trim((string)($cfg[$key] ?? $default)));
+  if ($key === 'notify_pull_done') {
+    return ($v === 'normal') ? 'normal' : 'off';
+  }
+  if (in_array($key, ['notify_pull_failed', 'notify_host_down'], true)) {
+    if ($v === 'warning' || $v === 'alert') {
+      return $v;
+    }
+    return 'off';
+  }
+  return $default;
+}
+
+/**
+ * Fire one-shot Pull finish notifications. Sets notified on the job array (caller persists).
+ */
+function nbd_maybe_notify_job_finished(array &$j) {
+  if (!empty($j['notified'])) {
+    return;
+  }
+  $ok = !empty($j['ok']);
+  $code = strtolower((string)($j['fail_code'] ?? ''));
+  $reason = (string)($j['fail_reason'] ?? '');
+  // User Stop / Cancel — never treat as failure alert
+  if (!$ok && (strpos($code, 'stopped_by_user') !== false
+      || strpos($code, 'cancelled_while_queued') !== false
+      || stripos($reason, 'Stopped by user') !== false
+      || stripos($reason, 'Cancelled while queued') !== false)) {
+    $j['notified'] = true;
+    return;
+  }
+  $src = (string)($j['url'] ?? '');
+  $out = (string)($j['output'] ?? '');
+  $id = (string)($j['id'] ?? '');
+  if ($ok) {
+    $mode = nbd_notify_cfg_get('notify_pull_done', 'off');
+    if ($mode === 'normal') {
+      $desc = 'Pull finished successfully.';
+      if ($src !== '') {
+        $desc .= "\nSource: " . $src;
+      }
+      if ($out !== '') {
+        $desc .= "\nOutput: " . $out;
+      }
+      nbd_notify('Pull finished', $desc, 'normal', '/Settings/NBDExport');
+    }
+  } else {
+    $mode = nbd_notify_cfg_get('notify_pull_failed', 'warning');
+    if ($mode === 'warning' || $mode === 'alert') {
+      $why = $reason !== '' ? $reason : 'See Status → History / Logs';
+      $desc = 'Pull failed: ' . $why;
+      if ($src !== '') {
+        $desc .= "\nSource: " . $src;
+      }
+      if ($out !== '') {
+        $desc .= "\nOutput: " . $out;
+      }
+      if ($id !== '') {
+        $desc .= "\nJob: " . $id;
+      }
+      nbd_notify('Pull failed', $desc, $mode === 'alert' ? 'alert' : 'warning', '/Settings/NBDExport');
+    }
+  }
+  $j['notified'] = true;
+}
+
+/**
+ * One-shot Host-down notify when a managed export goes stale unexpectedly.
+ */
+function nbd_maybe_notify_host_down(array &$e, $statefile) {
+  if (empty($e['stale']) || !empty($e['notified_down'])) {
+    return;
+  }
+  if (($e['stop_reason'] ?? '') === 'user') {
+    $e['notified_down'] = true;
+    return;
+  }
+  $mode = nbd_notify_cfg_get('notify_host_down', 'off');
+  if ($mode === 'warning' || $mode === 'alert') {
+    $dev = (string)($e['device'] ?? '');
+    $url = (string)($e['url'] ?? '');
+    $desc = 'Host export stopped unexpectedly (process gone / not listening).';
+    if ($dev !== '') {
+      $desc .= "\nDevice: " . $dev;
+    }
+    if ($url !== '') {
+      $desc .= "\nURL: " . $url;
+    }
+    nbd_notify('Host stopped unexpectedly', $desc, $mode === 'alert' ? 'alert' : 'warning', '/Settings/NBDExport');
+  }
+  $e['notified_down'] = true;
+  if ($statefile !== '' && is_file($statefile)) {
+    $persist = $e;
+    unset($persist['alive'], $persist['listening'], $persist['stale']);
+    @file_put_contents($statefile, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+  }
+}
+
 function nbd_detect_tools() {
   $find = function ($names) {
     foreach ($names as $n) {
@@ -1509,8 +1633,11 @@ function nbd_exports_state() {
       $j['listening'] = nbd_port_listening($j['bind'], (int)$j['port']);
     }
     if (!$alive && empty($j['listening'])) {
-      // stale state file
+      // stale state file — unexpected if user Stop did not clear JSON
       $j['stale'] = true;
+      if (function_exists('nbd_maybe_notify_host_down')) {
+        nbd_maybe_notify_host_down($j, $f);
+      }
     }
     $list[] = $j;
   }
@@ -2055,6 +2182,9 @@ function nbd_jobs_state() {
         }
         $j['finished_at'] = date('c');
         $j['status'] = !empty($j['ok']) ? 'done' : 'failed';
+        if (function_exists('nbd_maybe_notify_job_finished')) {
+          nbd_maybe_notify_job_finished($j);
+        }
         $persist = $j;
         unset($persist['alive'], $persist['output_size'], $persist['output_size_h'], $persist['orphaned'], $persist['orphan_pid']);
         @file_put_contents($f, json_encode($persist, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
@@ -2886,9 +3016,14 @@ function nbd_image_stop($id) {
     $j['finished'] = true;
     $j['ok'] = false;
     $j['finished_at'] = date('c');
+    $j['fail_code'] = 'cancelled_while_queued';
+    $j['fail_reason'] = 'Cancelled while queued';
     $log = (string)($j['log'] ?? '');
     if ($log !== '') {
       @file_put_contents($log, "\nNBD_JOB_FAIL cancelled_while_queued\n", FILE_APPEND);
+    }
+    if (function_exists('nbd_maybe_notify_job_finished')) {
+      nbd_maybe_notify_job_finished($j); // marks notified; no alert for user cancel
     }
     nbd_job_persist($j);
     nbd_pull_queue_kick();
@@ -2943,9 +3078,14 @@ function nbd_image_stop($id) {
     $j['finished'] = true;
     $j['ok'] = false;
     $j['finished_at'] = date('c');
+    $j['fail_code'] = 'stopped_by_user';
+    $j['fail_reason'] = 'Stopped by user';
     $log = (string)($j['log'] ?? '');
     if ($log !== '') {
       @file_put_contents($log, "\nNBD_JOB_FAIL stopped_by_user\n", FILE_APPEND);
+    }
+    if (function_exists('nbd_maybe_notify_job_finished')) {
+      nbd_maybe_notify_job_finished($j); // marks notified; no alert for user Stop
     }
     nbd_job_persist($j);
   }

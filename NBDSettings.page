@@ -185,6 +185,50 @@ nbd_page_styles();
         <strong>reconciles</strong> state and restarts the discovery beacon.
       </blockquote>
 
+      <h3 style="margin-top:1.25em">Notifications</h3>
+      <p class="nbd-section-lead">Unraid notification agents (same path as Storage Guard).</p>
+
+      <dl>
+        <dt>Pull finished:</dt>
+        <dd>
+          <select name="notify_pull_done">
+            <?= mk_option($notify_pull_done, 'off', 'Off') ?>
+            <?= mk_option($notify_pull_done, 'normal', 'Normal (green)') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        When a Pull completes successfully.
+      </blockquote>
+
+      <dl>
+        <dt>Pull failed:</dt>
+        <dd>
+          <select name="notify_pull_failed">
+            <?= mk_option($notify_pull_failed, 'off', 'Off') ?>
+            <?= mk_option($notify_pull_failed, 'warning', 'Warning') ?>
+            <?= mk_option($notify_pull_failed, 'alert', 'Alert') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Real failures only. User <strong>Stop</strong> / <strong>Cancel</strong> do not notify.
+      </blockquote>
+
+      <dl>
+        <dt>Host stopped unexpectedly:</dt>
+        <dd>
+          <select name="notify_host_down">
+            <?= mk_option($notify_host_down, 'off', 'Off') ?>
+            <?= mk_option($notify_host_down, 'warning', 'Warning') ?>
+            <?= mk_option($notify_host_down, 'alert', 'Alert') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Process died / not listening while state remains. UI <strong>Stop</strong> clears state — no notify.
+      </blockquote>
+
       <p class="nbd-actions">
         <input type="submit" name="#apply" value="Apply" onclick="return nbdConfirmDestructiveSave(this.form)">
         <input type="button" value="Done" onclick="done()">

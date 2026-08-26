@@ -79,6 +79,18 @@ If a client can **modify** sectors on a Host you believe is read-only:
 
 UI is **tabs** (Status · Host · Pull · Settings), not numbered sections. Update the plugin and hard-refresh. Docs live in this repo under `docs/`.
 
+## Notifications (Settings)
+
+Unraid agents via `webGui/scripts/notify` (same as Storage Guard):
+
+| Setting | Values |
+|---------|--------|
+| Pull finished | Off / Normal (green) |
+| Pull failed | Off / Warning / Alert |
+| Host stopped unexpectedly | Off / Warning / Alert |
+
+User **Stop** / **Cancel** do not fire failure or host-down alerts.
+
 ## Logs tab vs Status History
 
 - **Status → History** shows job **cards** (run JSON under `/var/run/nbdexport/`).

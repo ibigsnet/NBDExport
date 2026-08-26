@@ -6,6 +6,14 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26au
+
+- **Notifications (Settings):** Unraid agents via `notify` (Storage Guard–style).
+  - **Pull finished:** Off / Normal (green)
+  - **Pull failed:** Off / Warning / Alert (skips user Stop/Cancel)
+  - **Host stopped unexpectedly:** Off / Warning / Alert (UI Stop clears state — no alert)
+- One-shot per job/export (`notified` / `notified_down` flags).
+
 ## 2026.08.26at
 
 - **Dashboard paths:** show full source URL and output path (CSS `overflow-wrap`, no

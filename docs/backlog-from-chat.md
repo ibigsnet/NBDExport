@@ -58,6 +58,7 @@ Approved Tips 1–3 were largely shipped through `26ah`–`26an`. Gaps:
 | O5 | Auto-prune Logs by age/size | **Open** | Clear is manual only. |
 | O6 | Combined rolling `nbdexport-history.log` | **Open** | Chose keep per-job files instead. |
 | O7 | Plugin rename away from “NBD Export” | **Won’t** | Keep name; widen descriptors. |
+| O8 | Unraid notify warn/crit/normal for Pull/Host | **Done (`26au`)** | Settings dropdowns; SG-style `notify`. |
 
 ---
 
