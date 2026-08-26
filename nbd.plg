@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.25ad">
+<!ENTITY version "2026.08.26aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,9 +27,10 @@
 
 <CHANGES>
 ###&version;
-- Upgrade-safe: refuse update while Host/Pull busy (unless allowed/forced); post-install reconcile + beacon restart.
-- Status shows external qemu-img converts; Pull sources: nbd://, local /dev, or /mnt file.
-- Keep name NBD Export; widened imaging descriptors.
+- Pull path picker: load jquery.filetree.js (VM/Docker-style click-to-browse); Browse for local file source.
+
+###2026.08.25ad
+- Upgrade-safe busy abort + reconcile; external qemu-img in Status; local /dev|/mnt Pull sources.
 
 ###2026.08.25ac
 - Dashboard tile; Pause/Resume; progress timestamps + latest %.

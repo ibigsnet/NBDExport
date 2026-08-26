@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26aa
+
+- **Pull path browser fix:** load stock Unraid `jquery.filetree.js` (CSS was present but the
+  script was missing — click did nothing). Output path matches VM/Docker folder tree
+  (`/mnt/`, img/qcow2/raw filter); type freely or click to pick. **Browse…** on local-file
+  source uses the same tree without attaching it to the `nbd://` field.
+
 ## 2026.08.25ad
 
 - **Upgrade safety:** prepare aborts if Host/Pull busy (Settings → Allow upgrade while busy, or

@@ -49,15 +49,30 @@ nbd_page_styles();
             <option value="local_device">Local disk / partition (/dev/…)</option>
             <option value="local_file">Local file under /mnt or /tmp</option>
           </select>
-          <input type="text" name="nbd_url" id="nbd_url" style="width:22em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
+          <input type="text" name="nbd_url" id="nbd_url" style="width:22em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>"
+            autocomplete="off" spellcheck="false">
           <input type="button" value="Scan network" id="nbd_scan_btn" onclick="nbdScanNetwork()" title="Find NBD listeners / NBD Export peers on private LANs">
+          <span id="nbd_src_browse_wrap" style="display:none;position:relative;margin-left:0.25em">
+            <input type="button" value="Browse…" id="nbd_src_browse"
+              onclick="nbdBrowseLocalSource()" title="Browse /mnt for a source image (local file mode)">
+            <input type="text" id="nbd_src_pick" readonly tabindex="-1" aria-hidden="true"
+              autocomplete="off" spellcheck="false"
+              style="position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;margin:0"
+              data-pickroot="/mnt/"
+              data-picktop="/mnt/"
+              data-pickfolders="true"
+              data-pickfilter="img,qcow,qcow2,raw"
+              data-pickmatch="^[^.].*"
+              data-pickcloseonfile="true">
+          </span>
         </dd>
       </dl>
       <blockquote class="inline_help">
         <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd).
         <strong>Scan network</strong> probes ports <strong>10809+</strong> and beacons on <strong>10808</strong>.
         <strong>Local disk:</strong> e.g. <code>/dev/sdX</code> / <code>/dev/nvme0n1</code> — read the whole device into an image (prefer unassigned/unmounted).
-        <strong>Local file:</strong> convert an existing image under <code>/mnt</code> or <code>/tmp</code>.
+        <strong>Local file:</strong> convert an existing image under <code>/mnt</code> or <code>/tmp</code> —
+        use <strong>Browse…</strong> for the VM-style folder tree, or type the path.
         Live VM attach of <code>nbd://</code> is separate — see
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/client-attach.md" target="_blank" rel="noopener">client-attach.md</a>.
       </blockquote>
@@ -71,17 +86,18 @@ nbd_page_styles();
             autocomplete="off" spellcheck="false"
             placeholder="Click to select under /mnt/…"
             value="<?= $pref_out ?>"
-            data-pickroot="/mnt"
-            data-picktop="/mnt"
+            data-pickroot="/mnt/"
+            data-picktop="/mnt/"
             data-pickfolders="true"
-            data-pickfilter="HIDE_FILES_FILTER"
+            data-pickfilter="img,qcow,qcow2,raw"
+            data-pickmatch="^[^.].*"
             data-pickcloseonfile="true">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Click the field to browse from <code>/mnt</code> (same Unraid folder picker as Docker/VM).
+        Click the field for the same Unraid folder tree as VM templates / Docker (type a path anytime).
+        Pick a folder then append a filename (e.g. <code>disk.qcow2</code>), or click an existing image.
         File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
-        Pick a folder then append a filename (e.g. <code>disk.qcow2</code>), or type the full path.
         Prefer cache/disk/pool for multi-TB pulls; <code>/mnt/user</code> and <code>/mnt/user0</code> are allowed with a soft warning.
         Match the extension to the format: <strong>.qcow2</strong> for qcow2, <strong>.img</strong> or <strong>.raw</strong> for raw.
       </blockquote>
@@ -137,4 +153,5 @@ nbd_page_styles();
   </div>
 <?php nbd_page_footer(false); ?>
 </div>
+<script src="<?autov('/webGui/javascript/jquery.filetree.js')?>" charset="utf-8"></script>
 <?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>
