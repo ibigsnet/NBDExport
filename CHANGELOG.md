@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26aj
+
+- **Fix false convert failure:** background `ionice`/`nice` exited while `qemu-img` kept
+  running (PPID 1); wrapper waited on the wrong PID and logged `NBD_JOB_FAIL convert`.
+  Launch via subshell + `exec` so tracked PID is always `qemu-img`.
+- **Net rate:** show **x.xx Gb/s** when ≥ 1000 Mb/s (else Mb/s).
+
 ## 2026.08.26ai
 
 - **Full paths** on Status job cards (no `…` truncation).

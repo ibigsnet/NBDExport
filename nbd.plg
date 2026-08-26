@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ai">
+<!ENTITY version "2026.08.26aj">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,13 @@
 
 <CHANGES>
 ###&version;
-- Full paths on job cards; Select failed; shared delete-before-retry; Clear can delete images; Unraid MB/s and GB units; Pause/Stop align.
+- Fix false NBD_JOB_FAIL (wait on ionice PID); net shows Gb/s above 1 Gb/s.
+
+###2026.08.26ai
+- Full paths; Select failed; delete-before-retry; Clear can delete images; MB/s and GB units.
 
 ###2026.08.26ah
-- Status Active/Queued/History; clear/retry/edit/delete; queue ↑↓; Paused purple; lazy Dashboard tile.
+- Status Active/Queued/History; clear/retry/edit/delete; queue ↑↓; Paused purple; lazy Dashboard.
 
 ###2026.08.26ag
 - Reliable Pull progress via SIGUSR1; Status metrics; busy-upgrade refuse copy.
