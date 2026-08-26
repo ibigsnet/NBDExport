@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26aq">
+<!ENTITY version "2026.08.26ar">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,10 @@
 
 <CHANGES>
 ###&version;
-- History/Logs help: short inline_help (no essay tips under the toolbar).
+- Progress/ETA: no sticky ETA…; pct from sidecar+raw+log; Pause/Stop button heights aligned.
 
-###2026.08.26ap
-- Logs tab: full /var/log/nbdexport history (survives History clear); Clear log top and bottom.
+###2026.08.26aq–ap
+- Logs tab (survives History clear); History/Logs short inline_help.
 
 ###2026.08.26ao–an
 - Failure Reason map; Found a bug? diagnostics (forum/GitHub/Tools → Diagnostics).
@@ -46,9 +46,6 @@
 
 ###2026.08.26ac–aa
 - Pull fileTree path picker (VM-style in-flow Browse).
-
-###2026.08.25ad
-- Upgrade-safe busy abort + reconcile; external qemu-img; local /dev|/mnt Pull sources.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md

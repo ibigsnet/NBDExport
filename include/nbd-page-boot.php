@@ -258,14 +258,18 @@ function nbd_page_styles() {
   display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font-size: 0.9em;
 }
 .nbd-wrap .nbd-job-card-actions {
-  margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center;
+  margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center;
 }
 .nbd-wrap .nbd-job-card-actions form {
-  display: inline-flex; margin: 0; align-items: center; vertical-align: middle;
+  display: inline-flex !important; margin: 0; align-items: stretch; vertical-align: middle;
+  height: 2.25em;
 }
 .nbd-wrap .nbd-job-card-actions input[type="submit"],
 .nbd-wrap .nbd-job-card-actions button {
-  margin: 0; vertical-align: middle; min-height: 2em;
+  margin: 0; vertical-align: middle;
+  box-sizing: border-box;
+  height: 2.25em; min-height: 2.25em; min-width: 5.75em;
+  line-height: 1.15; padding: 0 0.85em;
 }
 .nbd-wrap .nbd-job-card-meta .nbd-job-path {
   display: inline; white-space: normal; word-break: break-all; overflow-wrap: anywhere;

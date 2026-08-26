@@ -94,17 +94,17 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var paused = item.key === 'paused';
     var queued = item.key === 'queued';
     var pause = row.querySelector('.nbd-live-job-pause-form');
-    if (pause) pause.style.display = running ? 'inline' : 'none';
+    if (pause) pause.style.display = running ? 'inline-flex' : 'none';
     var resume = row.querySelector('.nbd-live-job-resume-form');
-    if (resume) resume.style.display = paused ? 'inline' : 'none';
+    if (resume) resume.style.display = paused ? 'inline-flex' : 'none';
     var stop = row.querySelector('.nbd-live-job-stop-form');
-    if (stop) stop.style.display = (running || paused) ? 'inline' : 'none';
+    if (stop) stop.style.display = (running || paused) ? 'inline-flex' : 'none';
     var play = row.querySelector('.nbd-live-job-play-form');
-    if (play) play.style.display = queued ? 'inline' : 'none';
+    if (play) play.style.display = queued ? 'inline-flex' : 'none';
     var force = row.querySelector('.nbd-live-job-force-form');
-    if (force) force.style.display = queued ? 'inline' : 'none';
+    if (force) force.style.display = queued ? 'inline-flex' : 'none';
     var cancel = row.querySelector('.nbd-live-job-cancel-form');
-    if (cancel) cancel.style.display = queued ? 'inline' : 'none';
+    if (cancel) cancel.style.display = queued ? 'inline-flex' : 'none';
     var pctEl = row.querySelector('.nbd-live-job-pct');
     if (pctEl) {
       if (item.progress_pct != null && item.progress_pct !== '') {
@@ -122,7 +122,7 @@ $nbd_live_baseline = function_exists('nbd_live_snapshot')
     var etaEl = row.querySelector('.nbd-live-job-eta');
     if (etaEl) {
       var eh = item.eta_h ? String(item.eta_h) : '';
-      if (!eh && item.key === 'running') eh = 'ETA…';
+      // Hide until we have a real estimate (no sticky ETA…)
       etaEl.textContent = eh ? (' · ' + eh) : '';
     }
     var size = row.querySelector('.nbd-live-job-size');

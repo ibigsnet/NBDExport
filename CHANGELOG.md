@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ar
+
+- **Progress / ETA:** Prefer max of `.progress`, `.progress.raw`, and log so a stale
+  `pct=0` sidecar cannot hide real `(N/100%)` (some qemu builds emit `-p` on stdout).
+  Hist records fractional tenths; ETA hidden until progress moves (no sticky `ETA…`).
+  Dropped the noisy “disk size unavailable” log note (file length is the virtual size).
+- **Buttons:** Pause/Stop (and siblings) same height/min-width; live-watch uses
+  `inline-flex` so they stay aligned.
+
 ## 2026.08.26aq
 
 - **UI prose:** History toolbar tip → short Unraid `inline_help` (no muted essay).

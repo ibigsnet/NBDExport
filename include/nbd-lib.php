@@ -826,41 +826,73 @@ function nbd_format_when_html($when) {
 }
 
 /**
- * Latest Pull progress percent (0–100) from .progress sidecar or log, or null.
+ * Parse latest (N/100%) or pct=N from a blob of text. Returns null if none.
+ */
+function nbd_parse_progress_pct_text($text) {
+  $text = str_replace("\r", "\n", (string)$text);
+  if ($text === '') {
+    return null;
+  }
+  $best = null;
+  if (preg_match_all('/pct=(\d+(?:\.\d+)?)/', $text, $mm) && !empty($mm[1])) {
+    $best = (float)end($mm[1]);
+  }
+  if (preg_match_all('/\((\d+(?:\.\d+)?)\/100%\)/', $text, $mm) && !empty($mm[1])) {
+    $v = (float)end($mm[1]);
+    if ($best === null || $v >= $best) {
+      $best = $v;
+    }
+  }
+  return $best;
+}
+
+/**
+ * Latest Pull progress percent (0–100) from sidecar / PROGRAW / log, or null.
+ * Takes the max across sources so a stale pct=0 sidecar cannot hide real progress
+ * that landed in the log (some qemu builds emit -p on stdout).
  */
 function nbd_job_progress_pct(array $j) {
   $id = (string)($j['id'] ?? '');
+  $cands = [];
   if ($id !== '') {
-    $pf = NBDEXPORT_RUN . '/' . $id . '.progress';
-    if (is_file($pf)) {
-      $raw = trim((string)@file_get_contents($pf));
-      // "12.5" or "(12.50/100%)" or "pct=12.5 ts=..."
-      if (preg_match('/pct=(\d+(?:\.\d+)?)/', $raw, $m)
-        || preg_match('/(\d+(?:\.\d+)?)\s*\/\s*100/', $raw, $m)
-        || preg_match('/^(\d+(?:\.\d+)?)$/', $raw, $m)) {
-        return (float)$m[1];
+    foreach ([
+      NBDEXPORT_RUN . '/' . $id . '.progress',
+      NBDEXPORT_RUN . '/' . $id . '.progress.raw',
+    ] as $pf) {
+      if (!is_file($pf)) {
+        continue;
+      }
+      $raw = (string)@file_get_contents($pf);
+      // Prefer tail of raw CR spam
+      if (strlen($raw) > 4096) {
+        $raw = substr($raw, -4096);
+      }
+      $v = nbd_parse_progress_pct_text($raw);
+      if ($v !== null) {
+        $cands[] = $v;
       }
     }
   }
   $log = (string)($j['log'] ?? '');
-  if ($log === '' || !is_file($log)) {
+  if ($log !== '' && is_file($log)) {
+    $fh = @fopen($log, 'rb');
+    if ($fh) {
+      $size = @filesize($log);
+      if ($size > 8192) {
+        @fseek($fh, -8192, SEEK_END);
+      }
+      $tail = (string)@stream_get_contents($fh);
+      @fclose($fh);
+      $v = nbd_parse_progress_pct_text($tail);
+      if ($v !== null) {
+        $cands[] = $v;
+      }
+    }
+  }
+  if (!$cands) {
     return null;
   }
-  // Read tail only — full logs can be huge with old percent spam
-  $fh = @fopen($log, 'rb');
-  if (!$fh) {
-    return null;
-  }
-  $size = @filesize($log);
-  if ($size > 8192) {
-    @fseek($fh, -8192, SEEK_END);
-  }
-  $tail = (string)@stream_get_contents($fh);
-  @fclose($fh);
-  if (!preg_match_all('/\((\d+(?:\.\d+)?)\/100%\)/', $tail, $mm) || empty($mm[1])) {
-    return null;
-  }
-  return (float)end($mm[1]);
+  return max($cands);
 }
 
 /**
@@ -876,6 +908,7 @@ function nbd_job_progress_samples(array $j, $max = 40) {
       $lines = @file($hf, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
       if (is_array($lines)) {
         foreach ($lines as $line) {
+          // "epoch pct" — integer or fractional
           if (preg_match('/^(\d+)\s+(\d+(?:\.\d+)?)\s*$/', trim($line), $m)) {
             $samples[] = [(int)$m[1], (float)$m[2]];
           }
@@ -913,33 +946,41 @@ function nbd_job_progress_samples(array $j, $max = 40) {
 }
 
 /**
- * Human ETA from recent progress rate, or null if unknown.
- * Uses the last ~10 minutes of samples when available (more stable than first %).
+ * Human ETA from recent progress rate. Empty label until we can estimate
+ * (no sticky "ETA…"). Uses last ~15 min of samples when available.
  *
  * @return array{seconds:?int,label:string,rate_pct_per_min:?float}
  */
 function nbd_job_progress_eta(array $j) {
+  $empty = ['seconds' => null, 'label' => '', 'rate_pct_per_min' => null];
   $st = nbd_job_ui_status($j);
   $key = $st['key'] ?? '';
   if ($key === 'paused') {
     return ['seconds' => null, 'label' => 'paused', 'rate_pct_per_min' => null];
   }
   if ($key !== 'running') {
-    return ['seconds' => null, 'label' => '', 'rate_pct_per_min' => null];
+    return $empty;
   }
   $pct = nbd_job_progress_pct($j);
   if ($pct === null) {
-    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+    return $empty;
   }
   if ($pct >= 99.9) {
     return ['seconds' => 0, 'label' => 'finishing…', 'rate_pct_per_min' => null];
   }
-  $samples = nbd_job_progress_samples($j);
-  if (count($samples) < 2) {
-    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  // Still at ~0% — wait for real movement (multi-TiB often sits at 0.00 for a while).
+  if ($pct < 0.05) {
+    return $empty;
   }
+  $samples = nbd_job_progress_samples($j);
   $now = time();
-  // Prefer recent window (≥60s span, last 15 min)
+  // Anchor current pct as a sample so one hist point + live pct can estimate.
+  if ($pct > 0) {
+    $samples[] = [$now, $pct];
+  }
+  if (count($samples) < 2) {
+    return $empty;
+  }
   $window = [];
   foreach ($samples as $s) {
     if ($s[0] >= $now - 900) {
@@ -951,22 +992,21 @@ function nbd_job_progress_eta(array $j) {
   }
   $first = $window[0];
   $last = $window[count($window) - 1];
-  // If last sample is stale vs current pct sidecar, anchor end to now/pct
   if ($pct > $last[1]) {
     $last = [$now, $pct];
   }
   $dt = $last[0] - $first[0];
   $dp = $last[1] - $first[1];
-  if ($dt < 20 || $dp < 0.3) {
-    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+  // Allow smaller dp once we have a minute of wall time (large disks move slowly).
+  if ($dt < 30 || $dp < 0.05) {
+    return $empty;
   }
   $pct_per_sec = $dp / $dt;
   $remain = 100.0 - $pct;
   if ($pct_per_sec <= 0) {
-    return ['seconds' => null, 'label' => 'ETA…', 'rate_pct_per_min' => null];
+    return $empty;
   }
   $sec = (int)round($remain / $pct_per_sec);
-  // Clamp absurd projections (e.g. early sparse sprint)
   if ($sec < 0) {
     $sec = 0;
   }
@@ -976,7 +1016,7 @@ function nbd_job_progress_eta(array $j) {
   return [
     'seconds' => $sec,
     'label' => '~' . nbd_format_duration($sec),
-    'rate_pct_per_min' => round($pct_per_sec * 60, 2),
+    'rate_pct_per_min' => round($pct_per_sec * 60, 3),
   ];
 }
 
@@ -2694,17 +2734,16 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . '    sleep 5' . "\n"
     . '    if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
     . '  done' . "\n"
-    . '  echo "$(date -Iseconds) note: disk size unavailable on nbd:// is normal — virtual size is the device size" >>"$LOG"' . "\n"
     . 'else' . "\n"
     . '  run_img "$IMG" info -f raw "$SRC" >>"$LOG" 2>&1 || run_img "$IMG" info "$SRC" >>"$LOG" 2>&1 || true' . "\n"
     . 'fi' . "\n"
-    . 'LAST_PCT=-1' . "\n"
+    . 'LAST_PCT_X10=-1' . "\n"
     . ': >"$PROGHIST"' . "\n"
     . ': >"$PROGRAW"' . "\n"
     . 'echo "pct=0" >"$PROG"' . "\n"
     . 'set +e' . "\n"
     . 'SRC_FMT=raw' . "\n"
-    . '# Subshell + exec → $! is qemu-img. -p progress → PROGRAW (poll; no SIGUSR1).' . "\n"
+    . '# Subshell + exec → $! is qemu-img. -p progress → PROGRAW (+ LOG fallback; some builds use stdout).' . "\n"
     . '(' . "\n"
     . '  if [ "$HAVE_IONICE" = 1 ]; then' . "\n"
     . '    if [ "${#STDBUF[@]}" -gt 0 ]; then' . "\n"
@@ -2725,14 +2764,19 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'while kill -0 "$CPID" 2>/dev/null; do' . "\n"
     . '  sleep 3' . "\n"
     . '  line=$(tr "\\r" "\\n" <"$PROGRAW" 2>/dev/null | grep -E "/100%\\)" | tail -1)' . "\n"
+    . '  if [ -z "$line" ]; then' . "\n"
+    . '    line=$(tr "\\r" "\\n" <"$LOG" 2>/dev/null | grep -E "/100%\\)" | tail -1)' . "\n"
+    . '  fi' . "\n"
     . '  [ -n "$line" ] || continue' . "\n"
     . '  pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
-    . '  ipct=${pct%%.*}' . "\n"
     . '  echo "pct=$pct" >"$PROG"' . "\n"
-    . '  if [ "$ipct" != "$LAST_PCT" ]; then' . "\n"
-    . '    echo "$(date -Iseconds) progress ($ipct/100%)" >>"$LOG"' . "\n"
-    . '    echo "$(date +%s) $ipct" >>"$PROGHIST"' . "\n"
-    . '    LAST_PCT=$ipct' . "\n"
+    . '  # Tenths of a percent so hist/ETA move before a full integer tick' . "\n"
+    . '  ipct=${pct%%.*}; frac=${pct#*.}; [ "$frac" = "$pct" ] && frac=0; frac=${frac:0:1}; [ -z "$frac" ] && frac=0' . "\n"
+    . '  x10=$(( ${ipct:-0} * 10 + ${frac:-0} ))' . "\n"
+    . '  if [ "$x10" -ne "$LAST_PCT_X10" ]; then' . "\n"
+    . '    echo "$(date -Iseconds) progress ($pct/100%)" >>"$LOG"' . "\n"
+    . '    echo "$(date +%s) $pct" >>"$PROGHIST"' . "\n"
+    . '    LAST_PCT_X10=$x10' . "\n"
     . '  fi' . "\n"
     . 'done' . "\n"
     . 'wait "$CPID"' . "\n"
