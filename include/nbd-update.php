@@ -216,17 +216,13 @@ try {
         }
       }
       $all = (isset($_POST['clear_finished']) && (string)$_POST['clear_finished'] === 'yes');
-      $del = (isset($_POST['delete_outputs']) && (string)$_POST['delete_outputs'] === 'yes');
-      $r = nbd_jobs_clear($ids, $all, $del);
+      // Clear = list only. Disk images: use Delete image / Retry (same path).
+      $r = nbd_jobs_clear($ids, $all, false);
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'clear failed'));
       } else {
         $n = count($r['cleared'] ?? []);
-        $msg = 'NBD Image: cleared ' . $n . ' job' . ($n === 1 ? '' : 's') . ' from the list';
-        $nd = count($r['deleted'] ?? []);
-        if ($nd) {
-          $msg .= '; deleted ' . $nd . ' image file' . ($nd === 1 ? '' : 's');
-        }
+        $msg = 'NBD Image: cleared ' . $n . ' job' . ($n === 1 ? '' : 's') . ' from the list (image files kept)';
         if (!empty($r['skipped'])) {
           $msg .= ' (' . count($r['skipped']) . ' skipped)';
         }
@@ -246,7 +242,6 @@ try {
       if (isset($_POST['format']) && trim((string)$_POST['format']) !== '') {
         $overrides['format'] = trim((string)$_POST['format']);
       }
-      $overrides['remove_output'] = (isset($_POST['remove_output']) && (string)$_POST['remove_output'] === 'yes');
       $old = nbd_job_load($id);
       $r = nbd_image_retry($id, $overrides);
       if (empty($r['ok'])) {
@@ -256,18 +251,17 @@ try {
         $o = (string)($overrides['output'] ?? (is_array($old) ? ($old['output'] ?? '') : ''));
         $f = (string)($overrides['format'] ?? (is_array($old) ? ($old['format'] ?? 'qcow2') : 'qcow2'));
         nbd_memory_remember_pull($u, $o, $f);
-        if (!empty($r['queued'])) {
-          nbd_flash('NBD Image: retry queued ' . ($r['id'] ?? '') . ' — ' . ($r['warn'] ?? 'see Status'));
-        } else {
-          $msg = 'NBD Image: retry started ' . ($r['id'] ?? '') . ' (from ' . $id . ')';
-          if (!empty($overrides['remove_output'])) {
-            $msg .= ' — old output removed';
-          }
-          if (!empty($r['warn'])) {
-            $msg .= ' — ' . $r['warn'];
-          }
-          nbd_flash($msg);
+        $msg = !empty($r['queued'])
+          ? ('NBD Image: retry queued ' . ($r['id'] ?? ''))
+          : ('NBD Image: retry started ' . ($r['id'] ?? ''));
+        $msg .= ' — old History entry cleared';
+        if (!empty($r['removed_output'])) {
+          $msg .= '; previous output removed';
         }
+        if (!empty($r['warn'])) {
+          $msg .= ' — ' . $r['warn'];
+        }
+        nbd_flash($msg);
       }
       break;
 

@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ak
+
+- **Retry cleanup:** starting a retry **clears the old History card** and, when the output
+  path is unchanged, **deletes the incomplete image** automatically (no resume possible).
+  Edit & retry to a **new** path leaves the old file alone.
+- **Clear toolbar:** list-only again (removed the confusing “Also delete image files”
+  checkbox). Use per-card **Delete image** to free space without retrying.
+- Short help under History explains Clear vs Delete vs Retry.
+
 ## 2026.08.26aj
 
 - **Fix false convert failure:** background `ionice`/`nice` exited while `qemu-img` kept

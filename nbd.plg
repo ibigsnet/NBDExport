@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26aj">
+<!ENTITY version "2026.08.26ak">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,10 +27,13 @@
 
 <CHANGES>
 ###&version;
+- Retry auto-clears History card and deletes same-path output; Clear is list-only; remove confusing delete checkbox.
+
+###2026.08.26aj
 - Fix false NBD_JOB_FAIL (wait on ionice PID); net shows Gb/s above 1 Gb/s.
 
 ###2026.08.26ai
-- Full paths; Select failed; delete-before-retry; Clear can delete images; MB/s and GB units.
+- Full paths; Select failed; MB/s and GB units; Pause/Stop align.
 
 ###2026.08.26ah
 - Status Active/Queued/History; clear/retry/edit/delete; queue ↑↓; Paused purple; lazy Dashboard.

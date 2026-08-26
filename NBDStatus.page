@@ -125,15 +125,15 @@ foreach ($jobs_history as $j) {
           <button type="button" onclick="nbdJobsSelectByStatus(null)">Select finished</button>
           <button type="button" onclick="nbdJobsSelectByStatus('failed')">Select failed</button>
           <button type="button" onclick="nbdJobsSelectByStatus(false)">Clear selection</button>
-          <label class="nbd-jobs-delopt" title="Also unlink qcow2/raw under /mnt or /tmp when clearing">
-            <input type="checkbox" name="delete_outputs" value="yes" id="nbd_delete_outputs">
-            Also delete image files
-          </label>
           <input type="submit" name="#apply" value="Clear selected"
             onclick="return nbdJobsClearClick(false);">
           <input type="submit" name="#apply" value="Clear all finished"
             onclick="return nbdJobsClearClick(true);">
         </form>
+        <p class="nbd-muted" style="margin:0.35em 0 0;font-size:0.9em">
+          Clear removes History entries only (keeps files). Use <strong>Delete image</strong> to free disk space.
+          <strong>Retry</strong> removes the old incomplete file when the output path is unchanged, and drops that History card.
+        </p>
       </div>
 <?php endif; ?>
       <div class="nbd-job-list">
@@ -166,35 +166,17 @@ foreach ($jobs_history as $j) {
   window.nbdJobsClearClick = function (all) {
     var fin = document.getElementById('nbd_clear_finished');
     if (fin) fin.value = all ? 'yes' : 'no';
-    var del = document.getElementById('nbd_delete_outputs');
-    var delOn = del && del.checked;
     if (!all) {
       var boxes = document.querySelectorAll('.nbd-job-cb:checked');
       if (!boxes.length) {
         alert('Select at least one finished job (checkbox), or use Clear all finished.');
         return false;
       }
-      var msg = 'Clear ' + boxes.length + ' selected job(s) from the list?';
-      if (delOn) msg += '\n\nAlso DELETE their output image files under /mnt (cannot undo).';
-      else msg += '\n\nImage files under /mnt are kept unless “Also delete image files” is checked.';
-      return confirm(msg);
+      return confirm('Clear ' + boxes.length + ' selected job(s) from History?\n\nImage files under /mnt are kept. Use Delete image on a card to free space.');
     }
-    var msg2 = 'Remove all Done/Failed/Idle jobs from this list?';
-    if (delOn) msg2 += '\n\nAlso DELETE their output image files under /mnt (cannot undo).';
-    else msg2 += '\n\nImage files under /mnt are kept unless “Also delete image files” is checked.';
-    return confirm(msg2);
+    return confirm('Clear all Done/Failed/Idle jobs from History?\n\nImage files under /mnt are kept. Use Delete image on a card to free space.');
   };
   window.nbdJobsClearSubmit = function () { return true; };
-  window.nbdRetrySubmit = function (form, msg) {
-    var rmId = form.getAttribute('data-nbd-rm');
-    var cb = rmId ? document.getElementById(rmId) : null;
-    var hidden = form.querySelector('.nbd-rmout-hidden');
-    var del = !!(cb && cb.checked);
-    if (hidden) hidden.value = del ? 'yes' : 'no';
-    var m = msg || 'Retry this Pull?';
-    if (del) m += '\n\nExisting output file will be deleted first.';
-    return confirm(m);
-  };
   document.addEventListener('click', function (ev) {
     var btn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
     if (!btn) return;

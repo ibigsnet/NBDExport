@@ -36,7 +36,6 @@ if ($running && $eta_h === '') {
 $out_exists = ($out !== '' && $out !== '(unknown)' && @is_file($out));
 $qpos = isset($nbd_queue_pos) ? (int)$nbd_queue_pos : -1;
 $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
-$rm_id = 'nbd-rm-' . $jid_raw;
 ?>
         <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>" data-nbd-key="<?= htmlspecialchars($jkey) ?>">
           <div class="nbd-job-card-top">
@@ -65,12 +64,6 @@ $rm_id = 'nbd-rm-' . $jid_raw;
             <div><span class="nbd-muted">Source</span> <code class="nbd-job-path"><?= htmlspecialchars($src !== '' ? $src : '—') ?></code></div>
             <div><span class="nbd-muted">Output</span> <code class="nbd-job-path"><?= htmlspecialchars($out !== '' ? $out : '—') ?></code></div>
           </div>
-<?php if ($clearable && !$external && $out_exists): ?>
-          <label class="nbd-job-rmout">
-            <input type="checkbox" id="<?= htmlspecialchars($rm_id) ?>" class="nbd-rmout-cb" value="yes">
-            Delete existing output file before Retry
-          </label>
-<?php endif; ?>
           <div class="nbd-job-card-actions nbd-live-job-actions">
               <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline-flex' : 'none' ?>" class="nbd-live-job-pause-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
@@ -137,19 +130,17 @@ $rm_id = 'nbd-rm-' . $jid_raw;
 <?php endif; ?>
 <?php if ($clearable && !$external): ?>
               <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex" class="nbd-job-retry-form"
-                data-nbd-rm="<?= htmlspecialchars($rm_id) ?>"
-                onsubmit="return nbdRetrySubmit(this, 'Retry this Pull with the same source and output?\n\n<?= htmlspecialchars(addslashes($src), ENT_QUOTES) ?>\n→ <?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>');">
+                onsubmit="return confirm('Retry this Pull?\n\n<?= htmlspecialchars(addslashes($src), ENT_QUOTES) ?>\n→ <?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nSame output path: incomplete file is removed automatically.\nThis History entry is cleared; the new job appears under Active/Queued.');">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_retry">
                 <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="hidden" name="remove_output" value="no" class="nbd-rmout-hidden">
                 <input type="submit" name="#apply" value="Retry">
               </form>
               <button type="button" class="nbd-job-edit-toggle" data-nbd-edit="<?= $jid ?>">Edit &amp; retry…</button>
 <?php if ($out_exists): ?>
               <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex"
-                onsubmit="return confirm('DELETE image file from disk?\n\n<?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nCannot resume a stopped convert — this frees space. Job card stays until Clear.');">
+                onsubmit="return confirm('DELETE image file from disk?\n\n<?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nFrees space without starting a new Pull. Job card stays until Clear.');">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="job_delete_output">
@@ -162,13 +153,11 @@ $rm_id = 'nbd-rm-' . $jid_raw;
 <?php if ($clearable && !$external): ?>
           <div class="nbd-job-edit" id="nbd-edit-<?= $jid ?>" style="display:none">
             <form method="POST" action="/update.php" target="progressFrame" class="nbd-job-edit-form"
-              data-nbd-rm="<?= htmlspecialchars($rm_id) ?>"
-              onsubmit="return nbdRetrySubmit(this, 'Start retry with these values?');">
+              onsubmit="return confirm('Start retry with these values?\n\nIf Output is unchanged, the old file is removed automatically.\nThis History entry is cleared.');">
               <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
               <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="image_retry">
               <input type="hidden" name="job_id" value="<?= $jid ?>">
-              <input type="hidden" name="remove_output" value="no" class="nbd-rmout-hidden">
               <label>Source <input type="text" name="nbd_url" value="<?= htmlspecialchars($src) ?>" style="width:min(36em,100%)"></label>
               <label>Output <input type="text" name="output" value="<?= htmlspecialchars($out) ?>" style="width:min(36em,100%)"></label>
               <label>Format
@@ -177,6 +166,7 @@ $rm_id = 'nbd-rm-' . $jid_raw;
                   <option value="raw" <?= $fmt === 'raw' ? 'selected' : '' ?>>raw</option>
                 </select>
               </label>
+              <p class="nbd-muted" style="margin:0.35em 0">Same output path → old file deleted. Different path → old file left alone.</p>
               <input type="submit" name="#apply" value="Start retry">
             </form>
           </div>
