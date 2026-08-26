@@ -803,17 +803,11 @@ function nbd_job_io_rates(array $j) {
       $disk_bps = (int)max(0, round(($disk_bytes - (int)$prev['disk']) / $dt));
     }
   }
-  $fmt = function ($bps) {
-    if ($bps === null) {
-      return '';
-    }
-    return nbd_format_bytes($bps) . '/s';
-  };
   return [
     'net_bps' => $net_bps,
     'disk_bps' => $disk_bps,
-    'net_h' => $fmt($net_bps),
-    'disk_h' => $fmt($disk_bps),
+    'net_h' => nbd_format_net_rate($net_bps),
+    'disk_h' => nbd_format_disk_rate($disk_bps),
   ];
 }
 
@@ -1114,19 +1108,57 @@ function nbd_unraid_array_devices() {
   return $map;
 }
 
+/**
+ * Unraid-style size (decimal SI: KB/MB/GB/TB), matching stock my_scale(kilo=1000).
+ */
 function nbd_format_bytes($n) {
   $n = (float)$n;
   if ($n <= 0) {
     return '0 B';
   }
-  $u = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  $u = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   $i = 0;
-  while ($n >= 1024 && $i < count($u) - 1) {
-    $n /= 1024;
+  while ($n >= 1000 && $i < count($u) - 1) {
+    $n /= 1000;
     $i++;
   }
-  $fmt = $i === 0 ? (string)(int)$n : rtrim(rtrim(number_format($n, 1, '.', ''), '0'), '.');
+  $decimals = ($i === 0 || $n >= 100) ? 0 : ($n >= 10 ? 1 : 2);
+  $fmt = number_format($n, $decimals, '.', '');
+  $fmt = rtrim(rtrim($fmt, '0'), '.');
+  if ($fmt === '') {
+    $fmt = '0';
+  }
   return $fmt . ' ' . $u[$i];
+}
+
+/** Disk throughput: MB/s (decimal megabytes/sec). */
+function nbd_format_disk_rate($bps) {
+  if ($bps === null) {
+    return '';
+  }
+  $mb = ((float)$bps) / 1000000.0;
+  if ($mb < 0.1) {
+    return number_format($mb, 2, '.', '') . ' MB/s';
+  }
+  if ($mb < 10) {
+    return number_format($mb, 1, '.', '') . ' MB/s';
+  }
+  return number_format($mb, 0, '.', '') . ' MB/s';
+}
+
+/** Network throughput: Mb/s (megabits/sec), Unraid iface style. */
+function nbd_format_net_rate($bps) {
+  if ($bps === null) {
+    return '';
+  }
+  $mbits = ((float)$bps) * 8.0 / 1000000.0;
+  if ($mbits < 0.1) {
+    return number_format($mbits, 2, '.', '') . ' Mb/s';
+  }
+  if ($mbits < 10) {
+    return number_format($mbits, 1, '.', '') . ' Mb/s';
+  }
+  return number_format($mbits, 0, '.', '') . ' Mb/s';
 }
 
 function nbd_exports_state() {
@@ -2615,10 +2647,12 @@ function nbd_job_clear_one($id) {
  *
  * @param string[] $ids
  * @param bool $all_finished
- * @return array{ok:bool,cleared:string[],skipped:string[],error?:string}
+ * @param bool $delete_outputs Also unlink output images under /mnt|/tmp
+ * @return array{ok:bool,cleared:string[],deleted:string[],skipped:string[],error?:string}
  */
-function nbd_jobs_clear(array $ids, $all_finished = false) {
+function nbd_jobs_clear(array $ids, $all_finished = false, $delete_outputs = false) {
   $cleared = [];
+  $deleted = [];
   $skipped = [];
   $want = [];
   foreach ($ids as $id) {
@@ -2635,9 +2669,15 @@ function nbd_jobs_clear(array $ids, $all_finished = false) {
     }
   }
   if (!$want) {
-    return ['ok' => false, 'error' => 'Nothing selected to clear', 'cleared' => [], 'skipped' => []];
+    return ['ok' => false, 'error' => 'Nothing selected to clear', 'cleared' => [], 'deleted' => [], 'skipped' => []];
   }
   foreach (array_keys($want) as $id) {
+    if ($delete_outputs) {
+      $dr = nbd_job_delete_output($id);
+      if (!empty($dr['ok']) && empty($dr['missing']) && !empty($dr['path'])) {
+        $deleted[] = (string)$dr['path'];
+      }
+    }
     $r = nbd_job_clear_one($id);
     if (!empty($r['ok'])) {
       $cleared[] = $id;
@@ -2648,6 +2688,7 @@ function nbd_jobs_clear(array $ids, $all_finished = false) {
   return [
     'ok' => count($cleared) > 0,
     'cleared' => $cleared,
+    'deleted' => $deleted,
     'skipped' => $skipped,
     'error' => count($cleared) ? null : ('Nothing cleared' . ($skipped ? (' — ' . implode('; ', $skipped)) : '')),
   ];

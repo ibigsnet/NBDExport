@@ -216,12 +216,17 @@ try {
         }
       }
       $all = (isset($_POST['clear_finished']) && (string)$_POST['clear_finished'] === 'yes');
-      $r = nbd_jobs_clear($ids, $all);
+      $del = (isset($_POST['delete_outputs']) && (string)$_POST['delete_outputs'] === 'yes');
+      $r = nbd_jobs_clear($ids, $all, $del);
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'clear failed'));
       } else {
         $n = count($r['cleared'] ?? []);
         $msg = 'NBD Image: cleared ' . $n . ' job' . ($n === 1 ? '' : 's') . ' from the list';
+        $nd = count($r['deleted'] ?? []);
+        if ($nd) {
+          $msg .= '; deleted ' . $nd . ' image file' . ($nd === 1 ? '' : 's');
+        }
         if (!empty($r['skipped'])) {
           $msg .= ' (' . count($r['skipped']) . ' skipped)';
         }

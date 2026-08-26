@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ai
+
+- **Full paths** on Status job cards (no `…` truncation).
+- **Select failed** next to Select finished; **Also delete image files** on Clear
+  (optional — Clear alone still only removes list entries).
+- **Delete image** button on History when the output file exists; shared
+  **Delete existing output before Retry** checkbox (applies to Retry and Edit & retry).
+- **Units:** sizes as Unraid-style **GB/TB** (decimal); rates **net Mb/s** and **disk MB/s**.
+- **Pause / Stop** button alignment (flex row, same min-height).
+
 ## 2026.08.26ah
 
 - **Status sections:** **Active** / **Queued** / **History** instead of one flat list.
