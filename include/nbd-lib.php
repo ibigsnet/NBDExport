@@ -1146,12 +1146,16 @@ function nbd_format_disk_rate($bps) {
   return number_format($mb, 0, '.', '') . ' MB/s';
 }
 
-/** Network throughput: Mb/s (megabits/sec), Unraid iface style. */
+/** Network throughput: Mb/s, or Gb/s when ≥ 1000 Mb/s (Unraid-style). */
 function nbd_format_net_rate($bps) {
   if ($bps === null) {
     return '';
   }
   $mbits = ((float)$bps) * 8.0 / 1000000.0;
+  if ($mbits >= 1000.0) {
+    $g = $mbits / 1000.0;
+    return number_format($g, ($g >= 10 ? 1 : 2), '.', '') . ' Gb/s';
+  }
   if ($mbits < 0.1) {
     return number_format($mbits, 2, '.', '') . ' Mb/s';
   }
@@ -2400,8 +2404,23 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'echo "pct=0" >"$PROG"' . "\n"
     . 'set +e' . "\n"
     . 'SRC_FMT=raw' . "\n"
-    . '# No -p: ask for progress via SIGUSR1 (writes to stderr → PROGRAW)' . "\n"
-    . 'run_img "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT" >>"$LOG" 2>>"$PROGRAW" &' . "\n"
+    . '# Subshell + exec so $! is qemu-img (not ionice/nice which exit immediately).' . "\n"
+    . '# No -p: progress via SIGUSR1 → PROGRAW.' . "\n"
+    . '(' . "\n"
+    . '  if command -v ionice >/dev/null 2>&1; then' . "\n"
+    . '    if [ "${#STDBUF[@]}" -gt 0 ]; then' . "\n"
+    . '      exec ionice $IONICE_ARGS nice -n "$NICE_N" "${STDBUF[@]}" "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT"' . "\n"
+    . '    else' . "\n"
+    . '      exec ionice $IONICE_ARGS nice -n "$NICE_N" "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT"' . "\n"
+    . '    fi' . "\n"
+    . '  else' . "\n"
+    . '    if [ "${#STDBUF[@]}" -gt 0 ]; then' . "\n"
+    . '      exec nice -n "$NICE_N" "${STDBUF[@]}" "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT"' . "\n"
+    . '    else' . "\n"
+    . '      exec nice -n "$NICE_N" "$IMG" convert -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT"' . "\n"
+    . '    fi' . "\n"
+    . '  fi' . "\n"
+    . ') >>"$LOG" 2>>"$PROGRAW" &' . "\n"
     . 'CPID=$!' . "\n"
     . 'echo "$(date -Iseconds) convert pid=$CPID" >>"$LOG"' . "\n"
     . 'while kill -0 "$CPID" 2>/dev/null; do' . "\n"
@@ -2421,7 +2440,7 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'wait "$CPID"' . "\n"
     . 'CONV_RC=$?' . "\n"
     . 'set -e' . "\n"
-    . 'if [ "${CONV_RC}" -ne 0 ]; then fail convert; fi' . "\n"
+    . 'if [ "${CONV_RC}" -ne 0 ]; then fail convert rc=$CONV_RC; fi' . "\n"
     . 'echo "$(date -Iseconds) progress (100/100%)" >>"$LOG"' . "\n"
     . 'echo "pct=100" >"$PROG"' . "\n"
     . 'echo "$(date +%s) 100" >>"$PROGHIST"' . "\n"
