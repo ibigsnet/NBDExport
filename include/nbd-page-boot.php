@@ -112,6 +112,18 @@ function nbd_page_styles() {
   margin: 0 auto;
 }
 .nbd-wrap { max-width: 54em; margin-left: auto; margin-right: auto; }
+/* VM-template style: in-flow tree (pushes page), not absolute overlay (glitchy dismiss) */
+.nbd-wrap .fileTree {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: min(36em, 100%);
+  max-height: 16em;
+  z-index: 20;
+  margin: 0.35em 0 0.6em;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .nbd-wrap .nbd-companion {
   margin: 0.5em 0 1em;
   padding: 0.55em 0.75em;
