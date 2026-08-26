@@ -216,15 +216,33 @@ try {
         }
       }
       $all = (isset($_POST['clear_finished']) && (string)$_POST['clear_finished'] === 'yes');
-      // Clear = list only. Disk images: use Delete image / Retry (same path).
+      // Clear = History list only. Images stay; logs stay (Logs tab / Clear log).
       $r = nbd_jobs_clear($ids, $all, false);
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'clear failed'));
       } else {
         $n = count($r['cleared'] ?? []);
-        $msg = 'NBD Image: cleared ' . $n . ' job' . ($n === 1 ? '' : 's') . ' from the list (image files kept)';
+        $msg = 'NBD Image: removed ' . $n . ' job' . ($n === 1 ? '' : 's')
+          . ' from History (image files and logs kept — see Logs tab)';
         if (!empty($r['skipped'])) {
           $msg .= ' (' . count($r['skipped']) . ' skipped)';
+        }
+        nbd_flash($msg);
+      }
+      break;
+
+    case 'logs_clear':
+      $r = nbd_logs_clear();
+      $n = count($r['deleted'] ?? []);
+      $k = count($r['kept'] ?? []);
+      if ($n === 0 && $k === 0) {
+        nbd_flash('NBD Logs: nothing to clear');
+      } elseif ($n === 0) {
+        nbd_flash('NBD Logs: nothing deleted (' . $k . ' live log' . ($k === 1 ? '' : 's') . ' kept)');
+      } else {
+        $msg = 'NBD Logs: deleted ' . $n . ' log' . ($n === 1 ? '' : 's');
+        if ($k > 0) {
+          $msg .= ' (' . $k . ' live kept)';
         }
         nbd_flash($msg);
       }

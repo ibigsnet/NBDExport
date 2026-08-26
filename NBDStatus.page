@@ -137,11 +137,11 @@ foreach ($jobs_history as $j) {
               onclick="return nbdJobsClearClick(true);">
           </span>
         </form>
-        <p class="nbd-muted" style="margin:0.35em 0 0;font-size:0.9em">
-          <strong>Checkboxes / Remove from list</strong> only hide History rows (files stay on disk).
-          <strong>Delete image</strong> on a card frees the qcow2/raw.
-          <strong>Retry</strong> starts over: drops that History row, and deletes the incomplete file when the output path is unchanged.
-        </p>
+        <blockquote class="inline_help">
+          <strong>Remove from list</strong> — Status cards only (images and logs stay; see <strong>Logs</strong>).
+          <strong>Delete image</strong> — frees the qcow2/raw.
+          <strong>Retry</strong> — new Pull; same path deletes the incomplete file.
+        </blockquote>
       </div>
 <?php endif; ?>
       <div class="nbd-job-list">
@@ -186,13 +186,47 @@ foreach ($jobs_history as $j) {
   };
   window.nbdJobsClearSubmit = function () { return true; };
   document.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
-    if (!btn) return;
-    var id = btn.getAttribute('data-nbd-edit');
-    var box = id ? document.getElementById('nbd-edit-' + id) : null;
-    if (!box) return;
-    box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+    var editBtn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-edit-toggle') : null;
+    if (editBtn) {
+      var eid = editBtn.getAttribute('data-nbd-edit');
+      var ebox = eid ? document.getElementById('nbd-edit-' + eid) : null;
+      if (ebox) {
+        ebox.style.display = (ebox.style.display === 'none' || ebox.style.display === '') ? 'block' : 'none';
+      }
+      return;
+    }
+    var bugBtn = ev.target && ev.target.closest ? ev.target.closest('.nbd-job-bug-btn') : null;
+    if (!bugBtn) return;
+    var bid = bugBtn.getAttribute('data-nbd-bug');
+    var panel = bid ? document.getElementById('nbd-bug-' + bid) : null;
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      try {
+        panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (e) { /* ignore */ }
+    }
   });
+  window.nbdCopyDiagnostics = function (id) {
+    var el = document.getElementById('nbd-diag-' + id);
+    if (!el) return;
+    var text = el.value || el.textContent || '';
+    function ok() {
+      try {
+        el.focus();
+        el.select();
+      } catch (e) { /* ignore */ }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok).catch(function () {
+        ok();
+        try { document.execCommand('copy'); } catch (e2) { /* ignore */ }
+      });
+    } else {
+      ok();
+      try { document.execCommand('copy'); } catch (e3) { /* ignore */ }
+    }
+  };
 })();
 </script>
 <?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

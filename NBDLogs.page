@@ -1,0 +1,95 @@
+Menu="NBDExport:4"
+Title="Logs"
+Tag="file-text-o"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
+nbd_page_styles();
+$logs = function_exists('nbd_list_log_files') ? nbd_list_log_files() : [];
+$n_logs = count($logs);
+$n_clearable = 0;
+foreach ($logs as $L) {
+  if (empty($L['in_use'])) {
+    $n_clearable++;
+  }
+}
+$n_live = $n_logs - $n_clearable;
+?>
+<div class="nbd-wrap">
+<?php nbd_page_header(); ?>
+  <div class="nbd-tab-body">
+
+  <div class="nbd-section" style="margin-top:0">
+    <h3>Logs</h3>
+    <p class="nbd-section-lead">
+      Plugin logs under <code>/var/log/nbdexport/</code>. Survive History clear; <strong>Clear log</strong> removes finished only.
+    </p>
+  </div>
+
+  <div class="nbd-section">
+    <div class="nbd-logs-toolbar">
+      <form method="POST" action="/update.php" target="progressFrame" class="nbd-logs-clear-form"
+        onsubmit="return confirm('Delete finished plugin logs under /var/log/nbdexport/?\n\nLive job/host/beacon logs are kept.\nStatus History cards and image files are not touched.');">
+        <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+        <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+        <input type="hidden" name="nbd_action" value="logs_clear">
+        <input type="submit" name="#apply" value="Clear log"
+          <?= $n_clearable < 1 ? 'disabled title="No finished logs to clear"' : '' ?>>
+      </form>
+    </div>
+
+<?php if (!$logs): ?>
+    <p class="nbd-empty">No log files yet.</p>
+<?php else: ?>
+    <div class="nbd-log-list">
+<?php foreach ($logs as $L):
+  $name = (string)($L['name'] ?? '');
+  $kind = (string)($L['kind'] ?? 'other');
+  $in_use = !empty($L['in_use']);
+  $path = (string)($L['path'] ?? '');
+  $disp = function_exists('nbd_log_read_display')
+    ? nbd_log_read_display($path)
+    : ['text' => '', 'truncated' => false, 'size' => 0];
+  $kind_label = [
+    'job' => 'Pull job',
+    'host' => 'Host export',
+    'beacon' => 'Beacon',
+    'other' => 'Log',
+  ][$kind] ?? 'Log';
+?>
+      <details class="nbd-log-file">
+        <summary>
+          <span class="nbd-badge <?= $in_use ? 'nbd-badge-run' : 'nbd-badge-stale' ?>"><?= $in_use ? 'Live' : 'Finished' ?></span>
+          <strong><?= htmlspecialchars($kind_label) ?></strong>
+          <code><?= htmlspecialchars($name) ?></code>
+          <span class="nbd-muted">
+            · <?= htmlspecialchars($L['size_h'] ?? '') ?>
+            · <?= htmlspecialchars($L['mtime_h'] ?? '') ?>
+          </span>
+        </summary>
+<?php if (!empty($disp['truncated'])): ?>
+        <p class="nbd-muted" style="margin:0.35em 0">Showing last ~200&nbsp;KB of <?= htmlspecialchars($L['size_h'] ?? '') ?>.</p>
+<?php endif; ?>
+        <pre class="nbd-log nbd-log-full"><?= htmlspecialchars($disp['text'] !== '' ? $disp['text'] : '(empty)') ?></pre>
+      </details>
+<?php endforeach; ?>
+    </div>
+
+    <div class="nbd-logs-toolbar nbd-logs-toolbar-bottom">
+      <form method="POST" action="/update.php" target="progressFrame" class="nbd-logs-clear-form"
+        onsubmit="return confirm('Delete finished plugin logs under /var/log/nbdexport/?\n\nLive job/host/beacon logs are kept.\nStatus History cards and image files are not touched.');">
+        <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+        <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+        <input type="hidden" name="nbd_action" value="logs_clear">
+        <input type="submit" name="#apply" value="Clear log"
+          <?= $n_clearable < 1 ? 'disabled title="No finished logs to clear"' : '' ?>>
+      </form>
+    </div>
+<?php endif; ?>
+  </div>
+
+  </div>
+<?php nbd_page_footer(true); ?>
+</div>
+<?php require '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php'; ?>

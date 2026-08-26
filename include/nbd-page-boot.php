@@ -279,8 +279,57 @@ function nbd_page_styles() {
   border-left: 3px solid rgba(200, 60, 60, 0.85);
   background: rgba(200, 60, 60, 0.12); font-size: 0.92em; line-height: 1.35;
 }
+.nbd-wrap .nbd-job-bug-btn {
+  margin-left: auto;
+}
+.nbd-wrap .nbd-bug-panel {
+  margin-top: 0.55em; padding: 0.65em 0.75em; border-radius: 6px;
+  border: 1px solid rgba(200, 140, 40, 0.55);
+  background: rgba(200, 140, 40, 0.08);
+  font-size: 0.92em; line-height: 1.45;
+}
+.nbd-wrap .nbd-bug-panel .nbd-bug-lead,
+.nbd-wrap .nbd-bug-panel .nbd-bug-tools {
+  margin: 0 0 0.55em;
+}
+.nbd-wrap .nbd-bug-panel .nbd-bug-tools { margin-bottom: 0.75em; }
+.nbd-wrap .nbd-bug-panel a { word-break: break-word; }
+.nbd-wrap .nbd-diag-label {
+  display: block; font-weight: 600; margin: 0.35em 0 0.3em;
+}
+.nbd-wrap textarea.nbd-diag {
+  width: 100%; box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em; line-height: 1.35;
+  padding: 0.55em 0.65em; border-radius: 4px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: rgba(0, 0, 0, 0.12);
+  resize: vertical; min-height: 10em;
+}
+.nbd-wrap .nbd-bug-actions { margin: 0.45em 0 0; }
 .nbd-wrap .nbd-job-card details.nbd-job-log { margin-top: 0.45em; font-size: 0.9em; }
 .nbd-wrap .nbd-job-card details.nbd-job-log summary { cursor: pointer; opacity: 0.85; font-weight: 600; }
+.nbd-wrap .nbd-logs-toolbar {
+  margin: 0 0 0.75em; padding: 0.55em 0.65em;
+  border: 1px solid rgba(128,128,128,0.3); border-radius: 6px;
+  background: rgba(128,128,128,0.06);
+}
+.nbd-wrap .nbd-logs-toolbar-bottom { margin: 0.85em 0 0; }
+.nbd-wrap .nbd-logs-clear-form {
+  display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; margin: 0;
+}
+.nbd-wrap .nbd-log-list { display: flex; flex-direction: column; gap: 0.55em; margin: 0.5em 0 0; }
+.nbd-wrap details.nbd-log-file {
+  border: 1px solid rgba(128,128,128,0.35); border-radius: 6px;
+  padding: 0.45em 0.65em; background: rgba(128,128,128,0.05);
+}
+.nbd-wrap details.nbd-log-file summary {
+  cursor: pointer; font-size: 0.95em; line-height: 1.45;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35em 0.55em;
+}
+.nbd-wrap details.nbd-log-file pre.nbd-log-full {
+  max-height: 28em; overflow: auto; margin: 0.45em 0 0.15em;
+}
 .nbd-wrap .nbd-job-section-title { margin: 1.1em 0 0.45em; font-size: 1.05em; }
 .nbd-wrap .nbd-jobs-toolbar {
   margin: 0 0 0.65em; padding: 0.55em 0.65em;
