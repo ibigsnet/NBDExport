@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26ar">
+<!ENTITY version "2026.08.26as">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -27,6 +27,9 @@
 
 <CHANGES>
 ###&version;
+- Dashboard: stock single-cell tile (no header stretch); cheaper async load (no Loading flash / no ps-scan).
+
+###2026.08.26ar
 - Progress/ETA: no sticky ETA…; pct from sidecar+raw+log; Pause/Stop button heights aligned.
 
 ###2026.08.26aq–ap
@@ -41,11 +44,8 @@
 ###2026.08.26ai–ag
 - Status Active/Queued/History; metrics/units; Paused purple; lazy Dashboard; busy Update refuse.
 
-###2026.08.26af–ad
-- Dashboard tile fix; job cards; uninstall always exit 0 (CA no-op fix).
-
-###2026.08.26ac–aa
-- Pull fileTree path picker (VM-style in-flow Browse).
+###2026.08.26af–aa
+- Dashboard/job cards; uninstall exit 0; Pull fileTree Browse.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md

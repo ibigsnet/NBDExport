@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26as
+
+- **Dashboard tile:** stock single-cell icon+section (no dual-row `tile-header` stretch).
+  First paint shows `—` then fills after idle callback — no “Loading…” flash.
+  Dash poll skips external `qemu-img` `ps` scan; 5s when active / 15s when idle.
+- Backlog inventory: `docs/backlog-from-chat.md`.
+
 ## 2026.08.26ar
 
 - **Progress / ETA:** Prefer max of `.progress`, `.progress.raw`, and log so a stale

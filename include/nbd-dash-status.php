@@ -2,6 +2,9 @@
 /**
  * Async Dashboard tile body — keep NBDDashboard.page itself cheap so Main
  * Dashboard first paint is not blocked by process scans.
+ *
+ * Intentionally uses nbd_jobs_state() only (no full external qemu-img ps scan
+ * on every poll). Status tab still shows External converts.
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -27,20 +30,22 @@ try {
   }
 
   $pulls = [];
-  foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state()) as $j) {
+  $watch = false;
+  foreach (nbd_jobs_state() as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
     if (!in_array($key, ['running', 'queued', 'paused'], true)) {
       continue;
     }
+    $watch = true;
     $pct = nbd_job_progress_pct($j);
     $eta = function_exists('nbd_job_progress_eta') ? nbd_job_progress_eta($j) : ['label' => ''];
     $elapsed = function_exists('nbd_job_elapsed_seconds') ? nbd_job_elapsed_seconds($j) : null;
     $rates = ($key === 'running' && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : [];
     $out = (string)($j['output'] ?? '');
     $short = $out;
-    if (strlen($short) > 36) {
-      $short = '…' . substr($short, -34);
+    if (strlen($short) > 42) {
+      $short = '…' . substr($short, -40);
     }
     $pulls[] = [
       'url' => (string)($j['url'] ?? ''),
@@ -56,6 +61,9 @@ try {
       'size' => (string)($j['output_size_h'] ?? '—'),
     ];
   }
+  if ($hosts) {
+    $watch = true;
+  }
 
   $n_host = count($hosts);
   $n_pull = count($pulls);
@@ -65,20 +73,20 @@ try {
 
   ob_start();
   if (!$enabled) {
-    echo '<span class="orange-text">NBD Export is disabled</span>';
+    echo '<span class="orange-text">Disabled</span>';
   } elseif (!$hosts && !$pulls) {
-    echo '<span style="opacity:0.75">No active hosts or pulls</span>';
+    // Empty body — summary line is enough (no second “No active…” essay).
+    echo '';
   } else {
-    echo '<div style="font-size:0.92em;line-height:1.4">';
+    echo '<div style="font-size:0.92em;line-height:1.35">';
     foreach ($hosts as $h) {
       $badge = $h['ro'] ? 'RO' : 'RW';
       $bg = $h['ro'] ? 'rgba(46,160,90,0.4)' : 'rgba(220,140,40,0.45)';
-      echo '<div style="margin:0.35em 0;padding:0.35em 0;border-bottom:1px solid rgba(128,128,128,0.25)">';
-      echo '<span style="display:inline-block;padding:0.1em 0.45em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
+      echo '<div style="margin:0.25em 0;padding:0.2em 0;border-bottom:1px solid rgba(128,128,128,0.22)">';
+      echo '<span style="display:inline-block;padding:0.05em 0.4em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
         . $bg . '">' . htmlspecialchars($badge) . '</span> ';
       echo '<code>' . htmlspecialchars($h['device']) . '</code>';
-      echo ' <span style="opacity:0.75">· ' . htmlspecialchars($h['label']) . '</span><br>';
-      echo '<code style="opacity:0.75;font-size:0.9em">' . htmlspecialchars($h['url']) . '</code>';
+      echo ' <span style="opacity:0.75">' . htmlspecialchars($h['label']) . '</span>';
       echo '</div>';
     }
     foreach ($pulls as $p) {
@@ -89,40 +97,40 @@ try {
       } else {
         $bg = 'rgba(74,144,217,0.4)';
       }
-      echo '<div style="margin:0.35em 0;padding:0.35em 0;border-bottom:1px solid rgba(128,128,128,0.25)">';
-      echo '<span style="display:inline-block;padding:0.1em 0.45em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
+      echo '<div style="margin:0.25em 0;padding:0.2em 0;border-bottom:1px solid rgba(128,128,128,0.22)">';
+      echo '<span style="display:inline-block;padding:0.05em 0.4em;border-radius:4px;font-size:0.8em;font-weight:600;background:'
         . $bg . '">' . htmlspecialchars($p['label']) . '</span> ';
-      echo '<span style="white-space:nowrap;font-variant-numeric:tabular-nums">';
+      echo '<span style="font-variant-numeric:tabular-nums">';
       if ($p['pct'] !== null) {
         $ph = rtrim(rtrim(number_format((float)$p['pct'], 1, '.', ''), '0'), '.');
-        echo '<strong>' . htmlspecialchars($ph) . '%</strong> ';
+        echo '<strong>' . htmlspecialchars($ph) . '%</strong>';
       } else {
-        echo '<strong>—</strong> ';
+        echo '<strong>—</strong>';
       }
       if ($p['elapsed'] !== '') {
-        echo '<span style="opacity:0.75">' . htmlspecialchars($p['elapsed']) . '</span> ';
+        echo ' <span style="opacity:0.75">' . htmlspecialchars($p['elapsed']) . '</span>';
       }
       if ($p['eta'] !== '') {
-        echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['eta']) . '</span> ';
+        echo ' <span style="opacity:0.75">· ' . htmlspecialchars($p['eta']) . '</span>';
       }
-      echo '<span style="opacity:0.75">· ' . htmlspecialchars($p['size']) . '</span>';
+      echo ' <span style="opacity:0.75">· ' . htmlspecialchars($p['size']) . '</span>';
       if ($p['net'] !== '') {
-        echo '<span style="opacity:0.75"> · net ' . htmlspecialchars($p['net']) . '</span>';
-      }
-      if ($p['disk'] !== '') {
-        echo '<span style="opacity:0.75"> · disk ' . htmlspecialchars($p['disk']) . '</span>';
+        echo ' <span style="opacity:0.75">· ' . htmlspecialchars($p['net']) . '</span>';
       }
       echo '</span><br>';
-      echo '<code style="font-size:0.9em" title="' . htmlspecialchars($p['url']) . '">'
-        . htmlspecialchars($p['url']) . '</code><br>';
-      echo '<code style="opacity:0.75;font-size:0.9em" title="' . htmlspecialchars($p['out']) . '">'
+      echo '<code style="opacity:0.8;font-size:0.88em" title="' . htmlspecialchars($p['out']) . '">'
         . htmlspecialchars($p['short']) . '</code>';
       echo '</div>';
     }
     echo '</div>';
   }
   $html = ob_get_clean();
-  echo json_encode(['ok' => true, 'summary' => $summary, 'html' => $html], JSON_UNESCAPED_SLASHES);
+  echo json_encode([
+    'ok' => true,
+    'summary' => $summary,
+    'html' => $html,
+    'watch' => $watch,
+  ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
-  echo json_encode(['ok' => false, 'summary' => 'Error', 'html' => '<span class="orange-text">Tile error</span>']);
+  echo json_encode(['ok' => false, 'summary' => 'Error', 'html' => '<span class="orange-text">Tile error</span>', 'watch' => false]);
 }
