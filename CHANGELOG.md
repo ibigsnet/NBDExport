@@ -6,11 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26ac
+
+- **Pull fileTree click restored:** the 26ab capture-phase `stopPropagation` on the input
+  blocked stock `jquery.filetree` click-to-open. Keep VM-style in-flow CSS; drop that guard.
+
 ## 2026.08.26ab
 
 - **Pull fileTree layout:** match VM templates — `position: relative` in-flow tree that
-  pushes the page down (not the stock absolute overlay). Stop document-mousedown from
-  dismissing the tree on the same click that opens it (flash open/close). Attach once only.
+  pushes the page down (not the stock absolute overlay). Attach once only.
 
 ## 2026.08.26aa
 
