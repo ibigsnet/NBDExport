@@ -50,14 +50,15 @@ nbd_page_styles();
 <?php else: ?>
       <div class="nbd-status-legend">
         <span><span class="nbd-badge nbd-badge-run">Running</span></span>
+        <span><span class="nbd-badge nbd-badge-rw">Paused</span></span>
         <span><span class="nbd-badge nbd-badge-info">Queued</span></span>
         <span><span class="nbd-badge nbd-badge-ok">Done</span></span>
         <span><span class="nbd-badge nbd-badge-bad">Failed</span></span>
         <span><span class="nbd-badge nbd-badge-stale">Idle</span></span>
       </div>
       <p class="nbd-muted" style="margin:0 0 0.65em">
-        Extra Pulls wait in <strong>Queued</strong> (parity/array-safe). <strong>Play</strong> starts the next job;
-        <strong>Force start</strong> runs alongside a live job (can stall Main on array disks).
+        Extra Pulls wait in <strong>Queued</strong>. <strong>Play</strong> / <strong>Force start</strong> / <strong>Cancel</strong> for the queue.
+        <strong>Pause</strong> (SIGSTOP) frees disk IO for parity without losing the job — <strong>Resume</strong> continues.
       </p>
       <table class="nbd-data tablesorter">
         <thead>
@@ -65,7 +66,8 @@ nbd_page_styles();
             <th>Status</th>
             <th>Source</th>
             <th>Output</th>
-            <th>Size</th>
+            <th>Progress</th>
+            <th>Started</th>
             <th></th>
           </tr>
         </thead>
@@ -73,9 +75,13 @@ nbd_page_styles();
 <?php foreach ($jobs as $j):
   $jst = nbd_job_ui_status($j);
   $jkey = $jst['key'] ?? '';
-  $alive = ($jkey === 'running');
+  $running = ($jkey === 'running');
+  $paused = ($jkey === 'paused');
   $queued = ($jkey === 'queued');
   $jid = htmlspecialchars($j['id'] ?? '');
+  $pct = nbd_job_progress_pct($j);
+  $pct_h = ($pct !== null) ? (rtrim(rtrim(number_format($pct, 1, '.', ''), '0'), '.') . '%') : '—';
+  $size_h = htmlspecialchars($j['output_size_h'] ?? '—');
 ?>
           <tr data-nbd-job-id="<?= $jid ?>">
             <td><span class="nbd-badge <?= htmlspecialchars($jst['class']) ?> nbd-live-job-badge"
@@ -83,9 +89,25 @@ nbd_page_styles();
               title="<?= htmlspecialchars($jst['hint']) ?>"><?= htmlspecialchars($jst['label']) ?></span></td>
             <td><code><?= htmlspecialchars($j['url'] ?? '') ?></code></td>
             <td><code><?= htmlspecialchars($j['output'] ?? '') ?></code></td>
-            <td class="nbd-live-job-size"><?= htmlspecialchars($j['output_size_h'] ?? '—') ?></td>
+            <td class="nbd-live-job-progress"><span class="nbd-live-job-pct"><?= htmlspecialchars($pct_h) ?></span>
+              <span class="nbd-muted nbd-live-job-size"> · <?= $size_h ?></span></td>
+            <td class="nbd-live-job-started"><?= nbd_format_when_html($j['started'] ?? '') ?></td>
             <td class="nbd-live-job-actions">
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $alive ? 'inline' : 'none' ?>" class="nbd-live-job-stop-form">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $running ? 'inline' : 'none' ?>" class="nbd-live-job-pause-form">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_pause">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="submit" name="#apply" value="Pause">
+              </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $paused ? 'inline' : 'none' ?>" class="nbd-live-job-resume-form">
+                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+                <input type="hidden" name="nbd_action" value="image_resume">
+                <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="submit" name="#apply" value="Resume">
+              </form>
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= ($running || $paused) ? 'inline' : 'none' ?>" class="nbd-live-job-stop-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_stop">
@@ -119,8 +141,8 @@ nbd_page_styles();
             </td>
           </tr>
           <tr data-nbd-job-log="<?= $jid ?>">
-            <td colspan="5"><pre class="nbd-log nbd-live-job-log"><?php
-  $tail = !empty($j['log']) ? nbd_log_tail($j['log'], 6) : '';
+            <td colspan="6"><pre class="nbd-log nbd-live-job-log"><?php
+  $tail = !empty($j['log']) ? nbd_log_tail_display($j['log'], 8) : '';
   echo htmlspecialchars($tail);
 ?></pre></td>
           </tr>

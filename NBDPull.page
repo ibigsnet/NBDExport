@@ -12,14 +12,14 @@ nbd_page_styles();
 <?php nbd_page_header(); ?>
   <div class="nbd-tab-body">
   <div class="nbd-section" style="margin-top:0">
-    <h3>Pull a remote disk into a file</h3>
+    <h3>Image a disk into a file</h3>
     <p class="nbd-section-lead">
-      <strong>Client</strong> — connect to <code>nbd://…</code> and write qcow2/raw under <code>/mnt/…</code>.
+      Write <strong>qcow2</strong> or <strong>raw</strong> under <code>/mnt/…</code> from an
+      <code>nbd://</code> peer, a <strong>local</strong> <code>/dev/…</code> disk, or a file under <code>/mnt</code>.
       Prefer <code>/mnt/cache/…</code> (or a pool) for multi‑TB images — array
-      <code>/mnt/diskN</code> writes can stall Main while Pull runs.
-      <code>/mnt/user</code> / <code>/mnt/user0</code> are slower (FUSE).
-      Jobs stay running if you close the browser; see <strong>Status</strong>.
-      Default: one Pull at a time, idle IO class (Settings).
+      <code>/mnt/diskN</code> writes can stall Main.
+      Jobs stay running if you close the browser; see <strong>Status</strong> (also lists external
+      <code>qemu-img convert</code> processes). Default: one job at a time, idle IO class.
     </p>
     <p class="nbd-muted" style="margin:0.35em 0 0.75em">
       The red “writable host” banner above (if shown) is about <strong>Host exports on this Unraid</strong>,
@@ -42,17 +42,23 @@ nbd_page_styles();
       <input type="hidden" name="nbd_action" value="image_start">
 
       <dl>
-        <dt>NBD URL:</dt>
+        <dt>Source:</dt>
         <dd>
-          <input type="text" name="nbd_url" id="nbd_url" style="width:28em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
+          <select id="nbd_source_type" onchange="nbdSourceTypeChanged()" style="margin-right:0.5em">
+            <option value="nbd" selected>NBD URL (nbd://…)</option>
+            <option value="local_device">Local disk / partition (/dev/…)</option>
+            <option value="local_file">Local file under /mnt or /tmp</option>
+          </select>
+          <input type="text" name="nbd_url" id="nbd_url" style="width:22em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>">
           <input type="button" value="Scan network" id="nbd_scan_btn" onclick="nbdScanNetwork()" title="Find NBD listeners / NBD Export peers on private LANs">
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Must already be hosted (Host tab on peer Unraid, or any qemu-nbd listener).
-        <strong>Scan network</strong> probes private subnets for port <strong>10809+</strong> and peer beacons on <strong>10808</strong>
-        (same plugin). See <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/discovery.md" target="_blank" rel="noopener">discovery.md</a>.
-        Live VM use of <code>nbd://</code> is <strong>Attach</strong>, not Pull —
+        <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd).
+        <strong>Scan network</strong> probes ports <strong>10809+</strong> and beacons on <strong>10808</strong>.
+        <strong>Local disk:</strong> e.g. <code>/dev/sdX</code> / <code>/dev/nvme0n1</code> — read the whole device into an image (prefer unassigned/unmounted).
+        <strong>Local file:</strong> convert an existing image under <code>/mnt</code> or <code>/tmp</code>.
+        Live VM attach of <code>nbd://</code> is separate — see
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/client-attach.md" target="_blank" rel="noopener">client-attach.md</a>.
       </blockquote>
       <div id="nbd_scan_status" class="nbd-muted" style="margin:0.35em 0"></div>
@@ -98,7 +104,7 @@ nbd_page_styles();
       <p id="nbd_ext_hint" class="nbd-ext-hint" style="display:none;margin:0.35em 0 0.6em;padding:0.45em 0.65em;border-radius:4px;font-size:0.92em;line-height:1.35"></p>
 
       <div class="nbd-actions">
-        <input type="submit" name="#apply" value="Pull remote disk → file on Unraid"
+        <input type="submit" name="#apply" id="nbd_pull_submit" value="Convert → file on Unraid"
           <?= (empty($tools['qemu_img']) || $enabled !== 'yes') ? 'disabled' : '' ?>>
       </div>
     </form>

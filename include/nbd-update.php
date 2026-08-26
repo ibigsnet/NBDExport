@@ -20,7 +20,7 @@ try {
       foreach ([
         'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
         'rehydrate_on_start', 'ud_status_overlay',
-        'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
+        'max_concurrent_pulls', 'pull_io_class', 'pull_nice', 'allow_upgrade_while_busy',
       ] as $k) {
         if (isset($_POST[$k])) {
           $cfg[$k] = trim((string)$_POST[$k]);
@@ -29,7 +29,7 @@ try {
       // Normalize yes/no
       foreach ([
         'enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode',
-        'rehydrate_on_start', 'ud_status_overlay',
+        'rehydrate_on_start', 'ud_status_overlay', 'allow_upgrade_while_busy',
       ] as $k) {
         if (isset($cfg[$k])) {
           $cfg[$k] = ($cfg[$k] === 'yes') ? 'yes' : 'no';
@@ -194,6 +194,18 @@ try {
         }
         nbd_flash($msg);
       }
+      break;
+
+    case 'image_pause':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $r = nbd_image_pause($id);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'pause failed')) : ('Paused job ' . $id));
+      break;
+
+    case 'image_resume':
+      $id = trim((string)($_POST['job_id'] ?? ''));
+      $r = nbd_image_resume($id);
+      nbd_flash(empty($r['ok']) ? ('ERROR — ' . ($r['error'] ?? 'resume failed')) : ('Resumed job ' . $id));
       break;
 
     case 'preset_save_host':
