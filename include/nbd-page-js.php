@@ -494,9 +494,38 @@ if (!isset($presets) || !is_array($presets)) {
       )) return false;
     }
 
-    return window.confirm(
-      'Pull remote NBD disk into a file on this Unraid?\n  → ' + path + '\n  format: ' + format + '\n\nContinue?'
-    );
+    var srcEl = form.querySelector('#nbd_url');
+    var src = srcEl ? String(srcEl.value || '').trim() : '';
+    var stEl = document.getElementById('nbd_source_type');
+    var st = stEl ? stEl.value : 'nbd';
+    var msg = 'Convert into a file on this Unraid?\n  source: ' + src + '\n  → ' + path + '\n  format: ' + format;
+    if (st === 'local_device') {
+      msg += '\n\nReading a whole local /dev device. Prefer unassigned/unmounted disks.';
+    }
+    msg += '\n\nContinue?';
+    return window.confirm(msg);
+  };
+
+  window.nbdSourceTypeChanged = function () {
+    var sel = document.getElementById('nbd_source_type');
+    var inp = document.getElementById('nbd_url');
+    var scan = document.getElementById('nbd_scan_btn');
+    var sub = document.getElementById('nbd_pull_submit');
+    if (!sel || !inp) return;
+    var t = sel.value;
+    if (t === 'nbd') {
+      inp.placeholder = 'nbd://10.255.0.1:10809';
+      if (scan) scan.style.display = '';
+      if (sub) sub.value = 'Convert NBD → file on Unraid';
+    } else if (t === 'local_device') {
+      inp.placeholder = '/dev/nvme0n1';
+      if (scan) scan.style.display = 'none';
+      if (sub) sub.value = 'Convert local disk → file on Unraid';
+    } else {
+      inp.placeholder = '/mnt/cache/images/disk.img';
+      if (scan) scan.style.display = 'none';
+      if (sub) sub.value = 'Convert local file → file on Unraid';
+    }
   };
 
   // Live extension + path hints; Unraid folder picker on Pull output

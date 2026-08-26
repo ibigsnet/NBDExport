@@ -44,6 +44,8 @@ function nbd_load_cfg() {
     'max_concurrent_pulls' => '1',
     'pull_io_class' => 'idle', // idle | best-effort
     'pull_nice' => '10',
+    // Allow plugin package upgrade while Host/Pull busy (default No — safer)
+    'allow_upgrade_while_busy' => 'no',
   ];
   $path = nbd_cfg_path();
   if (!is_file($path) && is_file(nbd_default_cfg_path())) {
@@ -78,7 +80,7 @@ function nbd_write_cfg(array $cfg) {
   $keys = [
     'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
     'rehydrate_on_start', 'scan_extra_subnets', 'ud_status_overlay',
-    'max_concurrent_pulls', 'pull_io_class', 'pull_nice',
+    'max_concurrent_pulls', 'pull_io_class', 'pull_nice', 'allow_upgrade_while_busy',
   ];
   $lines = ['; NBD Export — written by plugin', ''];
   foreach ($keys as $k) {
@@ -448,10 +450,15 @@ function nbd_job_ui_status(array $j) {
   }
   if ($alive || $status === 'running') {
     $hint = 'qemu-img convert in progress';
+    $label = 'Running';
+    if (!empty($j['external'])) {
+      $label = 'External';
+      $hint = 'qemu-img convert not started by this plugin — Pause/Stop still work';
+    }
     if (!empty($j['orphaned'])) {
       $hint = 'Orphaned convert still running (wrapper died) — Stop to kill it';
     }
-    return ['key' => 'running', 'label' => 'Running', 'class' => 'nbd-badge-run', 'hint' => $hint];
+    return ['key' => 'running', 'label' => $label, 'class' => 'nbd-badge-run', 'hint' => $hint];
   }
   if ($fin && $ok) {
     return ['key' => 'done', 'label' => 'Done', 'class' => 'nbd-badge-ok', 'hint' => 'Finished successfully'];
@@ -893,6 +900,14 @@ function nbd_exports_state() {
     $raw = @file_get_contents($f);
     $j = is_string($raw) ? @json_decode($raw, true) : null;
     if (!is_array($j) || empty($j['id'])) {
+      continue;
+    }
+    // Pull / external convert state must not appear as Host exports
+    $id = (string)$j['id'];
+    if (strpos($id, 'job-') === 0 || strpos($id, 'ext-') === 0) {
+      continue;
+    }
+    if (empty($j['device']) && empty($j['port']) && empty($j['bind'])) {
       continue;
     }
     $pid = isset($j['pid']) ? (int)$j['pid'] : 0;
@@ -1527,6 +1542,14 @@ function nbd_job_pids(array $j) {
  * Pause a running Pull (SIGSTOP) — frees disk IO for parity etc. Slot stays reserved.
  */
 function nbd_image_pause($id) {
+  if (preg_match('/^ext-(\d+)$/', (string)$id, $em)) {
+    $pid = (int)$em[1];
+    if ($pid > 1 && @file_exists('/proc/' . $pid)) {
+      @posix_kill($pid, 19);
+      return ['ok' => true, 'id' => $id, 'external' => true, 'pids' => [$pid]];
+    }
+    return ['ok' => false, 'error' => 'External process not found'];
+  }
   $j = nbd_job_load($id);
   if (!$j) {
     return ['ok' => false, 'error' => 'Unknown job'];
@@ -1567,6 +1590,14 @@ function nbd_image_pause($id) {
  * Resume a paused Pull (SIGCONT).
  */
 function nbd_image_resume($id) {
+  if (preg_match('/^ext-(\d+)$/', (string)$id, $em)) {
+    $pid = (int)$em[1];
+    if ($pid > 1 && @file_exists('/proc/' . $pid)) {
+      @posix_kill($pid, 18);
+      return ['ok' => true, 'id' => $id, 'external' => true, 'pids' => [$pid]];
+    }
+    return ['ok' => false, 'error' => 'External process not found'];
+  }
   $j = nbd_job_load($id);
   if (!$j) {
     return ['ok' => false, 'error' => 'Unknown job'];
@@ -1666,7 +1697,8 @@ function nbd_live_snapshot() {
   $jobs = [];
   $live_jobs = 0;
   $queued_jobs = 0;
-  foreach (nbd_jobs_state() as $j) {
+  $job_list = function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state();
+  foreach ($job_list as $j) {
     $st = nbd_job_ui_status($j);
     $key = $st['key'] ?? 'idle';
     if ($key === 'running' || $key === 'paused') {
@@ -1897,14 +1929,31 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   if ($tools['qemu_img'] === '') {
     return ['ok' => false, 'error' => 'qemu-img not found.'];
   }
-  $url = trim((string)$url);
+  $url = trim((string)$url); // source: nbd://… or /dev/… or /mnt|/tmp file
   $output = trim((string)$output);
   $format = strtolower(trim((string)$format));
   if (!in_array($format, ['qcow2', 'raw'], true)) {
     return ['ok' => false, 'error' => 'Format must be qcow2 or raw.'];
   }
-  if (!preg_match('#^nbd://[A-Za-z0-9.:\[\]%-]+#', $url)) {
-    return ['ok' => false, 'error' => 'URL must start with nbd://'];
+  $source_type = 'nbd';
+  if (preg_match('#^nbd://[A-Za-z0-9.:\[\]%-]+#', $url)) {
+    $source_type = 'nbd';
+  } elseif (preg_match('#^/dev/[A-Za-z0-9/._-]+$#', $url)) {
+    $source_type = 'local_device';
+    if (!@is_file($url) && !@file_exists($url)) {
+      return ['ok' => false, 'error' => 'Local device not found: ' . $url];
+    }
+    $risk = nbd_device_risk($url);
+    if (!empty($risk['risky'])) {
+      // Still allow — UI should confirm; server notes in log
+    }
+  } elseif ((strpos($url, '/mnt/') === 0 || strpos($url, '/tmp/') === 0) && strpos($url, '..') === false) {
+    $source_type = 'local_file';
+    if (!is_file($url)) {
+      return ['ok' => false, 'error' => 'Local file not found: ' . $url];
+    }
+  } else {
+    return ['ok' => false, 'error' => 'Source must be nbd://…, /dev/…, or a file under /mnt or /tmp'];
   }
   if ($output === '' || strpos($output, '..') !== false) {
     return ['ok' => false, 'error' => 'Invalid output path.'];
@@ -1914,6 +1963,9 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
   }
   if (strpos($output, '/mnt/') !== 0 && strpos($output, '/tmp/') !== 0) {
     return ['ok' => false, 'error' => 'Output must be under /mnt/ (cache/array/share) or /tmp/.'];
+  }
+  if ($url === $output) {
+    return ['ok' => false, 'error' => 'Source and output must be different paths.'];
   }
   $dir = dirname($output);
   if (!is_dir($dir)) {
@@ -1974,15 +2026,20 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     . 'fail() { echo "NBD_JOB_FAIL $*" >>"$LOG"; echo "$(date -Iseconds) job failed: $*" >>"$LOG"; exit 1; }' . "\n"
     . 'if command -v ionice >/dev/null 2>&1; then WRAP=(ionice $IONICE_ARGS nice -n "$NICE_N"); else WRAP=(nice -n "$NICE_N"); fi' . "\n"
     . 'run_img() { "${WRAP[@]}" "$@"; }' . "\n"
-    . 'echo "$(date -Iseconds) job start wrap=${WRAP[*]}" >>"$LOG"' . "\n"
-    . 'for i in $(seq 1 60); do' . "\n"
-    . '  if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
-    . '  sleep 5' . "\n"
-    . '  if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
-    . 'done' . "\n"
+    . 'echo "$(date -Iseconds) job start type=' . $source_type . ' wrap=${WRAP[*]}" >>"$LOG"' . "\n"
+    . 'if [[ "$SRC" == nbd://* ]]; then' . "\n"
+    . '  for i in $(seq 1 60); do' . "\n"
+    . '    if run_img "$IMG" info "$SRC" >>"$LOG" 2>&1; then break; fi' . "\n"
+    . '    sleep 5' . "\n"
+    . '    if [ "$i" -eq 60 ]; then fail wait_src; fi' . "\n"
+    . '  done' . "\n"
+    . 'else' . "\n"
+    . '  run_img "$IMG" info -f raw "$SRC" >>"$LOG" 2>&1 || run_img "$IMG" info "$SRC" >>"$LOG" 2>&1 || true' . "\n"
+    . 'fi' . "\n"
     . 'LAST_PCT=-1' . "\n"
     . 'set +e' . "\n"
-    . 'run_img "$IMG" convert -p -f raw -O "$FMT" -t writeback -W "$SRC" "$OUT" 2> >(tr "\\r" "\\n" | while IFS= read -r line; do' . "\n"
+    . 'if [[ "$SRC" == nbd://* ]]; then SRC_FMT=raw; else SRC_FMT=raw; fi' . "\n"
+    . 'run_img "$IMG" convert -p -f "$SRC_FMT" -O "$FMT" -t writeback -W "$SRC" "$OUT" 2> >(tr "\\r" "\\n" | while IFS= read -r line; do' . "\n"
     . '  case "$line" in' . "\n"
     . '    *"/100%)"*)' . "\n"
     . '      pct="${line#*(}"; pct="${pct%%/*}"' . "\n"
@@ -2040,6 +2097,7 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
     'io_class' => $io_class,
     'nice' => (string)$nice,
     'array_like' => $array_like,
+    'source_type' => $source_type,
     'status' => $queue ? 'queued' : 'running',
   ];
   if ($queue) {
@@ -2072,6 +2130,18 @@ function nbd_image_start($url, $output, $format = 'qcow2') {
  */
 function nbd_image_stop($id) {
   $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);
+  // External converts: ext-<pid>
+  if (preg_match('/^ext-(\d+)$/', $id, $em)) {
+    $pid = (int)$em[1];
+    if ($pid > 1 && @file_exists('/proc/' . $pid)) {
+      @posix_kill($pid, 15);
+      usleep(200000);
+      if (@file_exists('/proc/' . $pid)) {
+        @posix_kill($pid, 9);
+      }
+    }
+    return ['ok' => true, 'external' => true, 'killed' => [$pid]];
+  }
   if ($id === '' || strpos($id, 'job-') !== 0) {
     return ['ok' => false, 'error' => 'Invalid job id'];
   }
@@ -2159,11 +2229,14 @@ function nbd_write_companion_marker() {
   nbd_ensure_runtime_dirs();
   $m = [
     'plugin' => 'NBDExport',
-    'provides' => ['nbd-export', 'qemu-nbd'],
+    'provides' => ['nbd-export', 'qemu-nbd', 'disk-imaging'],
     'version' => nbd_plugin_version(),
   ];
   @file_put_contents(NBDEXPORT_CFG_DIR . '/companion.json', json_encode($m, JSON_PRETTY_PRINT) . "\n");
 }
+
+// Upgrade reconcile + external convert discovery (after core job/export helpers exist)
+require_once __DIR__ . '/nbd-reconcile.php';
 
 function nbd_status() {
   $tools = nbd_detect_tools();

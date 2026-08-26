@@ -35,7 +35,7 @@ foreach (nbd_exports_state() as $e) {
 }
 
 $pulls = [];
-foreach (nbd_jobs_state() as $j) {
+foreach ((function_exists('nbd_jobs_with_external') ? nbd_jobs_with_external() : nbd_jobs_state()) as $j) {
   $st = nbd_job_ui_status($j);
   $key = $st['key'] ?? 'idle';
   if (!in_array($key, ['running', 'queued', 'paused'], true)) {

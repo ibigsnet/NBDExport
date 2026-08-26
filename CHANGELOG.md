@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.25ad
+
+- **Upgrade safety:** prepare aborts if Host/Pull busy (Settings → Allow upgrade while busy, or
+  `NBD_FORCE_UPGRADE=1`). Finish runs **reconcile**: reattach live work, restart discovery beacon,
+  kick Pull queue.
+- **External converts:** Status/Dashboard list unmanaged `qemu-img convert` (Pause/Stop work).
+- **Local imaging:** Pull tab source can be `nbd://…`, `/dev/…`, or a file under `/mnt`|/tmp
+  (same queue/IO/Pause path). Plugin **name stays NBD Export**; descriptors widened for imaging.
+- Host export state no longer confuses Pull job JSON files.
+
 ## 2026.08.25ac
 
 - **Dashboard:** custom tile in column3 (same column as Array/Cache/Parity — not a fixed
