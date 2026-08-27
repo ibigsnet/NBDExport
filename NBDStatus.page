@@ -65,10 +65,12 @@ foreach ($jobs_history as $j) {
 
     <div class="nbd-section">
       <h3>Pull jobs</h3>
-      <p class="nbd-section-lead">
-        Active converts, the start queue, then history (Done / Failed).
-        Stopped converts <strong>cannot resume</strong> — Retry starts over; Delete file frees incomplete output.
-      </p>
+      <p class="nbd-section-lead">Active, queue, then history.</p>
+      <blockquote class="inline_help">
+        Stopped converts cannot resume — <strong>Retry</strong> starts over.
+        <strong>Delete image</strong> frees incomplete output.
+        ETA appears after progress moves (large disks may sit at 0% briefly).
+      </blockquote>
       <div class="nbd-status-legend">
         <span><span class="nbd-badge nbd-badge-run">Running</span></span>
         <span><span class="nbd-badge nbd-badge-paused">Paused</span></span>

@@ -27,6 +27,11 @@ $pull_io_class = (($cfg['pull_io_class'] ?? 'idle') === 'best-effort') ? 'best-e
 $max_concurrent_pulls = (string)max(1, min(4, (int)($cfg['max_concurrent_pulls'] ?? 1)));
 $pull_nice = (string)max(0, min(19, (int)($cfg['pull_nice'] ?? 10)));
 $allow_upgrade_busy = (($cfg['allow_upgrade_while_busy'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$notify_pull_done = (($cfg['notify_pull_done'] ?? 'off') === 'normal') ? 'normal' : 'off';
+$npf = strtolower((string)($cfg['notify_pull_failed'] ?? 'warning'));
+$notify_pull_failed = in_array($npf, ['warning', 'alert'], true) ? $npf : 'off';
+$nhd = strtolower((string)($cfg['notify_host_down'] ?? 'off'));
+$notify_host_down = in_array($nhd, ['warning', 'alert'], true) ? $nhd : 'off';
 $ud_plugin_present = is_dir('/usr/local/emhttp/plugins/unassigned.devices');
 $tbn = !empty($st['thunderboltnet']);
 $frr = !empty($st['fabricrouting']);
@@ -258,14 +263,18 @@ function nbd_page_styles() {
   display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font-size: 0.9em;
 }
 .nbd-wrap .nbd-job-card-actions {
-  margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center;
+  margin-top: 0.45em; display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center;
 }
 .nbd-wrap .nbd-job-card-actions form {
-  display: inline-flex; margin: 0; align-items: center; vertical-align: middle;
+  display: inline-flex !important; margin: 0; align-items: stretch; vertical-align: middle;
+  height: 2.25em;
 }
 .nbd-wrap .nbd-job-card-actions input[type="submit"],
 .nbd-wrap .nbd-job-card-actions button {
-  margin: 0; vertical-align: middle; min-height: 2em;
+  margin: 0; vertical-align: middle;
+  box-sizing: border-box;
+  height: 2.25em; min-height: 2.25em; min-width: 5.75em;
+  line-height: 1.15; padding: 0 0.85em;
 }
 .nbd-wrap .nbd-job-card-meta .nbd-job-path {
   display: inline; white-space: normal; word-break: break-all; overflow-wrap: anywhere;

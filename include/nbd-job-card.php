@@ -30,9 +30,7 @@ $elapsed_h = ($elapsed !== null) ? nbd_format_duration($elapsed) : '';
 $rates = ($running && function_exists('nbd_job_io_rates')) ? nbd_job_io_rates($j) : ['net_h' => '', 'disk_h' => ''];
 $net_h = (string)($rates['net_h'] ?? '');
 $disk_h = (string)($rates['disk_h'] ?? '');
-if ($running && $eta_h === '') {
-  $eta_h = 'ETA…';
-}
+// No sticky "ETA…" — omit until nbd_job_progress_eta has a real estimate.
 $out_exists = ($out !== '' && $out !== '(unknown)' && @is_file($out));
 $qpos = isset($nbd_queue_pos) ? (int)$nbd_queue_pos : -1;
 $qtot = isset($nbd_queue_total) ? (int)$nbd_queue_total : 0;
@@ -109,7 +107,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="hidden" name="job_id" value="<?= $jid ?>">
                 <input type="submit" name="#apply" value="Stop">
               </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-play-form">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline-flex' : 'none' ?>" class="nbd-live-job-play-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_play">
@@ -117,7 +115,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="hidden" name="force" value="no">
                 <input type="submit" name="#apply" value="Play">
               </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-force-form"
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline-flex' : 'none' ?>" class="nbd-live-job-force-form"
                 onsubmit="return confirm('Force start this Pull while another may still be running?\n\nConcurrent array writes contend for parity and can stall the WebUI.');">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
@@ -126,7 +124,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="hidden" name="force" value="yes">
                 <input type="submit" name="#apply" value="Force start">
               </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline' : 'none' ?>" class="nbd-live-job-cancel-form">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:<?= $queued ? 'inline-flex' : 'none' ?>" class="nbd-live-job-cancel-form">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_stop">
@@ -134,7 +132,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="submit" name="#apply" value="Cancel">
               </form>
 <?php if ($queued && $qtot > 1): ?>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:inline" title="Move earlier in queue">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex" title="Move earlier in queue">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="queue_move">
@@ -142,7 +140,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="hidden" name="dir" value="-1">
                 <input type="submit" name="#apply" value="↑" <?= ($qpos <= 0) ? 'disabled' : '' ?>>
               </form>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:inline" title="Move later in queue">
+              <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex" title="Move later in queue">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="queue_move">

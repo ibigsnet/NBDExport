@@ -6,6 +6,44 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.08.26av
+
+- **WebUI under load:** live-watch no longer runs a full snapshot on every Status/Host/Pull
+  paint (that competed with dual Pulls + Folder Caching `find` on PLUSH). First poll is
+  deferred; active poll **4s**, idle **15s**, hidden tab **30s**; overlap-guarded.
+- **Cheaper probes:** cache `ss -lnt` and `qemu-img` `ps` (~2.5–3s); skip `ss` when Host
+  PID is alive; live snapshot skips external merge + running log tails; queue kick ≤1/8s.
+
+## 2026.08.26au
+
+- **Notifications (Settings):** Unraid agents via `notify` (Storage Guard–style).
+  - **Pull finished:** Off / Normal (green)
+  - **Pull failed:** Off / Warning / Alert (skips user Stop/Cancel)
+  - **Host stopped unexpectedly:** Off / Warning / Alert (UI Stop clears state — no alert)
+- One-shot per job/export (`notified` / `notified_down` flags).
+
+## 2026.08.26at
+
+- **Dashboard paths:** show full source URL and output path (CSS `overflow-wrap`, no
+  `…tail` PHP truncate). Tile only wraps when the column is narrow.
+- Suppress sticky `ETA…` on the Dashboard tile; restore disk rate on the metrics line.
+
+## 2026.08.26as
+
+- **Dashboard tile:** stock single-cell icon+section (no dual-row `tile-header` stretch).
+  First paint shows `—` then fills after idle callback — no “Loading…” flash.
+  Dash poll skips external `qemu-img` `ps` scan; 5s when active / 15s when idle.
+- Backlog inventory: `docs/backlog-from-chat.md`.
+
+## 2026.08.26ar
+
+- **Progress / ETA:** Prefer max of `.progress`, `.progress.raw`, and log so a stale
+  `pct=0` sidecar cannot hide real `(N/100%)` (some qemu builds emit `-p` on stdout).
+  Hist records fractional tenths; ETA hidden until progress moves (no sticky `ETA…`).
+  Dropped the noisy “disk size unavailable” log note (file length is the virtual size).
+- **Buttons:** Pause/Stop (and siblings) same height/min-width; live-watch uses
+  `inline-flex` so they stay aligned.
+
 ## 2026.08.26aq
 
 - **UI prose:** History toolbar tip → short Unraid `inline_help` (no muted essay).

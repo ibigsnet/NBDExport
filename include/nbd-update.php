@@ -21,6 +21,7 @@ try {
         'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
         'rehydrate_on_start', 'ud_status_overlay',
         'max_concurrent_pulls', 'pull_io_class', 'pull_nice', 'allow_upgrade_while_busy',
+        'notify_pull_done', 'notify_pull_failed', 'notify_host_down',
       ] as $k) {
         if (isset($_POST[$k])) {
           $cfg[$k] = trim((string)$_POST[$k]);
@@ -60,6 +61,13 @@ try {
         $pn = 19;
       }
       $cfg['pull_nice'] = (string)$pn;
+      // Notifications
+      $npd = strtolower((string)($cfg['notify_pull_done'] ?? 'off'));
+      $cfg['notify_pull_done'] = ($npd === 'normal') ? 'normal' : 'off';
+      $npf = strtolower((string)($cfg['notify_pull_failed'] ?? 'warning'));
+      $cfg['notify_pull_failed'] = in_array($npf, ['warning', 'alert'], true) ? $npf : 'off';
+      $nhd = strtolower((string)($cfg['notify_host_down'] ?? 'off'));
+      $cfg['notify_host_down'] = in_array($nhd, ['warning', 'alert'], true) ? $nhd : 'off';
       if (($cfg['enabled'] ?? 'yes') !== 'yes') {
         nbd_stop_all_exports();
       }
