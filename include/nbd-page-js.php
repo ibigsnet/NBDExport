@@ -86,6 +86,16 @@ if (!isset($presets) || !is_array($presets)) {
     return true;
   };
 
+  // Beacon JSON comes from other hosts on the LAN — escape everything before innerHTML.
+  function nbdEscHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Abortable network scan (Pull tab). Stop only cancels the browser wait —
   // the PHP scan may still finish in the background for a moment.
   var nbdScanAbort = null;
@@ -168,8 +178,8 @@ if (!isset($presets) || !is_array($presets)) {
           + '<th>Host</th><th>Kind</th><th>Export</th><th>RO</th><th>Size</th><th></th>'
           + '</tr></thead><tbody>';
         data.hits.forEach(function (h) {
-          var hostLabel = (h.hostname ? h.hostname + ' · ' : '') + h.ip
-            + (h.version ? ' <span class="nbd-muted">v' + h.version + '</span>' : '');
+          var hostLabel = (h.hostname ? nbdEscHtml(h.hostname) + ' · ' : '') + nbdEscHtml(h.ip)
+            + (h.version ? ' <span class="nbd-muted">v' + nbdEscHtml(h.version) + '</span>' : '');
           var kind = h.kind === 'peer'
             ? '<span class="nbd-badge-ok">NBD Export peer</span>'
             : '<span class="nbd-badge-info">NBD port open</span>';
@@ -180,15 +190,17 @@ if (!isset($presets) || !is_array($presets)) {
           }
           exs.forEach(function (ex, idx) {
             var ro = ex.read_only === true ? 'RO' : (ex.read_only === false ? '<span class="nbd-bad">RW</span>' : '—');
-            var size = (ex.info && ex.info.virtual_size_h) ? ex.info.virtual_size_h : '—';
+            var size = (ex.info && ex.info.virtual_size_h) ? nbdEscHtml(ex.info.virtual_size_h) : '—';
             var lab = [ex.label, ex.device_name].filter(Boolean).join(' · ') || ex.url;
-            var esc = (ex.url || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            var esc = nbdEscHtml(ex.url || '');
+            // onclick JS string literal: escape for JS first, then for the HTML attribute
+            var escJs = nbdEscHtml(String(ex.url || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
             html += '<tr>'
               + (idx === 0 ? '<td rowspan="' + exs.length + '">' + hostLabel + '</td><td rowspan="' + exs.length + '">' + kind + '</td>' : '')
               + '<td><code>' + esc + '</code>'
-              + (lab && lab !== ex.url ? '<br><span class="nbd-muted">' + lab.replace(/</g, '') + '</span>' : '')
+              + (lab && lab !== ex.url ? '<br><span class="nbd-muted">' + nbdEscHtml(lab) + '</span>' : '')
               + '</td><td>' + ro + '</td><td>' + size + '</td>'
-              + '<td><input type="button" value="Use" onclick="nbdScanUseUrl(\'' + esc.replace(/'/g, "\\'") + '\')"></td>'
+              + '<td><input type="button" value="Use" onclick="nbdScanUseUrl(\'' + escJs + '\')"></td>'
               + '</tr>';
           });
         });
