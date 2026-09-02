@@ -147,8 +147,17 @@ if (!isset($presets) || !is_array($presets)) {
       try { nbdScanAbort.abort(); } catch (e2) { /* ignore */ }
     }
     nbdScanAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var url = '/plugins/NBDExport/include/nbd-scan.php?probe_info=1&_=' + Date.now();
-    var opts = { credentials: 'same-origin', cache: 'no-store' };
+    var url = '/plugins/NBDExport/include/nbd-scan.php?_=' + Date.now();
+    var body = new URLSearchParams();
+    body.set('probe_info', '1');
+    body.set('csrf_token', (typeof csrf_token !== 'undefined' && csrf_token) ? csrf_token : '');
+    var opts = {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    };
     if (nbdScanAbort) opts.signal = nbdScanAbort.signal;
 
     fetch(url, opts)
