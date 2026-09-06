@@ -112,6 +112,7 @@ echo "NBD Export: ready for package install."
 
 <FILE Name="/boot/config/plugins/NBDExport/&pkgfile;" Run="upgradepkg --install-new --reinstall">
 <URL>&raw;/archive/&pkgfile;?v=&version;</URL>
+<MD5>9465c4395067ebdc434973af329fa827</MD5>
 </FILE>
 
 <FILE Run="/bin/bash">
