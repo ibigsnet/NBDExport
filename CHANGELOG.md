@@ -6,6 +6,16 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.06ab
+
+- **CA review:** hashed raw install. LAN scan is POST + csrf_token; scan results
+  HTML-escape beacon-supplied hostname/version/label/URL.
+
+## 2026.09.06aa
+
+- **Install:** plugin files come from GitHub raw with SHA256/MD5 pins in the `.plg`.
+  Dropped `archive/*.txz` payload (`upgradepkg`). Addresses CA review: unsigned package download.
+
 ## 2026.08.26av
 
 - **WebUI under load:** live-watch no longer runs a full snapshot on every Status/Host/Pull
