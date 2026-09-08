@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.08.26av">
+<!ENTITY version "2026.09.06aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -10,8 +10,6 @@
 <!ENTITY forum "https://forums.unraid.net/topic/200219-plugin-nbd-export-host-disks-over-network-block-device-image-to-qcow2raw/">
 <!ENTITY plugdir "/usr/local/emhttp/plugins/NBDExport">
 <!ENTITY configdir "/boot/config/plugins/NBDExport">
-<!ENTITY pkg "NBDExport-&version;-x86_64-1">
-<!ENTITY pkgfile "&pkg;.txz">
 ]>
 
 <PLUGIN name="&name;"
@@ -27,6 +25,9 @@
 
 <CHANGES>
 ###&version;
+- Install copies plugin files from GitHub raw (SHA256/MD5 pin). No archive .txz payload.
+
+###2026.08.26av
 - WebUI load: lighter live poll (deferred, 4s/15s, pause when hidden); cache ss/ps; no sync snapshot on paint.
 
 ###2026.08.26au
@@ -106,13 +107,143 @@ rm -rf /usr/local/emhttp/plugins/NBDExport \
        /usr/local/emhttp/plugins/NbdExport \
        /usr/local/emhttp/plugins/nbdexport 2>/dev/null || true
 rm -f /boot/config/plugins/NBDExport/NBDExport-*.txz 2>/dev/null || true
-echo "NBD Export: ready for package install."
+mkdir -p /usr/local/emhttp/plugins/NBDExport/{include,scripts,event}
+echo "NBD Export: ready for file install."
 ]]></INLINE>
 </FILE>
 
-<FILE Name="/boot/config/plugins/NBDExport/&pkgfile;" Run="upgradepkg --install-new --reinstall">
-<URL>&raw;/archive/&pkgfile;?v=&version;</URL>
+<!-- raw-files begin -->
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDExport.page">
+<URL>&raw;/NBDExport.page?v=&version;</URL>
+<SHA256>0974e14163869c9100bfca3d43bdef8ded219dd07beef1242fd634d42704ac58</SHA256>
+<MD5>8c27b63167bd412e85eddc55850bb7ec</MD5>
 </FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDStatus.page">
+<URL>&raw;/NBDStatus.page?v=&version;</URL>
+<SHA256>c6994c2237572f549df7916f5200f6aae90c32c7443d14bf89e4e98ac7363fb2</SHA256>
+<MD5>04be5e6c6b67c2d1245f3a9ad87dde49</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHost.page">
+<URL>&raw;/NBDHost.page?v=&version;</URL>
+<SHA256>47d949e8be730f7c43625f11bc85f67cf1dbb5d7e214fb667c8138e5bc6f5ac7</SHA256>
+<MD5>85238b781cb69c9693b23d7e79b8fea9</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDPull.page">
+<URL>&raw;/NBDPull.page?v=&version;</URL>
+<SHA256>a04f4a8ff4d8e40b98539d193aeeef95e60aeb8bb9dff2694747fce7cd5d9b7e</SHA256>
+<MD5>6d4899e7ac8c89a647bd266861bc0297</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDSettings.page">
+<URL>&raw;/NBDSettings.page?v=&version;</URL>
+<SHA256>2c34147a03a26ad6f2e672a264cbc2af792a2a71bce455984e80079f1dc03e3d</SHA256>
+<MD5>a6b3108f5b42582d0837059a76112faa</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/default.cfg">
+<URL>&raw;/default.cfg?v=&version;</URL>
+<SHA256>8b23c9074a13ae3e32e1e3369398d40b0e30fbd97c202b7b36714c6ad4e09ecb</SHA256>
+<MD5>06631ff6d3acb011e6e123eda19c1270</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/README.md">
+<URL>&raw;/README.md?v=&version;</URL>
+<SHA256>77f618192b54635943fc88da5102518fd9d7b8734d3adf4d892825a66480a1be</SHA256>
+<MD5>230e0a88465afa6412297d4e9b787c1f</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-beacon-server.php">
+<URL>&raw;/include/nbd-beacon-server.php?v=&version;</URL>
+<SHA256>fcca16b3d665f9a50d66205e3da4475284f00eee541b602fa942423679c644f0</SHA256>
+<MD5>70f920ae821fd8dae091e8514109ebf8</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-dash-status.php">
+<URL>&raw;/include/nbd-dash-status.php?v=&version;</URL>
+<SHA256>e17fd13e7533e1c1c393e162aaeac0c07846932a3832a57b39f149eeba0e9aff</SHA256>
+<MD5>b1673e42497e94223dc8fba5d4398902</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-download-config.php">
+<URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
+<SHA256>32158471cf9453bed5d2e1faf4b63b5bf0b41114ed6dd34c4e7378eb2794703b</SHA256>
+<MD5>3652e3fe59f7d1ae946624995f4400b1</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php">
+<URL>&raw;/include/nbd-job-card.php?v=&version;</URL>
+<SHA256>30f87bbd43963b436ac087eb175d4d9cf850966ce47ee7f914dae0ce406710de</SHA256>
+<MD5>685298b2b14ababbfeffd0ed367e2199</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php">
+<URL>&raw;/include/nbd-lib.php?v=&version;</URL>
+<SHA256>9fd259a597e3f2016e0d14c0295b14bbd87a79eb6919e09fa520f5f79ce35ec2</SHA256>
+<MD5>65e747f81fef964c6dc67b0ef4f6d782</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
+<URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
+<SHA256>d01e886ddf9ebdb8a8f1145435229d42fb262aaa38306e183905115f1283eecc</SHA256>
+<MD5>7e11e20efbde1c02be6875b439a9b441</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-watch.php">
+<URL>&raw;/include/nbd-live-watch.php?v=&version;</URL>
+<SHA256>3e5745c6c220a47183cbe6e3fa0afa73e046d015a11989c32796ac098bebec9b</SHA256>
+<MD5>ed2d8a108711f70ab8d1c7a13a62f90b</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php">
+<URL>&raw;/include/nbd-page-boot.php?v=&version;</URL>
+<SHA256>37c22e3ae7242cdd9dac03235323ee826beff6d1571f4283427f171fae1cf1e2</SHA256>
+<MD5>be65e5adbc0abe379934d05ba9284996</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php">
+<URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
+<SHA256>72373d575a4b2df808c9088353dd8085140d40ebd1fda763c44732f30d30ea7f</SHA256>
+<MD5>5ab9255199fd8fad574f0a4b5b25a758</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-reconcile.php">
+<URL>&raw;/include/nbd-reconcile.php?v=&version;</URL>
+<SHA256>ea317e372fc8e572745c7198401cdc3f97cfa1c9304b81ac5b1a63687aa5b9f2</SHA256>
+<MD5>b66d2fac76adc36a8d20b22a58fbfdb7</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-scan.php">
+<URL>&raw;/include/nbd-scan.php?v=&version;</URL>
+<SHA256>5e7c52d9fd888f214988bb174f0b7ba0369f6dd4cdda12efb30af533d030c2d0</SHA256>
+<MD5>8dfd3fc836e2a08fb5f150bd1db0b1ba</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php">
+<URL>&raw;/include/nbd-ud-head.php?v=&version;</URL>
+<SHA256>32a25f27aa7a574919e98435a9f03996177d7b6703f36e4017b2b9e3499d3c93</SHA256>
+<MD5>d701046b3bc5d73c0a42af2b0cb71c90</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-overlay.js">
+<URL>&raw;/include/nbd-ud-overlay.js?v=&version;</URL>
+<SHA256>7200257303fd4878f5629e56de85c33c823fd190957649f67873efc686d2c095</SHA256>
+<MD5>3fdfcb1fb74af5c8eb86e72b2cca2e56</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-status.php">
+<URL>&raw;/include/nbd-ud-status.php?v=&version;</URL>
+<SHA256>037f4f2666437cba9501f529e471a69a281c1c6e430d0b09d6709488f4b97b7d</SHA256>
+<MD5>fb143ddb3cd8c71e68ebe1c2053464a2</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-update.php">
+<URL>&raw;/include/nbd-update.php?v=&version;</URL>
+<SHA256>557651afe821e9177a228521bd3639b8f854b18fc64481263a9edd364ed7858e</SHA256>
+<MD5>f3aeb41fde25a0cea95d38540d458bbc</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-start">
+<URL>&raw;/scripts/nbd-export-start?v=&version;</URL>
+<SHA256>ce6d970b3404769cd90e9669bf12ab9a4057c7f10cd0ebdf996d3f24c271d1ad</SHA256>
+<MD5>d7a440a4741f957fdaf2820b6acf56bb</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop">
+<URL>&raw;/scripts/nbd-export-stop?v=&version;</URL>
+<SHA256>78f3460702b57e8a63ac5dfbe48f56b7f73342062a9e598100db821725c3d7d7</SHA256>
+<MD5>2b18beb249e6cebece303c068d1753d7</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-image-from-url">
+<URL>&raw;/scripts/nbd-image-from-url?v=&version;</URL>
+<SHA256>aa55a721811828a6b06139fea1c8d74c967724689de416666bb06852b5899a0b</SHA256>
+<MD5>c2aa9bef091d07afe867403c45a9b140</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/event/started">
+<URL>&raw;/event/started?v=&version;</URL>
+<SHA256>b00497f674455034bd5ed5daa6f2e4789191e1027cb2cfb2753f00915ef888e4</SHA256>
+<MD5>2c4e9e45b29df206a1f3828e2ad225a4</MD5>
+</FILE>
+<!-- raw-files end -->
 
 <FILE Run="/bin/bash">
 <INLINE><![CDATA[
