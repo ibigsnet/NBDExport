@@ -6,6 +6,12 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08ac
+
+- **Install:** do not `rm -rf` the live plugin or `removepkg` before GitHub FILE copies.
+  Update All was wiping the tree, then a failed download left Plugins on **error install**
+  with no NBD Export. Overlay files; forget old txz package names only.
+
 ## 2026.09.08ab
 
 - **Config export:** Settings → Download JSON is POST + csrf_token (GET no longer dumps config).
