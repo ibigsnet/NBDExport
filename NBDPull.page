@@ -7,6 +7,27 @@ Markdown="false"
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
 $nbd_scan_lans = function_exists('nbd_scan_local_lans') ? nbd_scan_local_lans() : [];
+if ($nbd_scan_lans) {
+  usort($nbd_scan_lans, static function ($a, $b) {
+    $rank = static function ($r) {
+      if (!empty($r['thunderbolt'])) {
+        return 0;
+      }
+      if (!empty($r['extra'])) {
+        return 3;
+      }
+      if (!empty($r['default_route'])) {
+        return 2;
+      }
+      return 1;
+    };
+    $d = $rank($a) - $rank($b);
+    if ($d !== 0) {
+      return $d;
+    }
+    return strnatcmp((string)($a['iface'] ?? ''), (string)($b['iface'] ?? ''));
+  });
+}
 ?>
 <link type="text/css" rel="stylesheet" href="<?autov('/webGui/styles/jquery.filetree.css')?>">
 <div class="nbd-wrap">
@@ -69,34 +90,81 @@ $nbd_scan_lans = function_exists('nbd_scan_local_lans') ? nbd_scan_local_lans() 
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd). Paste an <code>nbd://</code> URL, or use <strong>Scan network</strong> after ticking the LAN(s) to probe.
-        Scan is a button (not automatic). Default is plugin beacons on TCP <strong>10808</strong>; optional NBD ports <strong>10809–10812</strong>.
+        <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd). Paste an <code>nbd://</code> URL, or tick networks below and click <strong>Scan network</strong>.
+        Scan is a button (not automatic).
         <strong>Local disk:</strong> e.g. <code>/dev/sdX</code> / <code>/dev/nvme0n1</code> — read the whole device into an image (prefer unassigned/unmounted).
         <strong>Local file:</strong> convert an existing image under <code>/mnt</code> or <code>/tmp</code> —
         use <strong>Browse…</strong> for the VM-style folder tree, or type the path.
         Live VM attach of <code>nbd://</code> is separate — see
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/client-attach.md" target="_blank" rel="noopener">client-attach.md</a>.
       </blockquote>
-      <div id="nbd_scan_opts" style="margin:0.35em 0 0.15em">
+      <div id="nbd_scan_opts">
+      <dl>
+        <dt>Scan networks:</dt>
+        <dd>
 <?php if (!$nbd_scan_lans): ?>
-        <span class="nbd-muted">No private IPv4 LAN to scan.</span>
+          <span class="nbd-muted">No private IPv4 LAN to scan.</span>
 <?php else: ?>
-<?php foreach ($nbd_scan_lans as $lan): ?>
-        <label style="margin-right:1.1em;white-space:nowrap">
-          <input type="checkbox" class="nbd-scan-cidr" value="<?= htmlspecialchars((string)$lan['cidr']) ?>"
-            <?= !empty($lan['checked']) ? 'checked' : '' ?>>
-          <?= htmlspecialchars((string)$lan['cidr']) ?>
-          <span class="nbd-muted"><?= htmlspecialchars((string)$lan['iface']) ?></span>
-        </label>
+          <table class="nbd-scan-lans">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Network</th>
+                <th>Interface</th>
+                <th>This Unraid</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+<?php foreach ($nbd_scan_lans as $lan):
+  $note = '';
+  if (!empty($lan['thunderbolt'])) {
+    $note = 'Thunderbolt';
+  } elseif (!empty($lan['extra'])) {
+    $note = 'extra';
+  } elseif (!empty($lan['default_route'])) {
+    $note = 'default route';
+  }
+  $ip = trim((string)($lan['ip'] ?? ''));
+  $scan_id = 'nbd-scan-' . preg_replace('/[^A-Za-z0-9]+/', '-', (string)$lan['cidr'] . '-' . (string)$lan['iface']);
+?>
+              <tr>
+                <td>
+                  <input type="checkbox" class="nbd-scan-cidr" id="<?= htmlspecialchars($scan_id) ?>"
+                    value="<?= htmlspecialchars((string)$lan['cidr']) ?>"
+                    <?= !empty($lan['checked']) ? 'checked' : '' ?>>
+                </td>
+                <td><label for="<?= htmlspecialchars($scan_id) ?>"><code><?= htmlspecialchars((string)$lan['cidr']) ?></code></label></td>
+                <td><label for="<?= htmlspecialchars($scan_id) ?>"><?= htmlspecialchars((string)$lan['iface']) ?></label></td>
+                <td><label for="<?= htmlspecialchars($scan_id) ?>"><?= $ip !== '' ? htmlspecialchars($ip) : '—' ?></label></td>
+                <td class="nbd-scan-note"><label for="<?= htmlspecialchars($scan_id) ?>"><?= htmlspecialchars($note) ?></label></td>
+              </tr>
 <?php endforeach; ?>
-        <label style="display:block;margin-top:0.35em">
-          <input type="checkbox" id="nbd_scan_nbd_ports" value="1">
-          Also probe NBD ports (10809–10812)
-        </label>
+            </tbody>
+          </table>
 <?php endif; ?>
-      </div>
-      <div id="nbd_scan_status" class="nbd-muted" style="margin:0.35em 0"></div>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Tick the LAN(s) <strong>Scan network</strong> will probe. Thunderbolt is ticked by default when present; the default-route LAN is left off if another private LAN exists.
+      </blockquote>
+<?php if ($nbd_scan_lans): ?>
+      <dl>
+        <dt>Also probe NBD ports:</dt>
+        <dd>
+          <select id="nbd_scan_nbd_ports">
+            <option value="0" selected>No — beacons only (TCP 10808)</option>
+            <option value="1">Yes — also 10809–10812</option>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Default is plugin beacons on <strong>10808</strong> (Host must be running on the peer). Yes also probes qemu-nbd ports on the selected LAN(s).
+      </blockquote>
+<?php endif; ?>
+      <div id="nbd_scan_status" class="nbd-muted" style="margin:0.35em 0 0.15em"></div>
       <div id="nbd_scan_results" style="display:none;margin:0.5em 0 1em;overflow-x:auto"></div>
+      </div>
 
       <dl>
         <dt>Output path:</dt>

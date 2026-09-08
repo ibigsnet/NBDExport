@@ -145,7 +145,13 @@ if (!isset($presets) || !is_array($presets)) {
       return;
     }
     var nbdPorts = document.getElementById('nbd_scan_nbd_ports');
-    var mode = (nbdPorts && nbdPorts.checked) ? 'nbd' : 'beacon';
+    var wantNbd = false;
+    if (nbdPorts) {
+      wantNbd = (nbdPorts.tagName === 'SELECT')
+        ? (String(nbdPorts.value) === '1')
+        : !!nbdPorts.checked;
+    }
+    var mode = wantNbd ? 'nbd' : 'beacon';
     if (st) {
       st.textContent = mode === 'nbd'
         ? 'Scanning selected LAN(s) for beacons (10808) and NBD ports (10809+)…'

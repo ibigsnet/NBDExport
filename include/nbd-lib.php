@@ -3407,7 +3407,7 @@ function nbd_jobs_clear(array $ids, $all_finished = false, $delete_outputs = fal
 
 /**
  * Delete a finished job's output image on disk (incomplete/failed pulls cannot resume).
- * Never deletes outside /mnt or /tmp. Does not remove the job card (use Clear for that).
+ * Never deletes outside /mnt or /tmp. Does not remove the job card (Remove from list does that).
  */
 function nbd_job_delete_output($id) {
   $id = preg_replace('/[^A-Za-z0-9._-]/', '', (string)$id);

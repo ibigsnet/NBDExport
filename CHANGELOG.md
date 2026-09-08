@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08ae
+
+- **History:** Status past-job list is job records, not a file manager. **Remove from
+  list** still keeps the qcow2/raw under `/mnt` (and logs). Cards show **on disk** /
+  **not on disk**; **Delete file** sits on a separate On disk row so it is not mixed
+  with list-remove.
+- **Pull scan:** LAN picker is a Settings-style table (network, interface, this Unraid
+  IP, Thunderbolt / default route / extra). NBD-port probe is a Yes/No select.
+
 ## 2026.09.08ad
 
 - **Dashboard:** drop `Title=` from `NBDDashboard.page`. Unraid was rendering that as a

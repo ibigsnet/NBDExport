@@ -24,7 +24,7 @@ Find **NBD listeners** and optional **NBD Export peer beacons** on your **privat
 
 ## What Scan does
 
-Scan never runs on page load. **Pull → Scan network** is a button. You tick which **local private LAN(s)** to probe (Thunderbolt is ticked by default when present; the default-route/management LAN is left off if another private LAN exists). Paste an `nbd://` URL instead if you do not want to scan.
+Scan never runs on page load. **Pull → Scan network** is a button. Tick which **local private LAN(s)** to probe in the Scan networks table (Thunderbolt is ticked by default when present; the default-route/management LAN is left off if another private LAN exists). Paste an `nbd://` URL instead if you do not want to scan.
 
 1. **POST + csrf_token** only. The server accepts only CIDRs that are on this box (local private /24) or in optional `scan_extra_subnets`. It does not sweep every route.
 2. **Default probe:** plugin **beacons on TCP 10808**. Optional checkbox also probes NBD ports **10809–10812**.
