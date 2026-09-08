@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.06aa">
+<!ENTITY version "2026.09.06ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,6 +25,9 @@
 
 <CHANGES>
 ###&version;
+- Hashed raw install; LAN scan is POST+CSRF; beacon text escaped in results.
+
+###2026.09.06aa
 - Install copies plugin files from GitHub raw (SHA256/MD5 pin). No archive .txz payload.
 
 ###2026.08.26av
@@ -190,8 +193,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php">
 <URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
-<SHA256>72373d575a4b2df808c9088353dd8085140d40ebd1fda763c44732f30d30ea7f</SHA256>
-<MD5>5ab9255199fd8fad574f0a4b5b25a758</MD5>
+<SHA256>10014947fa6e58a22693bb96487e580b23b709e5501973a9305c827a45788f18</SHA256>
+<MD5>3fef5231e34dcac6f86eded7e0df3564</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-reconcile.php">
 <URL>&raw;/include/nbd-reconcile.php?v=&version;</URL>
@@ -200,8 +203,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-scan.php">
 <URL>&raw;/include/nbd-scan.php?v=&version;</URL>
-<SHA256>5e7c52d9fd888f214988bb174f0b7ba0369f6dd4cdda12efb30af533d030c2d0</SHA256>
-<MD5>8dfd3fc836e2a08fb5f150bd1db0b1ba</MD5>
+<SHA256>130b8e869dfd844840b58abdf0e13a056614f4584d25899ccadb0a4555ebd20b</SHA256>
+<MD5>30e39edc39c488a43f37fd00adccf166</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php">
 <URL>&raw;/include/nbd-ud-head.php?v=&version;</URL>
