@@ -6,6 +6,10 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08ab
+
+- **Config export:** Settings → Download JSON is POST + csrf_token (GET no longer dumps config).
+
 ## 2026.09.08aa
 
 - **Scan network:** button only (never on page load). Tick which **local private LAN(s)** to

@@ -25,7 +25,7 @@ require_once $lib;
 
 if (!function_exists('nbd_is_private_ipv4') || !nbd_is_private_ipv4($remote)) {
   http_response_code(403);
-  echo json_encode(['error' => 'private clients only', 'remote' => $remote]);
+  echo json_encode(['error' => 'private clients only']);
   exit;
 }
 

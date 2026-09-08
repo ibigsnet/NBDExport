@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.08aa">
+<!ENTITY version "2026.09.08ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,7 +25,7 @@
 
 <CHANGES>
 ###&version;
-- Scan network: pick which private LAN(s); beacon-only (10808) by default; POST+CSRF; escape beacon HTML.
+- Scan: pick private LAN(s), beacon-only default. Config export is POST+csrf.
 
 ###2026.09.06aa–ac
 - Hashed raw install (SHA256/MD5); restore Logs/Help/Dashboard.
@@ -134,8 +134,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDSettings.page">
 <URL>&raw;/NBDSettings.page?v=&version;</URL>
-<SHA256>2c34147a03a26ad6f2e672a264cbc2af792a2a71bce455984e80079f1dc03e3d</SHA256>
-<MD5>a6b3108f5b42582d0837059a76112faa</MD5>
+<SHA256>96dc27c5cbc6716bad19538fd6a90358d0bae1798643691048b9e5ada8f79ef9</SHA256>
+<MD5>5c9e35c741b12659de22bd477d6ba3f3</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHelp.page">
 <URL>&raw;/NBDHelp.page?v=&version;</URL>
@@ -159,8 +159,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-beacon-server.php">
 <URL>&raw;/include/nbd-beacon-server.php?v=&version;</URL>
-<SHA256>4f11401c66ec5109f00bb23976955750f6dd0b3e5bd465b0bdcf0914e55fd788</SHA256>
-<MD5>98d401663c8fff3468727ff71cf36c63</MD5>
+<SHA256>8024e04026eea533f2e2828f81ab3e95a1933290dba614bf9d4c7fa5fde0d1bd</SHA256>
+<MD5>034e7d44b951bab2c9e98261f9785fac</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-dash-status.php">
 <URL>&raw;/include/nbd-dash-status.php?v=&version;</URL>
@@ -169,8 +169,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-download-config.php">
 <URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
-<SHA256>32158471cf9453bed5d2e1faf4b63b5bf0b41114ed6dd34c4e7378eb2794703b</SHA256>
-<MD5>3652e3fe59f7d1ae946624995f4400b1</MD5>
+<SHA256>16886f78f44a006717a3124b4733926ae680c27bae7b903711b1ba3a7a5245d7</SHA256>
+<MD5>18fe9cad9242f2c8476ba96a0feb7649</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php">
 <URL>&raw;/include/nbd-job-card.php?v=&version;</URL>

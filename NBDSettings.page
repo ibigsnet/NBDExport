@@ -6,6 +6,11 @@ Markdown="false"
 <?php
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
+$nbd_csrf = '';
+if (is_readable('/var/local/emhttp/var.ini')) {
+  $vi = @parse_ini_file('/var/local/emhttp/var.ini');
+  $nbd_csrf = is_array($vi) ? (string)($vi['csrf_token'] ?? '') : '';
+}
 ?>
 <div class="nbd-wrap">
 <?php nbd_page_header(); ?>
@@ -239,7 +244,10 @@ nbd_page_styles();
       <strong>Export / import config</strong>
       <span class="nbd-muted"> — settings, last-used fields, and named presets (JSON).</span>
       <div class="nbd-config-backup-actions">
-        <a class="nbd-btn-link" href="/plugins/NBDExport/include/nbd-download-config.php">Download JSON…</a>
+        <form method="POST" action="/plugins/NBDExport/include/nbd-download-config.php" style="display:inline">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($nbd_csrf) ?>">
+          <input type="submit" value="Download JSON…">
+        </form>
         <form method="POST" action="/update.php" target="progressFrame" style="display:inline">
           <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
           <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
