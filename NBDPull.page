@@ -6,6 +6,7 @@ Markdown="false"
 <?php
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php';
 nbd_page_styles();
+$nbd_scan_lans = function_exists('nbd_scan_local_lans') ? nbd_scan_local_lans() : [];
 ?>
 <link type="text/css" rel="stylesheet" href="<?autov('/webGui/styles/jquery.filetree.css')?>">
 <div class="nbd-wrap">
@@ -51,7 +52,7 @@ nbd_page_styles();
           </select>
           <input type="text" name="nbd_url" id="nbd_url" style="width:22em" placeholder="nbd://10.255.0.1:10809" value="<?= $pref_url ?>"
             autocomplete="off" spellcheck="false">
-          <input type="button" value="Scan network" id="nbd_scan_btn" onclick="nbdScanNetwork()" title="Find NBD listeners / NBD Export peers on private LANs">
+          <input type="button" value="Scan network" id="nbd_scan_btn" onclick="nbdScanNetwork()" title="Find NBD Export beacons on the LAN(s) you tick"<?= $nbd_scan_lans ? '' : ' disabled' ?>>
           <span id="nbd_src_browse_wrap" style="display:none;position:relative;margin-left:0.25em">
             <input type="button" value="Browse…" id="nbd_src_browse"
               onclick="nbdBrowseLocalSource()" title="Browse /mnt for a source image (local file mode)">
@@ -68,14 +69,32 @@ nbd_page_styles();
         </dd>
       </dl>
       <blockquote class="inline_help">
-        <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd).
-        <strong>Scan network</strong> probes ports <strong>10809+</strong> and beacons on <strong>10808</strong>.
+        <strong>NBD:</strong> peer must already host (Host tab or any qemu-nbd). Paste an <code>nbd://</code> URL, or use <strong>Scan network</strong> after ticking the LAN(s) to probe.
+        Scan is a button (not automatic). Default is plugin beacons on TCP <strong>10808</strong>; optional NBD ports <strong>10809–10812</strong>.
         <strong>Local disk:</strong> e.g. <code>/dev/sdX</code> / <code>/dev/nvme0n1</code> — read the whole device into an image (prefer unassigned/unmounted).
         <strong>Local file:</strong> convert an existing image under <code>/mnt</code> or <code>/tmp</code> —
         use <strong>Browse…</strong> for the VM-style folder tree, or type the path.
         Live VM attach of <code>nbd://</code> is separate — see
         <a href="https://github.com/ibigsnet/NBDExport/blob/main/docs/client-attach.md" target="_blank" rel="noopener">client-attach.md</a>.
       </blockquote>
+      <div id="nbd_scan_opts" style="margin:0.35em 0 0.15em">
+<?php if (!$nbd_scan_lans): ?>
+        <span class="nbd-muted">No private IPv4 LAN to scan.</span>
+<?php else: ?>
+<?php foreach ($nbd_scan_lans as $lan): ?>
+        <label style="margin-right:1.1em;white-space:nowrap">
+          <input type="checkbox" class="nbd-scan-cidr" value="<?= htmlspecialchars((string)$lan['cidr']) ?>"
+            <?= !empty($lan['checked']) ? 'checked' : '' ?>>
+          <?= htmlspecialchars((string)$lan['cidr']) ?>
+          <span class="nbd-muted"><?= htmlspecialchars((string)$lan['iface']) ?></span>
+        </label>
+<?php endforeach; ?>
+        <label style="display:block;margin-top:0.35em">
+          <input type="checkbox" id="nbd_scan_nbd_ports" value="1">
+          Also probe NBD ports (10809–10812)
+        </label>
+<?php endif; ?>
+      </div>
       <div id="nbd_scan_status" class="nbd-muted" style="margin:0.35em 0"></div>
       <div id="nbd_scan_results" style="display:none;margin:0.5em 0 1em;overflow-x:auto"></div>
 

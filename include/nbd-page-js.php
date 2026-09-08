@@ -135,7 +135,22 @@ if (!isset($presets) || !is_array($presets)) {
       return;
     }
 
-    if (st) st.textContent = 'Scanning private LANs for NBD ports (10809+) and peer beacons (10808)…';
+    var cidrs = [];
+    var boxes = document.querySelectorAll('.nbd-scan-cidr:checked');
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].value) cidrs.push(boxes[i].value);
+    }
+    if (!cidrs.length) {
+      if (st) st.textContent = 'Select a LAN to scan.';
+      return;
+    }
+    var nbdPorts = document.getElementById('nbd_scan_nbd_ports');
+    var mode = (nbdPorts && nbdPorts.checked) ? 'nbd' : 'beacon';
+    if (st) {
+      st.textContent = mode === 'nbd'
+        ? 'Scanning selected LAN(s) for beacons (10808) and NBD ports (10809+)…'
+        : 'Scanning selected LAN(s) for plugin beacons (10808)…';
+    }
     if (box) {
       box.style.display = 'none';
       box.innerHTML = '';
@@ -148,7 +163,8 @@ if (!isset($presets) || !is_array($presets)) {
     nbdScanAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var url = '/plugins/NBDExport/include/nbd-scan.php?_=' + Date.now();
     var body = new URLSearchParams();
-    body.set('probe_info', '1');
+    body.set('mode', mode);
+    cidrs.forEach(function (c) { body.append('cidrs[]', c); });
     body.set('csrf_token', (typeof csrf_token !== 'undefined' && csrf_token) ? csrf_token : '');
     var opts = {
       method: 'POST',
@@ -171,7 +187,7 @@ if (!isset($presets) || !is_array($presets)) {
         var n = (data.hits && data.hits.length) || 0;
         if (st) {
           st.textContent = 'Scan finished in ' + (data.seconds || '?') + 's — '
-            + n + ' host(s) on ' + ((data.subnets && data.subnets.join(', ')) || 'private LANs');
+            + n + ' host(s) on ' + ((data.subnets && data.subnets.join(', ')) || 'selected LAN(s)');
         }
         if (!box) return;
         if (!n) {
@@ -531,6 +547,7 @@ if (!isset($presets) || !is_array($presets)) {
     var sel = document.getElementById('nbd_source_type');
     var inp = document.getElementById('nbd_url');
     var scan = document.getElementById('nbd_scan_btn');
+    var scanOpts = document.getElementById('nbd_scan_opts');
     var browse = document.getElementById('nbd_src_browse_wrap');
     var sub = document.getElementById('nbd_pull_submit');
     if (!sel || !inp) return;
@@ -538,16 +555,19 @@ if (!isset($presets) || !is_array($presets)) {
     if (t === 'nbd') {
       inp.placeholder = 'nbd://10.255.0.1:10809';
       if (scan) scan.style.display = '';
+      if (scanOpts) scanOpts.style.display = '';
       if (browse) browse.style.display = 'none';
       if (sub) sub.value = 'Convert NBD → file on Unraid';
     } else if (t === 'local_device') {
       inp.placeholder = '/dev/nvme0n1';
       if (scan) scan.style.display = 'none';
+      if (scanOpts) scanOpts.style.display = 'none';
       if (browse) browse.style.display = 'none';
       if (sub) sub.value = 'Convert local disk → file on Unraid';
     } else {
       inp.placeholder = '/mnt/cache/images/disk.img';
       if (scan) scan.style.display = 'none';
+      if (scanOpts) scanOpts.style.display = 'none';
       if (browse) browse.style.display = 'inline-block';
       if (sub) sub.value = 'Convert local file → file on Unraid';
     }

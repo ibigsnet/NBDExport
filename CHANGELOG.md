@@ -6,6 +6,18 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08aa
+
+- **Scan network:** button only (never on page load). Tick which **local private LAN(s)** to
+  probe; Thunderbolt is ticked by default when present, management/default-route LAN is
+  left off if another private LAN exists. Server accepts only those CIDRs (plus optional
+  `scan_extra_subnets`). Default probe is plugin **beacons on TCP 10808**; optional
+  checkbox also sweeps NBD ports 10809–10812. POST + csrf_token; beacon text escaped.
+  Remembered peers are re-probed only if they sit on a selected LAN. Paste `nbd://` if
+  you do not want to scan.
+- **Beacon listen:** `php -S` binds the Host export IP when there is a single private
+  bind; otherwise `0.0.0.0` with the existing private-client filter.
+
 ## 2026.09.06ac
 
 - **Fix:** hashed install list omitted **Logs**, **Help**, and **Dashboard** pages

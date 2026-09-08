@@ -3584,6 +3584,32 @@ function nbd_beacon_payload() {
 }
 
 /**
+ * php -S address for the beacon. Prefer a single Host bind IP; otherwise
+ * 0.0.0.0 with the private-client filter in nbd-beacon-server.php.
+ */
+function nbd_beacon_listen_addr() {
+  $binds = [];
+  foreach (nbd_exports_state() as $e) {
+    if (empty($e['alive']) && empty($e['listening'])) {
+      continue;
+    }
+    $b = trim((string)($e['bind'] ?? ''));
+    if ($b === '' || $b === '0.0.0.0' || $b === '*') {
+      return '0.0.0.0';
+    }
+    if (!nbd_is_private_ipv4($b)) {
+      return '0.0.0.0';
+    }
+    $binds[$b] = true;
+  }
+  $keys = array_keys($binds);
+  if (count($keys) === 1) {
+    return $keys[0];
+  }
+  return '0.0.0.0';
+}
+
+/**
  * Ensure lightweight beacon HTTP is running while any managed export is up.
  * Uses php -S (no Unraid login) so peers can discover without root passwords.
  */
@@ -3624,8 +3650,8 @@ function nbd_beacon_ensure() {
 
   $port = nbd_beacon_port();
   $log = nbd_beacon_logfile();
-  // Bind all interfaces; server script rejects non-private clients.
-  $cmd = 'setsid nohup ' . escapeshellarg($php) . ' -S 0.0.0.0:' . (int)$port
+  $listen = nbd_beacon_listen_addr();
+  $cmd = 'setsid nohup ' . escapeshellarg($php) . ' -S ' . escapeshellarg($listen . ':' . (int)$port)
     . ' ' . escapeshellarg($router)
     . ' >>' . escapeshellarg($log) . ' 2>&1 & echo $! >' . escapeshellarg($pidfile);
   exec($cmd);
@@ -3636,6 +3662,7 @@ function nbd_beacon_ensure() {
     'running' => $pid > 0 && @file_exists('/proc/' . $pid),
     'pid' => $pid,
     'port' => $port,
+    'listen' => $listen,
   ];
 }
 
@@ -3653,79 +3680,159 @@ function nbd_beacon_stop() {
   return ['ok' => true];
 }
 
-/**
- * Private /24 networks to scan: local interfaces + private routes (e.g. LAN via gateway).
- * @return string[] list of "a.b.c.0/24"
- */
-function nbd_scan_subnets() {
-  $nets = [];
-  $add = function ($ip, $pref) use (&$nets) {
-    if (!nbd_is_private_ipv4($ip)) {
-      return;
-    }
-    $pref = (int)$pref;
-    if ($pref < 22 || $pref > 30) {
-      $pref = 24;
-    }
-    $long = ip2long($ip);
-    if ($long === false) {
-      return;
-    }
-    $mask = -1 << (32 - min(24, $pref));
-    // Always scan as /24 grids (cap how many for wider prefixes)
-    $net_long = $long & (-1 << (32 - $pref));
-    if ($pref < 24) {
-      $count = min(4, 1 << (24 - $pref));
-      $base = $net_long;
-      for ($i = 0; $i < $count; $i++) {
-        $nets[] = long2ip($base + ($i * 256)) . '/24';
-      }
-    } else {
-      $nets[] = long2ip($long & (-1 << 8)) . '/24';
-    }
-  };
+/** Containing private /24 for an IPv4, or empty. */
+function nbd_ip_to_slash24($ip) {
+  if (!nbd_is_private_ipv4($ip)) {
+    return '';
+  }
+  $long = ip2long($ip);
+  if ($long === false) {
+    return '';
+  }
+  return long2ip($long & (~255)) . '/24';
+}
 
+/** Normalize posted/cfg CIDR to a private a.b.c.0/24, or empty. */
+function nbd_scan_normalize_cidr($cidr) {
+  $cidr = trim((string)$cidr);
+  if (preg_match('#^(\d+\.\d+\.\d+\.\d+)/(\d+)$#', $cidr, $m)) {
+    return nbd_ip_to_slash24($m[1]);
+  }
+  if (preg_match('#^(\d+\.\d+\.\d+\.\d+)$#', $cidr, $m)) {
+    return nbd_ip_to_slash24($m[1]);
+  }
+  return '';
+}
+
+function nbd_scan_default_route_ifaces() {
+  $out = [];
+  @exec('ip -4 route show default 2>/dev/null', $out);
+  $ifs = [];
+  foreach ($out as $line) {
+    if (preg_match('/\bdev\s+(\S+)/', $line, $m)) {
+      $ifs[preg_replace('/@.*$/', '', $m[1])] = true;
+    }
+  }
+  return $ifs;
+}
+
+/**
+ * Local private LANs the user may tick on Pull → Scan network.
+ * Thunderbolt (and non-default-route ifaces) are checked by default; the
+ * default-route LAN is left off when another private LAN exists.
+ *
+ * @return array[] iface, ip, cidr, extra, checked, label
+ */
+function nbd_scan_local_lans() {
+  $def_if = nbd_scan_default_route_ifaces();
+  $rows = [];
+  $seen_local = [];
   $out = [];
   @exec('ip -4 -o addr show scope global 2>/dev/null', $out);
   foreach ($out as $line) {
-    if (!preg_match('/inet\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/', $line, $m)) {
+    if (!preg_match('/^\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)\//', $line, $m)) {
       continue;
     }
-    $add($m[1], (int)$m[2]);
-  }
-
-  // Routes: "192.168.1.0/24 via …" (covers LAN via gateway when not on that iface)
-  $routes = [];
-  @exec('ip -4 route show 2>/dev/null', $routes);
-  foreach ($routes as $line) {
-    if (preg_match('/^(\d+\.\d+\.\d+\.\d+)\/(\d+)\s/', $line, $m)) {
-      $pref = (int)$m[2];
-      if ($pref < 22 || $pref > 24) {
-        continue; // skip default and huge aggregates
-      }
-      $add($m[1], $pref);
+    $if = preg_replace('/@.*$/', '', $m[1]);
+    $ip = $m[2];
+    if ($if === 'lo' || strpos($ip, '127.') === 0) {
+      continue;
     }
+    $cidr = nbd_ip_to_slash24($ip);
+    if ($cidr === '') {
+      continue;
+    }
+    $key = $cidr . '|' . $if;
+    if (isset($seen_local[$key])) {
+      continue;
+    }
+    $seen_local[$key] = true;
+    $is_tb = (bool)preg_match('/^thunderbolt\d+$/', $if);
+    $rows[] = [
+      'iface' => $if,
+      'ip' => $ip,
+      'cidr' => $cidr,
+      'extra' => false,
+      'thunderbolt' => $is_tb,
+      'default_route' => isset($def_if[$if]),
+      'label' => $cidr . ' (' . $if . ')',
+    ];
   }
 
-  // Optional cfg: scan_extra_subnets="192.168.1.0/24,10.0.0.0/24"
   $cfg = nbd_load_cfg();
   $extra = trim((string)($cfg['scan_extra_subnets'] ?? ''));
+  $have_cidr = [];
+  foreach ($rows as $r) {
+    $have_cidr[$r['cidr']] = true;
+  }
   if ($extra !== '') {
-    foreach (preg_split('/[\s,;]+/', $extra) as $cidr) {
-      if ($cidr === '') {
+    foreach (preg_split('/[\s,;]+/', $extra, -1, PREG_SPLIT_NO_EMPTY) as $raw) {
+      $cidr = nbd_scan_normalize_cidr($raw);
+      if ($cidr === '' || isset($have_cidr[$cidr])) {
         continue;
       }
-      if (preg_match('#^(\d+\.\d+\.\d+\.\d+)/(\d+)$#', $cidr, $m)) {
-        $add($m[1], (int)$m[2]);
-      } elseif (preg_match('#^(\d+\.\d+\.\d+\.\d+)$#', $cidr, $m)) {
-        $add($m[1], 24);
-      }
+      $have_cidr[$cidr] = true;
+      $rows[] = [
+        'iface' => 'extra',
+        'ip' => '',
+        'cidr' => $cidr,
+        'extra' => true,
+        'thunderbolt' => false,
+        'default_route' => false,
+        'label' => $cidr . ' (extra)',
+      ];
     }
   }
 
-  $nets = array_values(array_unique($nets));
-  sort($nets);
-  return $nets;
+  $local_n = 0;
+  foreach ($rows as $r) {
+    if (empty($r['extra'])) {
+      $local_n++;
+    }
+  }
+  $any_checked = false;
+  foreach ($rows as &$r) {
+    if (!empty($r['extra'])) {
+      $r['checked'] = false;
+      continue;
+    }
+    if ($local_n <= 1) {
+      $r['checked'] = true;
+    } elseif (!empty($r['thunderbolt']) || empty($r['default_route'])) {
+      $r['checked'] = true;
+    } else {
+      $r['checked'] = false;
+    }
+    if ($r['checked']) {
+      $any_checked = true;
+    }
+  }
+  unset($r);
+  if (!$any_checked) {
+    foreach ($rows as &$r) {
+      if (empty($r['extra'])) {
+        $r['checked'] = true;
+      }
+    }
+    unset($r);
+  }
+  return $rows;
+}
+
+/** CIDRs Scan may accept from POST (local private + cfg extra). */
+function nbd_scan_allowed_cidrs() {
+  $ok = [];
+  foreach (nbd_scan_local_lans() as $r) {
+    if (!empty($r['cidr'])) {
+      $ok[$r['cidr']] = true;
+    }
+  }
+  return $ok;
+}
+
+/** @return string[] list of "a.b.c.0/24" */
+function nbd_scan_subnets() {
+  return array_keys(nbd_scan_allowed_cidrs());
 }
 
 /**
@@ -3874,14 +3981,18 @@ function nbd_scan_tcp_parallel(array $ips, array $ports, $timeout_s = 0.15, $job
 }
 
 /**
- * Scan private LANs for NBD ports + optional plugin beacons.
+ * Scan user-selected private /24s for plugin beacons (default) and optional NBD ports.
  *
  * @param int[]|null $nbd_ports
+ * @param bool $probe_info qemu-img info on beacon-advertised URLs only
+ * @param string[] $cidrs posted CIDRs; must be in nbd_scan_allowed_cidrs()
+ * @param string $mode beacon|nbd
  * @return array{ok:bool,subnets:string[],hits:array,seconds:float,error?:string}
  */
-function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
+function nbd_scan_network(array $nbd_ports = null, $probe_info = true, array $cidrs = null, $mode = 'beacon') {
   $t0 = microtime(true);
   nbd_ensure_runtime_dirs();
+  $mode = ($mode === 'nbd') ? 'nbd' : 'beacon';
   if ($nbd_ports === null || !$nbd_ports) {
     $cfg = nbd_load_cfg();
     $base = (int)($cfg['default_port'] ?? 10809);
@@ -3895,11 +4006,29 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
   }
   $nbd_ports = array_values(array_unique(array_map('intval', $nbd_ports)));
   $beacon_port = nbd_beacon_port();
-  $probe_ports = array_values(array_unique(array_merge($nbd_ports, [$beacon_port])));
+  $probe_ports = [$beacon_port];
+  if ($mode === 'nbd') {
+    $probe_ports = array_values(array_unique(array_merge($nbd_ports, [$beacon_port])));
+  }
 
-  $subnets = nbd_scan_subnets();
+  $allowed = nbd_scan_allowed_cidrs();
+  $subnets = [];
+  foreach ((array)$cidrs as $raw) {
+    $cidr = nbd_scan_normalize_cidr($raw);
+    if ($cidr !== '' && isset($allowed[$cidr])) {
+      $subnets[] = $cidr;
+    }
+  }
+  $subnets = array_values(array_unique($subnets));
   if (!$subnets) {
-    return ['ok' => false, 'error' => 'No private IPv4 subnets to scan', 'subnets' => [], 'hits' => [], 'seconds' => 0];
+    return [
+      'ok' => false,
+      'error' => 'Select a LAN to scan',
+      'subnets' => [],
+      'hits' => [],
+      'seconds' => 0,
+      'mode' => $mode,
+    ];
   }
 
   $self_ips = [];
@@ -3910,6 +4039,7 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
   }
 
   $ips = [];
+  $selected = array_flip($subnets);
   foreach ($subnets as $cidr) {
     if (!preg_match('#^(\d+\.\d+\.\d+)\.0/24$#', $cidr, $m)) {
       continue;
@@ -3923,9 +4053,9 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
       $ips[] = $ip;
     }
   }
-  // Always re-probe remembered peers (even if not on a scanned /24)
   foreach (nbd_scan_known_peers() as $ip) {
-    if (!isset($self_ips[$ip])) {
+    $slash = nbd_ip_to_slash24($ip);
+    if ($slash !== '' && isset($selected[$slash]) && !isset($self_ips[$ip])) {
       $ips[] = $ip;
     }
   }
@@ -3978,14 +4108,13 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
     } else {
       foreach ($info['nbd'] as $port) {
         $url = 'nbd://' . $ip . ':' . $port;
-        $inf = $probe_info ? nbd_probe_nbd_info($url) : null;
         $exports[] = [
           'url' => $url,
           'port' => $port,
           'read_only' => null,
           'label' => '',
           'device_name' => '',
-          'info' => $inf,
+          'info' => null,
         ];
       }
     }
@@ -4021,8 +4150,9 @@ function nbd_scan_network(array $nbd_ports = null, $probe_info = true) {
   return [
     'ok' => true,
     'subnets' => $subnets,
-    'nbd_ports' => $nbd_ports,
+    'nbd_ports' => $mode === 'nbd' ? $nbd_ports : [],
     'beacon_port' => $beacon_port,
+    'mode' => $mode,
     'hits' => $hits,
     'seconds' => round(microtime(true) - $t0, 2),
   ];

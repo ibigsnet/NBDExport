@@ -3,7 +3,7 @@
  * Lightweight discovery beacon for php -S (no Unraid session).
  * Private clients only. See docs/discovery.md.
  *
- * Usage: php -S 0.0.0.0:10808 /path/to/nbd-beacon-server.php
+ * Usage: php -S <bind-ip-or-0.0.0.0>:10808 /path/to/nbd-beacon-server.php
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

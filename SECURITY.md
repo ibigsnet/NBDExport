@@ -142,8 +142,8 @@ Step-by-step: [docs/hosting-safety.md](docs/hosting-safety.md).
 
 | Piece | Behavior |
 |-------|----------|
-| **Scan** | Authenticated WebUI only (Pull tab). Probes **private** IPv4 subnets for NBD ports and peer beacons. |
-| **Beacon** | Lightweight HTTP while Host exports exist. Rejects non-private clients (`403`). |
+| **Scan** | Pull tab **button** (not automatic). POST + csrf. You pick which private LAN(s). Default is beacons on **10808**; optional NBD ports. Beacon text is escaped in results. |
+| **Beacon** | Lightweight HTTP while Host exports exist. Prefers the Host bind IP. Rejects non-private clients (`403`). |
 | **Cloud** | None |
 | **Token** | Not required for basic LAN use; optional hardening later |
 
