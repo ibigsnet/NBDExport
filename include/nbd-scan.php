@@ -1,8 +1,5 @@
 <?php
-/**
- * Authenticated LAN scan (Pull tab). Runs as logged-in Unraid WebUI user/session.
- * POST /plugins/NBDExport/include/nbd-scan.php (csrf_token + optional probe_info)
- */
+/** LAN scan (Pull tab). POST + csrf_token only. */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 

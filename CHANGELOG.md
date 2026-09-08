@@ -13,13 +13,14 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ## 2026.09.06ab
 
-- **CA review:** hashed raw install. LAN scan is POST + csrf_token; scan results
+- **Install / security:** hashed raw files. LAN scan is POST + csrf_token; scan results
   HTML-escape beacon-supplied hostname/version/label/URL.
 
 ## 2026.09.06aa
 
 - **Install:** plugin files come from GitHub raw with SHA256/MD5 pins in the `.plg`.
-  Dropped `archive/*.txz` payload (`upgradepkg`). Addresses CA review: unsigned package download.
+  Dropped `archive/*.txz` payload (`upgradepkg`). Pins the download so the payload cannot
+  change under a given plugin version.
 
 ## 2026.08.26av
 
@@ -48,7 +49,6 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 - **Dashboard tile:** stock single-cell icon+section (no dual-row `tile-header` stretch).
   First paint shows `—` then fills after idle callback — no “Loading…” flash.
   Dash poll skips external `qemu-img` `ps` scan; 5s when active / 15s when idle.
-- Backlog inventory: `docs/backlog-from-chat.md`.
 
 ## 2026.08.26ar
 

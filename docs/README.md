@@ -11,7 +11,7 @@ Read in this order for a new install:
 | 5 | [destructive-mode.md](destructive-mode.md) | **When** to enable Destructive mode |
 | 6 | [security-and-bind.md](security-and-bind.md) | Read-only, bind IP, isolation |
 | 7 | [hosting-safety.md](hosting-safety.md) | **Host checklist** every time you publish a disk |
-| 8 | [../SECURITY.md](../SECURITY.md) | Threat model + **CA review** notes |
+| 8 | [../SECURITY.md](../SECURITY.md) | Threat model, defaults, uninstall |
 | 9 | [imaging-workflow.md](imaging-workflow.md) | CLI convert + restore |
 | 10 | [peer-host-linux.md](peer-host-linux.md) | Host a disk from another Linux (firewall + Pull) |
 | 11 | [settings-reference.md](settings-reference.md) | Controls by tab |

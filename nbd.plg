@@ -25,19 +25,13 @@
 
 <CHANGES>
 ###&version;
-- Restore Logs, Help, and Dashboard pages in the hashed install list (missed in 06aa).
-
-###2026.09.06ab
-- Hashed raw install; LAN scan is POST+CSRF; beacon text escaped in results.
-
-###2026.09.06aa
-- Install copies plugin files from GitHub raw (SHA256/MD5 pin). No archive .txz payload.
+- Hashed raw install (SHA256/MD5); restore Logs/Help/Dashboard; LAN scan POST+CSRF; escape beacon HTML.
 
 ###2026.08.26av
-- WebUI load: lighter live poll (deferred, 4s/15s, pause when hidden); cache ss/ps; no sync snapshot on paint.
+- WebUI load: lighter live poll under Pull load (deferred, 4s/15s, pause when hidden).
 
 ###2026.08.26au
-- Notifications: Pull done / failed / Host down unexpected (Settings dropdowns).
+- Notifications: Pull done / failed / Host down unexpected.
 
 ###2026.08.26at–ar
 - Dashboard full paths + stock tile; progress/ETA; Pause/Stop align.
@@ -48,14 +42,8 @@
 ###2026.08.26ao–an
 - Failure Reason map; Found a bug? diagnostics (forum/GitHub/Tools → Diagnostics).
 
-###2026.08.26am–aj
-- Convert PID and SIGUSR1 (rc=138) fixes; History Clear/Retry/Delete wording; net Gb/s.
-
-###2026.08.26ai–ag
-- Status Active/Queued/History; metrics/units; Paused purple; lazy Dashboard; busy Update refuse.
-
-###2026.08.26af–aa
-- Dashboard/job cards; uninstall exit 0; Pull fileTree Browse.
+###2026.08.26am–aa
+- Convert/PID/SIGUSR1; Status cards; Dashboard/job cards; busy Update refuse.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
@@ -221,8 +209,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-scan.php">
 <URL>&raw;/include/nbd-scan.php?v=&version;</URL>
-<SHA256>130b8e869dfd844840b58abdf0e13a056614f4584d25899ccadb0a4555ebd20b</SHA256>
-<MD5>30e39edc39c488a43f37fd00adccf166</MD5>
+<SHA256>20a0ebf3b61f33841dfd60986c675a1960113002d3919997c2bb3a2ea33b302d</SHA256>
+<MD5>b8c01bce6f3a910e26219c582aac407a</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php">
 <URL>&raw;/include/nbd-ud-head.php?v=&version;</URL>

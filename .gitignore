@@ -13,6 +13,10 @@ NOTES.local.md
 
 # Lab / workstation only — NOT Unraid runtime
 AGENTS.md
+CA-CHANNEL.md
+DEVELOPMENT.md
+docs/DEVELOPMENT.md
+docs/backlog-from-chat.md
 scripts/pack-txz.sh
 scripts/promote-stable.sh
 
