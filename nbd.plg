@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.06ab">
+<!ENTITY version "2026.09.06ac">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,6 +25,9 @@
 
 <CHANGES>
 ###&version;
+- Restore Logs, Help, and Dashboard pages in the hashed install list (missed in 06aa).
+
+###2026.09.06ab
 - Hashed raw install; LAN scan is POST+CSRF; beacon text escaped in results.
 
 ###2026.09.06aa
@@ -136,10 +139,25 @@ echo "NBD Export: ready for file install."
 <SHA256>a04f4a8ff4d8e40b98539d193aeeef95e60aeb8bb9dff2694747fce7cd5d9b7e</SHA256>
 <MD5>6d4899e7ac8c89a647bd266861bc0297</MD5>
 </FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDLogs.page">
+<URL>&raw;/NBDLogs.page?v=&version;</URL>
+<SHA256>1a8740b6637a71b89899ae3723e106b2674050633c720b46fcba2e8fc28c8e33</SHA256>
+<MD5>bb85ca336c98930572af8f169c5e7d97</MD5>
+</FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDSettings.page">
 <URL>&raw;/NBDSettings.page?v=&version;</URL>
 <SHA256>2c34147a03a26ad6f2e672a264cbc2af792a2a71bce455984e80079f1dc03e3d</SHA256>
 <MD5>a6b3108f5b42582d0837059a76112faa</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHelp.page">
+<URL>&raw;/NBDHelp.page?v=&version;</URL>
+<SHA256>8a5af464dced8da128a62fec12c909537e9c89f971301cf6f9d14dc5601eb535</SHA256>
+<MD5>989284f7ca71153dda646667af327d59</MD5>
+</FILE>
+<FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDDashboard.page">
+<URL>&raw;/NBDDashboard.page?v=&version;</URL>
+<SHA256>dfb283c38f3e8c4e08bb375bbaf89a757afbe6d8f4830c1da6df37cdaf319e02</SHA256>
+<MD5>7dc372179f9c6d65913af5a4d2c66842</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/default.cfg">
 <URL>&raw;/default.cfg?v=&version;</URL>

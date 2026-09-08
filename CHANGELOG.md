@@ -6,6 +6,11 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.06ac
+
+- **Fix:** hashed install list omitted **Logs**, **Help**, and **Dashboard** pages
+  (they were in 26av `.txz`). Tabs and Main tile are back.
+
 ## 2026.09.06ab
 
 - **CA review:** hashed raw install. LAN scan is POST + csrf_token; scan results
