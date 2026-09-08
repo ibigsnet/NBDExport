@@ -6,6 +6,12 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08ad
+
+- **Dashboard:** drop `Title=` from `NBDDashboard.page`. Unraid was rendering that as a
+  second heading at the top of Dashboard in addition to the `$mytiles` column-3 tile
+  (bottom right). Official custom-tile example has no Title.
+
 ## 2026.09.08ac
 
 - **Install:** do not `rm -rf` the live plugin or `removepkg` before GitHub FILE copies.

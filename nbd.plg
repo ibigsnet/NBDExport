@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.08ac">
+<!ENTITY version "2026.09.08ad">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,10 +25,10 @@
 
 <CHANGES>
 ###&version;
-- Install overlays hashed files; do not wipe the live plugin before FILE copy (Update All error-install).
+- Dashboard: one tile in column 3 (Title on the tile page was duplicating it at the top).
 
-###2026.09.08aa–ab
-- Scan: pick private LAN(s), beacon-only default. Config export POST+csrf.
+###2026.09.08aa–ac
+- Scan LAN picker; overlay install (do not wipe the live plugin before FILE copy).
 
 ###2026.09.06aa–ac
 - Hashed raw install (SHA256/MD5); restore Logs/Help/Dashboard.
@@ -145,8 +145,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDDashboard.page">
 <URL>&raw;/NBDDashboard.page?v=&version;</URL>
-<SHA256>dfb283c38f3e8c4e08bb375bbaf89a757afbe6d8f4830c1da6df37cdaf319e02</SHA256>
-<MD5>7dc372179f9c6d65913af5a4d2c66842</MD5>
+<SHA256>83c9ea08834ff04ec075374e0e4fcc2b81ce527167b5c2bb68c49c1fb3a59b38</SHA256>
+<MD5>86a905888d4e76c9194066f61eef25ae</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/default.cfg">
 <URL>&raw;/default.cfg?v=&version;</URL>
