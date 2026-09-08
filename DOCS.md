@@ -146,7 +146,7 @@ NBD is effectively **raw disk over TCP**. Basic qemu-nbd has **no password** —
 
 | Doc | Audience |
 |-----|----------|
-| [SECURITY.md](SECURITY.md) | **CA review**, threat model, defaults, uninstall |
+| [SECURITY.md](SECURITY.md) | Threat model, defaults, uninstall |
 | [docs/hosting-safety.md](docs/hosting-safety.md) | Operator checklist every Host job |
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, RO vs RW |
 | [docs/destructive-mode.md](docs/destructive-mode.md) | When Destructive mode is required |
@@ -186,7 +186,7 @@ Image files under `/mnt/` are never part of this export.
 | [docs/security-and-bind.md](docs/security-and-bind.md) | Bind IP, isolation, read-only |
 | [docs/hosting-safety.md](docs/hosting-safety.md) | Host checklist (publish safely) |
 | [docs/integration-unassigned-devices.md](docs/integration-unassigned-devices.md) | Opt-in UD status badges |
-| [SECURITY.md](SECURITY.md) | Threat model + CA review notes |
+| [SECURITY.md](SECURITY.md) | Threat model, defaults, uninstall |
 | [docs/imaging-workflow.md](docs/imaging-workflow.md) | CLI golden path + restore |
 | [docs/integration-thunderboltnet.md](docs/integration-thunderboltnet.md) | Thunderbolt underlay + listening vs NBD |
 | [docs/integration-fabricrouting.md](docs/integration-fabricrouting.md) | Fabric Routing / multi-hop (optional) |

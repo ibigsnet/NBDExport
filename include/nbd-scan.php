@@ -1,8 +1,5 @@
 <?php
-/**
- * Authenticated LAN scan (Pull tab). Runs as logged-in Unraid WebUI user/session.
- * POST /plugins/NBDExport/include/nbd-scan.php (csrf_token + optional probe_info)
- */
+/** LAN scan (Pull tab). POST + csrf_token; user-selected private /24s only. */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -25,10 +22,11 @@ if ($csrf_expected !== '' && !hash_equals($csrf_expected, (string)($_POST['csrf_
 
 require_once __DIR__ . '/nbd-lib.php';
 
-$probe = true;
-if (isset($_POST['probe_info']) && ($_POST['probe_info'] === '0' || $_POST['probe_info'] === 'false')) {
-  $probe = false;
+$cidrs = $_POST['cidrs'] ?? [];
+if (!is_array($cidrs)) {
+  $cidrs = [$cidrs];
 }
+$mode = ((string)($_POST['mode'] ?? 'beacon') === 'nbd') ? 'nbd' : 'beacon';
 
-$result = nbd_scan_network(null, $probe);
+$result = nbd_scan_network(null, true, $cidrs, $mode);
 echo json_encode($result, JSON_UNESCAPED_SLASHES);

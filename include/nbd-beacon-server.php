@@ -3,7 +3,7 @@
  * Lightweight discovery beacon for php -S (no Unraid session).
  * Private clients only. See docs/discovery.md.
  *
- * Usage: php -S 0.0.0.0:10808 /path/to/nbd-beacon-server.php
+ * Usage: php -S <bind-ip-or-0.0.0.0>:10808 /path/to/nbd-beacon-server.php
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -25,7 +25,7 @@ require_once $lib;
 
 if (!function_exists('nbd_is_private_ipv4') || !nbd_is_private_ipv4($remote)) {
   http_response_code(403);
-  echo json_encode(['error' => 'private clients only', 'remote' => $remote]);
+  echo json_encode(['error' => 'private clients only']);
   exit;
 }
 

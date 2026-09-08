@@ -24,18 +24,13 @@ Find **NBD listeners** and optional **NBD Export peer beacons** on your **privat
 
 ## What Scan does
 
-1. Collect **private IPv4** targets from:
-   - Local interface prefixes (e.g. `192.168.254.0/24`)
-   - Private **routes** (e.g. `192.168.1.0/24 via …` when the peer LAN is not on a local NIC)
-   - Optional **`scan_extra_subnets`** in `NBDExport.cfg` (comma-separated CIDRs)
-   - **Remembered peer IPs** from prior successful scans (`scan-peers.json` on flash)
-2. Probe each host for:
-   - **NBD TCP** ports (default **10809**, plus a short range if configured).  
-   - **Beacon HTTP** on port **10808** (plugin JSON when advertise is running).  
-3. Classify results:
-   - **Peer plugin** — beacon JSON from NBD Export (hostname, version, export list).  
-   - **NBD port open** — TCP open; optional `qemu-img info` size/format.  
-4. UI: pick a row → **Use** fills the Pull **NBD URL** field.
+Scan never runs on page load. **Pull → Scan network** is a button. Tick which **local private LAN(s)** to probe in the Scan networks table (Thunderbolt is ticked by default when present; the default-route/management LAN is left off if another private LAN exists). Paste an `nbd://` URL instead if you do not want to scan.
+
+1. **POST + csrf_token** only. The server accepts only CIDRs that are on this box (local private /24) or in optional `scan_extra_subnets`. It does not sweep every route.
+2. **Default probe:** plugin **beacons on TCP 10808**. Optional checkbox also probes NBD ports **10809–10812**.
+3. Beacon JSON (hostname, version, labels, URLs) is **HTML-escaped** before it is shown.
+4. Remembered peer IPs are re-probed only if they sit on a LAN you ticked.
+5. UI: pick a row → **Use** fills the Pull **NBD URL** field.
 
 Scan is **best-effort** and bounded (timeouts, max hosts per subnet) so the WebUI does not hang.
 
@@ -69,8 +64,9 @@ Payload does **not** include array data, passwords, or full disk contents — on
 
 | Control | Default / rule |
 |---------|----------------|
-| Scan targets | Private IPv4 ranges only |
-| Beacon answers | Private client IPs only |
+| Scan targets | Private IPv4 /24s you tick (local ifaces; optional cfg extra) |
+| Scan start | Button + POST + csrf_token (GET does not scan) |
+| Beacon answers | Private client IPs only; listener prefers the Host bind IP |
 | NBD itself | Still **no** protocol auth — isolation is **bind IP** + RO default |
 | Token (optional later) | Shared secret on beacon/scan — not required for basic LAN use |
 | Cloud | None |
@@ -84,7 +80,7 @@ Treat open Host + writable export as sensitive even on LAN. Prefer Thunderbolt /
 1. Install **NBD Export** on both.  
 2. **Host:** Host tab → export disk, bind a private IP, port `10809` (or next free port).  
 3. Beacon starts automatically when the export is up.  
-4. **Scanner:** Pull tab → **Scan network** → select peer → **Use** → Pull or copy URL for Attach/VM.  
+4. **Scanner:** Pull tab → tick the LAN → **Scan network** → select peer → **Use** → Pull or copy URL for Attach/VM.  
 5. Ensure L3 reachability between the two machines.
 
 ---

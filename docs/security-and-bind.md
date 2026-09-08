@@ -128,7 +128,7 @@ On builds that include network discovery:
 
 | Piece | Security note |
 |-------|----------------|
-| **Scan** | Runs only from the **logged-in** WebUI; private subnets only |
+| **Scan** | Button on Pull; POST + csrf; only the private LAN(s) you tick; default is beacons on 10808 |
 | **Beacon** | Metadata only (hostname, version, export list); **private clients only**; no disk contents |
 | **While idle** | No beacon if no managed Host export is up |
 

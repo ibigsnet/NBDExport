@@ -94,7 +94,9 @@ User **Stop** / **Cancel** do not fire failure or host-down alerts.
 ## Logs tab vs Status History
 
 - **Status → History** shows job **cards** (run JSON under `/var/run/nbdexport/`).
-  **Remove from list** drops those cards only — **log files stay** under `/var/log/nbdexport/`.
+  **Remove from list** drops those cards only — **image files stay** under `/mnt` and
+  **log files stay** under `/var/log/nbdexport/`.
+  **Delete file** on a card unlinks that qcow2/raw; the card stays until you remove it.
 - **Logs** tab lists every `*.log` there (Pull, Host, beacon), including after History clear.
   **Clear log** (top and bottom) deletes finished logs; live job/host/beacon logs are kept.
 

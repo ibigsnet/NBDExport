@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.06ac">
+<!ENTITY version "2026.09.08ae">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/main/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,37 +25,25 @@
 
 <CHANGES>
 ###&version;
-- Restore Logs, Help, and Dashboard pages in the hashed install list (missed in 06aa).
+- History list-remove keeps qcow2; Pull scan LAN table.
 
-###2026.09.06ab
-- Hashed raw install; LAN scan is POST+CSRF; beacon text escaped in results.
+###2026.09.08ad
+- Dashboard: one tile in column 3 (Title was duplicating it at the top).
 
-###2026.09.06aa
-- Install copies plugin files from GitHub raw (SHA256/MD5 pin). No archive .txz payload.
+###2026.09.08aa–ac
+- Scan LAN picker; overlay install (do not wipe the live plugin before FILE copy).
 
-###2026.08.26av
-- WebUI load: lighter live poll (deferred, 4s/15s, pause when hidden); cache ss/ps; no sync snapshot on paint.
+###2026.09.06aa–ac
+- Hashed raw install (SHA256/MD5); restore Logs/Help/Dashboard.
 
-###2026.08.26au
-- Notifications: Pull done / failed / Host down unexpected (Settings dropdowns).
+###2026.08.26av–au
+- Lighter live poll under Pull load; Pull/Host notifications.
 
 ###2026.08.26at–ar
 - Dashboard full paths + stock tile; progress/ETA; Pause/Stop align.
 
 ###2026.08.26aq–ap
 - Logs tab (survives History clear); History/Logs short inline_help.
-
-###2026.08.26ao–an
-- Failure Reason map; Found a bug? diagnostics (forum/GitHub/Tools → Diagnostics).
-
-###2026.08.26am–aj
-- Convert PID and SIGUSR1 (rc=138) fixes; History Clear/Retry/Delete wording; net Gb/s.
-
-###2026.08.26ai–ag
-- Status Active/Queued/History; metrics/units; Paused purple; lazy Dashboard; busy Update refuse.
-
-###2026.08.26af–aa
-- Dashboard/job cards; uninstall exit 0; Pull fileTree Browse.
 
 ### Older releases
 - Full changelog: https://github.com/ibigsnet/NBDExport/blob/main/CHANGELOG.md
@@ -103,14 +91,15 @@ fi
 rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
       /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
 mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
-# YYYY.MM.DDxx package names: always remove prior installs so upgrades never leave mixed files
+# Forget old Slackware txz registration WITHOUT deleting the live tree.
+# removepkg / rm -rf here ran before GitHub FILE copies; a failed download
+# left Plugins on "error install" with no NBD Export.
 for p in /var/log/packages/NBDExport-* /var/log/packages/NbdExport-*; do
   [ -e "$p" ] || continue
-  echo "NBD Export: removing old package $(basename "$p")"
-  removepkg "$(basename "$p")" 2>/dev/null || true
+  echo "NBD Export: forgetting old package $(basename "$p") (overlay files next)"
+  rm -f "$p"
 done
-rm -rf /usr/local/emhttp/plugins/NBDExport \
-       /usr/local/emhttp/plugins/NbdExport \
+rm -rf /usr/local/emhttp/plugins/NbdExport \
        /usr/local/emhttp/plugins/nbdexport 2>/dev/null || true
 rm -f /boot/config/plugins/NBDExport/NBDExport-*.txz 2>/dev/null || true
 mkdir -p /usr/local/emhttp/plugins/NBDExport/{include,scripts,event}
@@ -126,8 +115,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDStatus.page">
 <URL>&raw;/NBDStatus.page?v=&version;</URL>
-<SHA256>c6994c2237572f549df7916f5200f6aae90c32c7443d14bf89e4e98ac7363fb2</SHA256>
-<MD5>04be5e6c6b67c2d1245f3a9ad87dde49</MD5>
+<SHA256>55b1be2cf285c223ee25a20ea079df0cea8ff6c2480a205f6d939026753bf9ed</SHA256>
+<MD5>6aacc1abadc0a9a9a51f3ceb45a3fcd8</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHost.page">
 <URL>&raw;/NBDHost.page?v=&version;</URL>
@@ -136,8 +125,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDPull.page">
 <URL>&raw;/NBDPull.page?v=&version;</URL>
-<SHA256>a04f4a8ff4d8e40b98539d193aeeef95e60aeb8bb9dff2694747fce7cd5d9b7e</SHA256>
-<MD5>6d4899e7ac8c89a647bd266861bc0297</MD5>
+<SHA256>5236ffe5d0e9cc5a34f6c290ff89480230174428a219cd22caa7e1bfcb8be31c</SHA256>
+<MD5>7445bdb4241bfc368500cfe094035fa5</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDLogs.page">
 <URL>&raw;/NBDLogs.page?v=&version;</URL>
@@ -146,8 +135,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDSettings.page">
 <URL>&raw;/NBDSettings.page?v=&version;</URL>
-<SHA256>2c34147a03a26ad6f2e672a264cbc2af792a2a71bce455984e80079f1dc03e3d</SHA256>
-<MD5>a6b3108f5b42582d0837059a76112faa</MD5>
+<SHA256>96dc27c5cbc6716bad19538fd6a90358d0bae1798643691048b9e5ada8f79ef9</SHA256>
+<MD5>5c9e35c741b12659de22bd477d6ba3f3</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDHelp.page">
 <URL>&raw;/NBDHelp.page?v=&version;</URL>
@@ -156,8 +145,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/NBDDashboard.page">
 <URL>&raw;/NBDDashboard.page?v=&version;</URL>
-<SHA256>dfb283c38f3e8c4e08bb375bbaf89a757afbe6d8f4830c1da6df37cdaf319e02</SHA256>
-<MD5>7dc372179f9c6d65913af5a4d2c66842</MD5>
+<SHA256>83c9ea08834ff04ec075374e0e4fcc2b81ce527167b5c2bb68c49c1fb3a59b38</SHA256>
+<MD5>86a905888d4e76c9194066f61eef25ae</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/default.cfg">
 <URL>&raw;/default.cfg?v=&version;</URL>
@@ -171,8 +160,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-beacon-server.php">
 <URL>&raw;/include/nbd-beacon-server.php?v=&version;</URL>
-<SHA256>fcca16b3d665f9a50d66205e3da4475284f00eee541b602fa942423679c644f0</SHA256>
-<MD5>70f920ae821fd8dae091e8514109ebf8</MD5>
+<SHA256>8024e04026eea533f2e2828f81ab3e95a1933290dba614bf9d4c7fa5fde0d1bd</SHA256>
+<MD5>034e7d44b951bab2c9e98261f9785fac</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-dash-status.php">
 <URL>&raw;/include/nbd-dash-status.php?v=&version;</URL>
@@ -181,18 +170,18 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-download-config.php">
 <URL>&raw;/include/nbd-download-config.php?v=&version;</URL>
-<SHA256>32158471cf9453bed5d2e1faf4b63b5bf0b41114ed6dd34c4e7378eb2794703b</SHA256>
-<MD5>3652e3fe59f7d1ae946624995f4400b1</MD5>
+<SHA256>16886f78f44a006717a3124b4733926ae680c27bae7b903711b1ba3a7a5245d7</SHA256>
+<MD5>18fe9cad9242f2c8476ba96a0feb7649</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-job-card.php">
 <URL>&raw;/include/nbd-job-card.php?v=&version;</URL>
-<SHA256>30f87bbd43963b436ac087eb175d4d9cf850966ce47ee7f914dae0ce406710de</SHA256>
-<MD5>685298b2b14ababbfeffd0ed367e2199</MD5>
+<SHA256>16f8f604f6902ba591771c520c7b7fa68fadb115c4675896867abffb7391f873</SHA256>
+<MD5>db43f886fb488190fedc81307d6166bc</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php">
 <URL>&raw;/include/nbd-lib.php?v=&version;</URL>
-<SHA256>9fd259a597e3f2016e0d14c0295b14bbd87a79eb6919e09fa520f5f79ce35ec2</SHA256>
-<MD5>65e747f81fef964c6dc67b0ef4f6d782</MD5>
+<SHA256>19e2bc535a7e341aa78720a606cddd042f99e47502f5d62a8f53eaed5c91fa04</SHA256>
+<MD5>bb7f0caee74531fb959ccbb806180951</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
 <URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
@@ -206,13 +195,13 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-boot.php">
 <URL>&raw;/include/nbd-page-boot.php?v=&version;</URL>
-<SHA256>37c22e3ae7242cdd9dac03235323ee826beff6d1571f4283427f171fae1cf1e2</SHA256>
-<MD5>be65e5adbc0abe379934d05ba9284996</MD5>
+<SHA256>58145708c27b59fbb3f284c9e7ec19b535a0e137117b406b4ac67fa3f3c3e2dc</SHA256>
+<MD5>f34488a0f6b9fcc47851e3a5442c8908</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php">
 <URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
-<SHA256>10014947fa6e58a22693bb96487e580b23b709e5501973a9305c827a45788f18</SHA256>
-<MD5>3fef5231e34dcac6f86eded7e0df3564</MD5>
+<SHA256>10ae9e526aa16cfb61c5b8030a3e02a4585095232fb196783086dd62b6d160b0</SHA256>
+<MD5>a9e3470cce8f2ce19d357d2f845be01f</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-reconcile.php">
 <URL>&raw;/include/nbd-reconcile.php?v=&version;</URL>
@@ -221,8 +210,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-scan.php">
 <URL>&raw;/include/nbd-scan.php?v=&version;</URL>
-<SHA256>130b8e869dfd844840b58abdf0e13a056614f4584d25899ccadb0a4555ebd20b</SHA256>
-<MD5>30e39edc39c488a43f37fd00adccf166</MD5>
+<SHA256>469ae9d14cdab91c7c47fff9cb453cc567d9f928dc000a2a7c7a3a25a9b951af</SHA256>
+<MD5>be1a5fc219092257f76a49b7e3d751d3</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php">
 <URL>&raw;/include/nbd-ud-head.php?v=&version;</URL>

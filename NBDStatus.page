@@ -65,10 +65,11 @@ foreach ($jobs_history as $j) {
 
     <div class="nbd-section">
       <h3>Pull jobs</h3>
-      <p class="nbd-section-lead">Active, queue, then history.</p>
+      <p class="nbd-section-lead">Active, queue, then past jobs (job records — not a file list).</p>
       <blockquote class="inline_help">
         Stopped converts cannot resume — <strong>Retry</strong> starts over.
-        <strong>Delete image</strong> frees incomplete output.
+        <strong>Remove from list</strong> drops History cards only; the qcow2/raw stays under <code>/mnt</code>.
+        <strong>Delete file</strong> on a card is the action that unlinks the image.
         ETA appears after progress moves (large disks may sit at 0% briefly).
       </blockquote>
       <div class="nbd-status-legend">
@@ -116,6 +117,10 @@ foreach ($jobs_history as $j) {
 <?php if (!$jobs_history): ?>
       <p class="nbd-muted">No finished or failed jobs.</p>
 <?php else: ?>
+      <p class="nbd-section-lead" style="margin:0 0 0.55em">
+        These cards are Pull <strong>job records</strong>. Removing a card from this list does
+        <strong>not</strong> delete the qcow2/raw under <code>/mnt</code>.
+      </p>
 <?php if ($n_clearable > 0): ?>
       <div class="nbd-jobs-toolbar">
         <form method="POST" action="/update.php" target="progressFrame" id="nbd-jobs-clear-form"
@@ -124,15 +129,15 @@ foreach ($jobs_history as $j) {
           <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
           <input type="hidden" name="nbd_action" value="jobs_clear">
           <input type="hidden" name="clear_finished" id="nbd_clear_finished" value="no">
-          <span class="nbd-toolbar-group" role="group" aria-label="Checkboxes">
-            <span class="nbd-toolbar-label">Checkboxes</span>
+          <span class="nbd-toolbar-group" role="group" aria-label="Select records">
+            <span class="nbd-toolbar-label">Select records</span>
             <button type="button" onclick="nbdJobsSelectByStatus(null)">Check all</button>
             <button type="button" onclick="nbdJobsSelectByStatus('failed')">Check failed</button>
             <button type="button" onclick="nbdJobsSelectByStatus(false)">Uncheck all</button>
           </span>
           <span class="nbd-toolbar-sep" aria-hidden="true">|</span>
-          <span class="nbd-toolbar-group" role="group" aria-label="History list">
-            <span class="nbd-toolbar-label">History list</span>
+          <span class="nbd-toolbar-group" role="group" aria-label="Remove from this list">
+            <span class="nbd-toolbar-label">This list only</span>
             <input type="submit" name="#apply" value="Remove checked from list"
               onclick="return nbdJobsClearClick(false);">
             <input type="submit" name="#apply" value="Remove all finished from list"
@@ -140,9 +145,9 @@ foreach ($jobs_history as $j) {
           </span>
         </form>
         <blockquote class="inline_help">
-          <strong>Remove from list</strong> — Status cards only (images and logs stay; see <strong>Logs</strong>).
-          <strong>Delete image</strong> — frees the qcow2/raw.
-          <strong>Retry</strong> — new Pull; same path deletes the incomplete file.
+          <strong>Remove from list</strong> — drops these cards. Image files stay on disk; logs stay on the <strong>Logs</strong> tab.
+          <strong>Delete file</strong> on a card unlinks that qcow2/raw. The card stays until you remove it here.
+          <strong>Retry</strong> — new Pull; same output path unlinks the incomplete file first.
         </blockquote>
       </div>
 <?php endif; ?>
@@ -182,9 +187,9 @@ foreach ($jobs_history as $j) {
         alert('Check at least one History job first, or use Remove all finished from list.');
         return false;
       }
-      return confirm('Remove ' + boxes.length + ' checked job(s) from the History list?\n\nFiles under /mnt are kept. Use Delete image on a card to free space.');
+      return confirm('Remove ' + boxes.length + ' job record(s) from this list?\n\nThe qcow2/raw files stay on disk.\nThis is not Delete file.');
     }
-    return confirm('Remove all Done/Failed/Idle jobs from the History list?\n\nFiles under /mnt are kept. Use Delete image on a card to free space.');
+    return confirm('Remove all Done/Failed/Idle job records from this list?\n\nThe qcow2/raw files stay on disk.\nThis is not Delete file.');
   };
   window.nbdJobsClearSubmit = function () { return true; };
   document.addEventListener('click', function (ev) {

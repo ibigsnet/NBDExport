@@ -52,7 +52,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
         <div class="nbd-job-card" data-nbd-job-id="<?= $jid ?>" data-nbd-key="<?= htmlspecialchars($jkey) ?>">
           <div class="nbd-job-card-top">
 <?php if ($clearable): ?>
-            <label class="nbd-job-sel" title="Select for Clear">
+            <label class="nbd-job-sel" title="Select this job record (file stays on disk)">
               <input type="checkbox" class="nbd-job-cb" name="job_ids[]" value="<?= $jid ?>"
                 form="nbd-jobs-clear-form" data-nbd-status="<?= htmlspecialchars($jkey) ?>">
             </label>
@@ -74,7 +74,15 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
           </div>
           <div class="nbd-job-card-meta">
             <div><span class="nbd-muted">Source</span> <code class="nbd-job-path"><?= htmlspecialchars($src !== '' ? $src : '—') ?></code></div>
-            <div><span class="nbd-muted">Output</span> <code class="nbd-job-path"><?= htmlspecialchars($out !== '' ? $out : '—') ?></code></div>
+            <div>
+              <span class="nbd-muted">Output</span>
+              <code class="nbd-job-path"><?= htmlspecialchars($out !== '' ? $out : '—') ?></code>
+<?php if ($clearable && $out !== '' && $out !== '(unknown)'): ?>
+              <?= $out_exists
+                ? '<span class="nbd-ok" title="File is still on disk">on disk</span>'
+                : '<span class="nbd-muted" title="No file at this path">not on disk</span>' ?>
+<?php endif; ?>
+            </div>
 <?php if ($jkey === 'failed' && ($fail['reason'] ?? '') !== ''): ?>
             <div class="nbd-job-fail">
               <strong>Reason</strong>
@@ -159,22 +167,30 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                 <input type="submit" name="#apply" value="Retry">
               </form>
               <button type="button" class="nbd-job-edit-toggle" data-nbd-edit="<?= $jid ?>">Edit &amp; retry…</button>
-<?php if ($out_exists): ?>
-              <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex"
-                onsubmit="return confirm('DELETE image file from disk?\n\n<?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nFrees space without starting a new Pull. Job card stays until Clear.');">
-                <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
-                <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
-                <input type="hidden" name="nbd_action" value="job_delete_output">
-                <input type="hidden" name="job_id" value="<?= $jid ?>">
-                <input type="submit" name="#apply" value="Delete image">
-              </form>
-<?php endif; ?>
 <?php endif; ?>
 <?php if ($show_bug): ?>
               <button type="button" class="nbd-job-bug-btn" data-nbd-bug="<?= $jid ?>"
                 title="Reason is outside our known map — copy diagnostics for support">Found a bug?</button>
 <?php endif; ?>
           </div>
+<?php if ($clearable && !$external && $out !== '' && $out !== '(unknown)'): ?>
+          <div class="nbd-job-disk-row">
+            <span class="nbd-job-disk-label">On disk</span>
+<?php if ($out_exists): ?>
+            <span class="nbd-ok">file present</span>
+            <form method="POST" action="/update.php" target="progressFrame"
+              onsubmit="return confirm('Permanently delete this file from disk?\n\n<?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nThis is not Remove from list. The History card stays.');">
+              <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
+              <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
+              <input type="hidden" name="nbd_action" value="job_delete_output">
+              <input type="hidden" name="job_id" value="<?= $jid ?>">
+              <input type="submit" name="#apply" value="Delete file" title="Unlink the qcow2/raw. Does not remove this job record.">
+            </form>
+<?php else: ?>
+            <span class="nbd-muted">no file at this path</span>
+<?php endif; ?>
+          </div>
+<?php endif; ?>
 <?php if ($show_bug): ?>
           <div class="nbd-bug-panel" id="nbd-bug-<?= $jid ?>" hidden>
             <p class="nbd-bug-lead">

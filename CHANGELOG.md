@@ -6,6 +6,43 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.08ae
+
+- **History:** Status past-job list is job records, not a file manager. **Remove from
+  list** still keeps the qcow2/raw under `/mnt` (and logs). Cards show **on disk** /
+  **not on disk**; **Delete file** sits on a separate On disk row so it is not mixed
+  with list-remove.
+- **Pull scan:** LAN picker is a Settings-style table (network, interface, this Unraid
+  IP, Thunderbolt / default route / extra). NBD-port probe is a Yes/No select.
+
+## 2026.09.08ad
+
+- **Dashboard:** drop `Title=` from `NBDDashboard.page`. Unraid was rendering that as a
+  second heading at the top of Dashboard in addition to the `$mytiles` column-3 tile
+  (bottom right). Official custom-tile example has no Title.
+
+## 2026.09.08ac
+
+- **Install:** do not `rm -rf` the live plugin or `removepkg` before GitHub FILE copies.
+  Update All was wiping the tree, then a failed download left Plugins on **error install**
+  with no NBD Export. Overlay files; forget old txz package names only.
+
+## 2026.09.08ab
+
+- **Config export:** Settings → Download JSON is POST + csrf_token (GET no longer dumps config).
+
+## 2026.09.08aa
+
+- **Scan network:** button only (never on page load). Tick which **local private LAN(s)** to
+  probe; Thunderbolt is ticked by default when present, management/default-route LAN is
+  left off if another private LAN exists. Server accepts only those CIDRs (plus optional
+  `scan_extra_subnets`). Default probe is plugin **beacons on TCP 10808**; optional
+  checkbox also sweeps NBD ports 10809–10812. POST + csrf_token; beacon text escaped.
+  Remembered peers are re-probed only if they sit on a selected LAN. Paste `nbd://` if
+  you do not want to scan.
+- **Beacon listen:** `php -S` binds the Host export IP when there is a single private
+  bind; otherwise `0.0.0.0` with the existing private-client filter.
+
 ## 2026.09.06ac
 
 - **Fix:** hashed install list omitted **Logs**, **Help**, and **Dashboard** pages
@@ -13,13 +50,14 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ## 2026.09.06ab
 
-- **CA review:** hashed raw install. LAN scan is POST + csrf_token; scan results
+- **Install / security:** hashed raw files. LAN scan is POST + csrf_token; scan results
   HTML-escape beacon-supplied hostname/version/label/URL.
 
 ## 2026.09.06aa
 
 - **Install:** plugin files come from GitHub raw with SHA256/MD5 pins in the `.plg`.
-  Dropped `archive/*.txz` payload (`upgradepkg`). Addresses CA review: unsigned package download.
+  Dropped `archive/*.txz` payload (`upgradepkg`). Pins the download so the payload cannot
+  change under a given plugin version.
 
 ## 2026.08.26av
 
@@ -48,7 +86,6 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 - **Dashboard tile:** stock single-cell icon+section (no dual-row `tile-header` stretch).
   First paint shows `—` then fills after idle callback — no “Loading…” flash.
   Dash poll skips external `qemu-img` `ps` scan; 5s when active / 15s when idle.
-- Backlog inventory: `docs/backlog-from-chat.md`.
 
 ## 2026.08.26ar
 

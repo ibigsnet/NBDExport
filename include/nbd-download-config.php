@@ -1,8 +1,27 @@
 <?php
 /**
  * Browser download of NBD Export settings + memory/presets (JSON).
- * Linked from Settings → NBD; requires WebGUI session (Unraid root UI).
+ * POST + csrf_token (Settings tab). GET does not export.
  */
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+  http_response_code(405);
+  header('Allow: POST');
+  header('Content-Type: text/plain; charset=UTF-8');
+  echo "POST required\n";
+  exit;
+}
+$csrf_expected = '';
+if (is_readable('/var/local/emhttp/var.ini')) {
+  $var_ini = @parse_ini_file('/var/local/emhttp/var.ini');
+  $csrf_expected = is_array($var_ini) ? (string)($var_ini['csrf_token'] ?? '') : '';
+}
+if ($csrf_expected !== '' && !hash_equals($csrf_expected, (string)($_POST['csrf_token'] ?? ''))) {
+  http_response_code(403);
+  header('Content-Type: text/plain; charset=UTF-8');
+  echo "Invalid csrf_token\n";
+  exit;
+}
+
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php';
 
 $bundle = nbd_config_export_bundle();
