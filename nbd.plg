@@ -88,8 +88,8 @@ if [ -d /boot/config/plugins/NbdExport ]; then
   echo "NBD Export: migrated flash config NbdExport → NBDExport"
 fi
 # Note: do not delete /tmp/plugins/nbd.plg here — Unraid uses it as the install working copy
-rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
-      /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
+rm -f /boot/config/plugins/nbdexport.plg \
+      /var/log/plugins/nbdexport.plg 2>/dev/null || true
 mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
 # Forget old Slackware txz registration WITHOUT deleting the live tree.
 # removepkg / rm -rf here ran before GitHub FILE copies; a failed download
@@ -180,8 +180,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php">
 <URL>&raw;/include/nbd-lib.php?v=&version;</URL>
-<SHA256>19e2bc535a7e341aa78720a606cddd042f99e47502f5d62a8f53eaed5c91fa04</SHA256>
-<MD5>bb7f0caee74531fb959ccbb806180951</MD5>
+<SHA256>6c1e7e37a0d38eddf7bde3566baebc1ec9f5b6017222db6388838ec926d51853</SHA256>
+<MD5>f19020cd7c9f92684f70d59f89db393e</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
 <URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
@@ -357,16 +357,14 @@ rm -rf \
 rm -f \
   /boot/config/plugins/nbdexport.plg \
   /boot/config/plugins/NBDExport.plg \
-  /boot/config/plugins/NbdExport.plg \
-  /boot/config/plugins/install.plg >/dev/null 2>&1
+  /boot/config/plugins/NbdExport.plg >/dev/null 2>&1
 
 rm -f \
   /tmp/plugins/nbd.txt \
   /tmp/plugins/nbdexport.plg \
   /tmp/plugins/NBDExport.plg \
   /var/log/plugins/nbdexport.plg \
-  /var/log/plugins/NBDExport.plg \
-  /var/log/plugins/install.plg >/dev/null 2>&1
+  /var/log/plugins/NBDExport.plg >/dev/null 2>&1
 
 # Note: do not delete /tmp/plugins/nbd.plg here — Unraid install/remove working copy
 # Note: do not touch /boot/config/plugins-removed/ (Unraid-owned)
