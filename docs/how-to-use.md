@@ -60,10 +60,12 @@ Main actions in the NBD UI (and what they run). Columns: **control → process �
 
 | Tab | Purpose |
 |-----|---------|
-| **Status** | Tools check, pull-job list, collapsible CLI. Live hosts also appear at the top of **every** tab. |
+| **Status** | Tools check; pull jobs as **Active / Queued / History**. History is job records — **Remove from list** does not delete the qcow2/raw. **Delete file** on a card unlinks the image. |
 | **Host** | Publish a local Unraid disk (server). Multi-disk: host again with another free port. |
-| **Pull** | Image a remote `nbd://…` into a file under `/mnt/…` (client). |
+| **Pull** | Image a remote `nbd://…` (or local disk/file) into a file under `/mnt/…`. **Scan network** is a button; tick LANs in the table first. |
+| **Logs** | Plugin logs under `/var/log/nbdexport/` (survive History list-remove). |
 | **Settings** | Enable plugin, defaults, Destructive mode, export/import config. |
+| **Help** | Safe Mode / CLI recovery notes. |
 
 At the top of every tab you always see **disks currently hosted** (and an orange banner if Destructive mode is ON).
 

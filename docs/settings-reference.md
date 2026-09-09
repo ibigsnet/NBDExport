@@ -20,10 +20,12 @@ Every tab shows a shared header: **disks currently hosted** (and an orange banne
 
 | Tab | Purpose |
 |-----|---------|
-| **Status** | Tools (`qemu-nbd` / `qemu-img`), pull-job list, collapsible CLI |
+| **Status** | Tools (`qemu-nbd` / `qemu-img`); pull jobs Active / Queued / History (list-remove keeps qcow2/raw) |
 | **Host** | Publish a local Unraid disk/partition (NBD server) |
-| **Pull** | Image a remote `nbd://…` into a file under `/mnt/…` (client) |
+| **Pull** | Image `nbd://…` or a local disk/file into a file under `/mnt/…`; Scan network is a LAN table + button |
+| **Logs** | `/var/log/nbdexport/` (survives History list-remove) |
 | **Settings** | Enable, defaults, Destructive mode, export/import config |
+| **Help** | Safe Mode / CLI recovery |
 
 ---
 
