@@ -13,7 +13,7 @@ if (!isset($presets) || !is_array($presets)) {
 <script>
 (function () {
   var destructiveOn = <?= $destructive === 'yes' ? 'true' : 'false' ?>;
-  var NBD_PRESETS = <?= json_encode($presets, JSON_UNESCAPED_SLASHES) ?> || {};
+  var NBD_PRESETS = <?= json_encode($presets, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) ?> || {};
 
   function nbdSelectedBinds() {
     var boxes = document.querySelectorAll('#nbd_export_form input.nbd-bind-cb:checked');
