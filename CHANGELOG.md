@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.09aa
+
+- **Host bind:** start refuses a non-IP bind. Stop `pkill` quotes the bind so dots are
+  not regex wildcards. CLI `nbd-export-start … rw` now passes confirm (still gated by
+  Destructive mode).
+- **Install:** do not delete `/boot/config/plugins/install.plg` (not this plugin’s name).
+- Preset JSON in the Host tab script uses `JSON_HEX_TAG` so a `</script>` in a name
+  cannot break out of the page.
+
 ## 2026.09.08ae
 
 - **History:** Status past-job list is job records, not a file manager. **Remove from

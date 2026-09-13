@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.08ae">
+<!ENTITY version "2026.09.09aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,13 +25,10 @@
 
 <CHANGES>
 ###&version;
-- History list-remove keeps qcow2; Pull scan LAN table.
+- Bind must be an IP; pkill quotes it; do not delete install.plg.
 
-###2026.09.08ad
-- Dashboard: one tile in column 3 (Title was duplicating it at the top).
-
-###2026.09.08aa–ac
-- Scan LAN picker; overlay install (do not wipe the live plugin before FILE copy).
+###2026.09.08aa–ae
+- History vs Delete file; Dashboard one tile; Scan LAN table; overlay install.
 
 ###2026.09.06aa–ac
 - Hashed raw install (SHA256/MD5); restore Logs/Help/Dashboard.
@@ -88,8 +85,8 @@ if [ -d /boot/config/plugins/NbdExport ]; then
   echo "NBD Export: migrated flash config NbdExport → NBDExport"
 fi
 # Note: do not delete /tmp/plugins/nbd.plg here — Unraid uses it as the install working copy
-rm -f /boot/config/plugins/install.plg /boot/config/plugins/nbdexport.plg \
-      /var/log/plugins/install.plg /var/log/plugins/nbdexport.plg 2>/dev/null || true
+rm -f /boot/config/plugins/nbdexport.plg \
+      /var/log/plugins/nbdexport.plg 2>/dev/null || true
 mkdir -p /boot/config/plugins/NBDExport /var/run/nbdexport /var/log/nbdexport
 # Forget old Slackware txz registration WITHOUT deleting the live tree.
 # removepkg / rm -rf here ran before GitHub FILE copies; a failed download
@@ -180,8 +177,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php">
 <URL>&raw;/include/nbd-lib.php?v=&version;</URL>
-<SHA256>19e2bc535a7e341aa78720a606cddd042f99e47502f5d62a8f53eaed5c91fa04</SHA256>
-<MD5>bb7f0caee74531fb959ccbb806180951</MD5>
+<SHA256>2053ce59762205450fceae4026012e691c06d420bb12607007ec9b609ef52e29</SHA256>
+<MD5>344545966325518877480bb5c3c13e89</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-live-status.php">
 <URL>&raw;/include/nbd-live-status.php?v=&version;</URL>
@@ -200,8 +197,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-page-js.php">
 <URL>&raw;/include/nbd-page-js.php?v=&version;</URL>
-<SHA256>10ae9e526aa16cfb61c5b8030a3e02a4585095232fb196783086dd62b6d160b0</SHA256>
-<MD5>a9e3470cce8f2ce19d357d2f845be01f</MD5>
+<SHA256>b8b30958cfd26fc91ebc116a742392277f4ed08865bbf8b9c977d04a301a593d</SHA256>
+<MD5>2d90c41ad6f69d18ab2372f8252ad31e</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/include/nbd-reconcile.php">
 <URL>&raw;/include/nbd-reconcile.php?v=&version;</URL>
@@ -235,8 +232,8 @@ echo "NBD Export: ready for file install."
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-start">
 <URL>&raw;/scripts/nbd-export-start?v=&version;</URL>
-<SHA256>ce6d970b3404769cd90e9669bf12ab9a4057c7f10cd0ebdf996d3f24c271d1ad</SHA256>
-<MD5>d7a440a4741f957fdaf2820b6acf56bb</MD5>
+<SHA256>a9845abb289852dd7a77e7b23b5ebf19e82f51a85260f4a1cc9d2b4b1c300c04</SHA256>
+<MD5>a7463a63c8535a8c3af859267b1d14dd</MD5>
 </FILE>
 <FILE Name="/usr/local/emhttp/plugins/NBDExport/scripts/nbd-export-stop">
 <URL>&raw;/scripts/nbd-export-stop?v=&version;</URL>
@@ -357,16 +354,14 @@ rm -rf \
 rm -f \
   /boot/config/plugins/nbdexport.plg \
   /boot/config/plugins/NBDExport.plg \
-  /boot/config/plugins/NbdExport.plg \
-  /boot/config/plugins/install.plg >/dev/null 2>&1
+  /boot/config/plugins/NbdExport.plg >/dev/null 2>&1
 
 rm -f \
   /tmp/plugins/nbd.txt \
   /tmp/plugins/nbdexport.plg \
   /tmp/plugins/NBDExport.plg \
   /var/log/plugins/nbdexport.plg \
-  /var/log/plugins/NBDExport.plg \
-  /var/log/plugins/install.plg >/dev/null 2>&1
+  /var/log/plugins/NBDExport.plg >/dev/null 2>&1
 
 # Note: do not delete /tmp/plugins/nbd.plg here — Unraid install/remove working copy
 # Note: do not touch /boot/config/plugins-removed/ (Unraid-owned)

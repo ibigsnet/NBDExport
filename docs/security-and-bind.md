@@ -42,6 +42,7 @@ When Destructive mode is ON, every NBD tab shows an **orange banner**. You may t
 | Destructive mode | **No** |
 | Bind address | Specific host IP — **Thunderbolt first** when present |
 | Bind `0.0.0.0` | **Disabled** unless Allow bind 0.0.0.0 = Yes |
+| Bind value | Must be an IPv4 or IPv6 address (not a hostname) |
 | Array / mounted / flash | Blocked unless Destructive mode = Yes (+ UI confirm) |
 | Writable host | Blocked unless Destructive mode = Yes (+ double UI confirm) |
 | Writable **boot** device | **Always refused** (even with Destructive On) |

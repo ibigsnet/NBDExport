@@ -1938,6 +1938,9 @@ function nbd_export_start($device, $bind, $port, $read_only = true, $label = '',
   if ($bind === '') {
     return ['ok' => false, 'error' => 'Bind IP is required (prefer Thunderbolt or private LAN).'];
   }
+  if (filter_var($bind, FILTER_VALIDATE_IP) === false) {
+    return ['ok' => false, 'error' => 'Bind must be an IPv4 or IPv6 address.'];
+  }
   if ($bind === '0.0.0.0' && ($cfg['allow_bind_all'] ?? 'no') !== 'yes') {
     return ['ok' => false, 'error' => 'Binding 0.0.0.0 is disabled (allow_bind_all=no). Pick a specific IP.'];
   }
@@ -2055,9 +2058,9 @@ function nbd_export_stop($id) {
     if (is_array($j) && !empty($j['port'])) {
       $p = (int)$j['port'];
       $b = trim((string)($j['bind'] ?? ''));
-      if ($b !== '') {
-        // cmd order: --bind=IP --port=N
-        @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--bind=' . $b . '.*--port=' . $p) . ' 2>/dev/null || true');
+      if ($b !== '' && filter_var($b, FILTER_VALIDATE_IP) !== false) {
+        // cmd order: --bind=IP --port=N. Quote bind so dots are not regex wildcards.
+        @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--bind=' . preg_quote($b, '/') . '.*--port=' . $p) . ' 2>/dev/null || true');
       } else {
         @exec('pkill -f ' . escapeshellarg('qemu-nbd.*--port=' . $p) . ' 2>/dev/null || true');
       }
