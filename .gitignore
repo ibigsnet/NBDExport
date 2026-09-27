@@ -20,5 +20,6 @@ docs/backlog-from-chat.md
 scripts/pack-txz.sh
 scripts/promote-stable.sh
 
-# Plugin payload is hashed raw files in the .plg — do not ship Slackware txz
+# Plugin .txz is a GitHub Release asset, not a git blob
 archive/*.txz
+dist/
