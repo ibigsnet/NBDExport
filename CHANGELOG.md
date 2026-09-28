@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.28ab
+
+- **Security:** `nbd-update.php` (Host, Pull, Settings, History and Logs actions) is POST
+  only (405 on GET) and checks the WebUI CSRF token. It fails closed when the token is empty
+  or cannot be read. It still works when Unraid's `/update.php` posts the form.
+- **Fix:** LAN scan and settings download returned 403 on Unraid. Unraid checks
+  `csrf_token` on every POST and then removes it from `$_POST`, so the plugin now also reads
+  the token from the raw form body or the `X-CSRF-Token` header (`include/nbd-csrf.php`).
+
 ## 2026.09.28aa
 
 - **Security:** LAN scan and settings export refuse the request when the WebUI CSRF

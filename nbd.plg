@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.28aa">
+<!ENTITY version "2026.09.28ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,6 +25,9 @@
 
 <CHANGES>
 ###&version;
+- Host, Pull and Settings actions are POST only and check the CSRF token (fail closed). Scan and settings export work again: Unraid removes csrf_token from $_POST after its own check, so the plugin also reads it from the form body.
+
+###2026.09.28aa
 - Scan and settings export refuse the request when the CSRF token cannot be read. Generic example addresses in defaults and docs.
 
 ###2026.09.27aa
@@ -97,8 +100,8 @@ echo "NBD Export: ready for file install."
 <!-- raw-files begin -->
 <FILE Name="&configdir;/NBDExport-&version;-x86_64-1.txz" Run="upgradepkg --install-new --reinstall">
 <URL>https://github.com/ibigsnet/NBDExport/releases/download/v&version;/NBDExport-&version;-x86_64-1.txz</URL>
-<SHA256>965f9420889154057d7b0164ada3514bad469d2b0de8728c6d16515b6a826728</SHA256>
-<MD5>ea62f3d09b7058d57d5379e568836afe</MD5>
+<SHA256>3688f72733d166f93208b3cfc40edce0a95de5b12881a3c9535845bc91760e16</SHA256>
+<MD5>b38f36dea20a14690e47bf1c6d426a78</MD5>
 </FILE>
 <!-- raw-files end -->
 
