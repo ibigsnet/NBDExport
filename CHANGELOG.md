@@ -438,6 +438,22 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 - **Release channel:** PluginURL + raw sources on branch `stable` (install.plg remains Latest URL).
 - SECURITY.md: RO default, no bind-all, destructive off, managed-pid uninstall.
 
+## 2026.08.13aj
+- Wording: spell out **Thunderbolt** (not ambiguous “TB”); storage sizes stay “1 TB”.
+
+## 2026.08.13ai
+- Companion rename: **Fabric Routing** / **FabricRouting** (was UnraidFRR).
+- Docs: standard Support development line (Patreon + PayPal) in the NBD meta table.
+
+## 2026.08.13ah
+- PluginURL matches the `.plg` entity exactly (no `?v=` query) so Community Apps can list/update NBD Export.
+
+## 2026.08.13ag
+- Docs/code comments: example IPs made generic.
+
+## 2026.08.13af
+- Install: `install.plg?v=` cache-bust on PluginURL (keep body identical to `nbdexport.plg`).
+
 ## 2026.08.13ae
 - Fleet standard ibigsGotoNetTab (same as af).
 
@@ -458,31 +474,88 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ## 2026.08.11bm
 - UI: drop redundant hosted-disks lead line; empty state is enough.
+
+## 2026.08.11bl
 - UI: remove meta “Always visible” note from hosted-disks header; public copy only.
+
+## 2026.08.11bk
 - Docs: Destructive mode wording — NBD block protocol, not imaging-only; mounted case less qcow2-centric.
+
+## 2026.08.11bj
 - Docs/UI: Destructive case 2 = array/parity/cache/pools; case 4 = Unraid boot device (USB or disk holding /boot).
+
+## 2026.08.11bi
 - Docs: destructive-mode.md — four Host cases only, bullet points.
+
+## 2026.08.11bh
+- Docs: destructive-mode.md rewrite — prose + lists, drop awkward tables.
+
+## 2026.08.11bg
 - Docs: NBD is not qcow2-only — raw/.img and other qemu-img targets; formats table.
 - Docs: one NVMe slot scenario — prepare image on Unraid, write new drive in a dock, swap once.
+
+## 2026.08.11bf
 - Docs: restore how-to-use.md (full scenarios A–F; prior empty file on main).
 - Docs: Wi‑Fi balance — solid private Wi‑Fi OK for smaller jobs; single stream + sparse qcow2 + re-Pull while host stays up; still ordinary TCP (no special resume).
+
+## 2026.08.11be
+- Docs: balanced Wi‑Fi guidance — fine for smaller private jobs; multi-terabyte prefers Thunderbolt/10G; NBD is still TCP.
+
+## 2026.08.11bd
 - Docs: when-to-use — common scenarios (laptop→VM, gaming PC→array, recovery, reverse to physical).
+
+## 2026.08.11bc
 - Docs: when-to-use opener — local physical disk feel, over the network.
+
+## 2026.08.11bb
 - Docs: rename “If you click this…” to “What each control does”.
+
+## 2026.08.11ba
 - Docs: Contents/TOC on large pages (how-to-use, DOCS, destructive-mode, …).
+
+## 2026.08.11az
 - Docs: destructive-mode.md — explicit when to enable Destructive mode.
+
+## 2026.08.11ay
 - Docs/UI: spell out read-only (not RO); table entry not row — avoid RO/row confusion.
+
+## 2026.08.11ax
 - Docs: Scenario E — clear BTRFS snapshot recipe only (public tone).
+
+## 2026.08.11aw
 - Docs: quirky Thunderbolt vs 10G speed notes (Thunderbolt 4 ~20G each way ≈ 2× 10G NIC) in how-to / when-to / integration.
+
+## 2026.08.11av
 - Docs: Scenario E — cold physical-disk qcow2 on Unraid + honest BTRFS snapshot versioning.
+
+## 2026.08.11au
 - Docs: Scenario C wording — Host where disk plugs in (may lack free space); Pull qcow2 onto roomy Unraid/array.
+
+## 2026.08.11at
 - Docs: Host wording — raw blocks visible over the network.
-- Docs: disambiguate Thunderbolt — Thunderbolt vs multi-terabyte (spell out both).
+
+## 2026.08.11as
+- Docs: disambiguate “TB” — Thunderbolt vs multi-terabyte (spell out both).
+
+## 2026.08.11ar
 - Docs: Scenario C expanded — Host NVMe on easy-access Unraid, Pull qcow2 on the box with space.
+
+## 2026.08.11aq
+- Docs: documentation cleanse for the tab UI.
+
+## 2026.08.11ap
 - Docs: how-to-use tables rewritten for left→right reading; UI map matches tabs (not old section 3/4).
+
+## 2026.08.11ao
 - Wording: Destructive confirm clarifies writable = peer writes selected Unraid disk; array/mounted/flash = host in-use/critical devices.
+
+## 2026.08.11an
 - Shared chrome: hosted disks + orange Destructive banner on every tab; NBD blurb footer; CLI dropdown on Status.
+
+## 2026.08.11am
 - Tabs: header-only parent (no blank first tab, like Network Settings/SMB); center tab strip; text tabs.
+
+## 2026.08.11al
 - UI tabs (Unraid xmenu): Status · Host · Pull · Settings — like Network Settings / SMB strip.
 - Multi-disk hosting documented (already supported; free port prefill); CLI under Status as collapsible.
 
