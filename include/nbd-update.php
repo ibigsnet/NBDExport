@@ -4,6 +4,24 @@
  */
 $save = false;
 
+// Unraid's /update.php runs this as its #include. POST only, CSRF fails closed.
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+  if (!headers_sent()) {
+    http_response_code(405);
+    header('Allow: POST');
+  }
+  echo "POST required\n";
+  exit;
+}
+require_once __DIR__ . '/nbd-csrf.php';
+if (!nbd_csrf_ok()) {
+  if (!headers_sent()) {
+    http_response_code(403);
+  }
+  echo "Invalid csrf_token\n";
+  exit;
+}
+
 require_once '/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php';
 
 $action = $_POST['nbd_action'] ?? '';

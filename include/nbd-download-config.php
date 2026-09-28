@@ -10,12 +10,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
   echo "POST required\n";
   exit;
 }
-$csrf_expected = '';
-if (is_readable('/var/local/emhttp/var.ini')) {
-  $var_ini = @parse_ini_file('/var/local/emhttp/var.ini');
-  $csrf_expected = is_array($var_ini) ? (string)($var_ini['csrf_token'] ?? '') : '';
-}
-if ($csrf_expected !== '' && !hash_equals($csrf_expected, (string)($_POST['csrf_token'] ?? ''))) {
+require_once __DIR__ . '/nbd-csrf.php';
+// Fail closed: no readable token means no request goes through.
+if (!nbd_csrf_ok()) {
   http_response_code(403);
   header('Content-Type: text/plain; charset=UTF-8');
   echo "Invalid csrf_token\n";

@@ -222,7 +222,7 @@ if ($nbd_scan_lans) {
       <input type="hidden" name="output" id="nbd_ps_out" value="">
       <input type="hidden" name="format" id="nbd_ps_fmt" value="">
       <span class="nbd-muted">Save pull preset as</span>
-      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. peer-holo-qcow" style="width:12em">
+      <input type="text" name="preset_name" maxlength="48" placeholder="e.g. peer-vm-qcow2" style="width:12em">
       <input type="submit" name="#apply" value="Save pull preset">
     </form>
 <?php if ($pull_presets): ?>
