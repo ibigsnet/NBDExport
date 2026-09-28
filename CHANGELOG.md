@@ -6,6 +6,13 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.09.28aa
+
+- **Security:** LAN scan and settings export refuse the request when the WebUI CSRF
+  token cannot be read, instead of skipping the check.
+- **Docs / defaults:** example subnets in `default.cfg` and the discovery docs use
+  generic addresses. Pull preset name placeholder is generic.
+
 ## 2026.09.27aa
 
 - **Install:** one Slackware `.txz` per version, saved on the flash drive from the
@@ -77,7 +84,7 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 ## 2026.08.26av
 
 - **WebUI under load:** live-watch no longer runs a full snapshot on every Status/Host/Pull
-  paint (that competed with dual Pulls + Folder Caching `find` on PLUSH). First poll is
+  paint (that competed with dual Pulls + Folder Caching `find` on a busy host). First poll is
   deferred; active poll **4s**, idle **15s**, hidden tab **30s**; overlap-guarded.
 - **Cheaper probes:** cache `ss -lnt` and `qemu-img` `ps` (~2.5–3s); skip `ss` when Host
   PID is alive; live snapshot skips external merge + running log tails; queue kick ≤1/8s.
@@ -317,8 +324,23 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 ## 2026.08.15ah
 - Uninstall: document full wipe of plugin flash tree; do not touch Unraid plugins-removed; leave user export JSON under /boot/config/nbdexport-config-*.json.
 
+## 2026.08.15ag
+- Fix: install prepare no longer wipes Unraid's `/tmp/plugins` working copy.
+
+## 2026.08.15af
+- Remove leaves the plugin `.plg` file to Unraid.
+
+## 2026.08.15ae
+- Cleaner install/remove scripts (canonical paths only).
+
 ## 2026.08.15ad
 - Changelog: Plugins page shows recent entries only; full history on GitHub <code>CHANGELOG.md</code>.
+
+## 2026.08.15ac
+- Package rebuild only; no user-facing change.
+
+## 2026.08.15ab
+- **Install:** single runtime `.txz` package (faster updates; docs stay on GitHub).
 
 ## 2026.08.15aa
 - **Pull:** Scan network → <strong>Stop scanning</strong> (distinct color) while a scan is in progress.
@@ -382,7 +404,7 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
   <code>docs/integration-unassigned-devices.md</code>.
 
 ## 2026.08.14al
-- **Security docs:** expanded <code>SECURITY.md</code> (CA review / threat model),
+- **Security docs:** expanded <code>SECURITY.md</code> (threat model),
   <code>docs/hosting-safety.md</code> Host checklist, bind isolation guide.
 
 ## 2026.08.14ak

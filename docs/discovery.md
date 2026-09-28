@@ -36,10 +36,10 @@ Scan is **best-effort** and bounded (timeouts, max hosts per subnet) so the WebU
 
 ### Cross-LAN tip
 
-If the scanner only has a fabric IP (e.g. `192.168.254.4`) and reaches the export host via **NAT/default gateway**, there may be **no** `192.168.1.0/24` route entry. Either:
+If the scanner only has a fabric IP (e.g. `192.168.20.5`) and reaches the export host via **NAT/default gateway**, there may be **no** `192.168.10.0/24` route entry. Either:
 
-- add a route: `ip route add 192.168.1.0/24 via <gateway>`, or  
-- set `scan_extra_subnets="192.168.1.0/24"` in `/boot/config/plugins/NBDExport/NBDExport.cfg`, or  
+- add a route: `ip route add 192.168.10.0/24 via <gateway>`, or  
+- set `scan_extra_subnets="192.168.10.0/24"` in `/boot/config/plugins/NBDExport/NBDExport.cfg`, or  
 - paste the peer once (after first hit, Scan re-probes remembered peers).
 
 ---

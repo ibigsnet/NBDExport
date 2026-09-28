@@ -15,7 +15,8 @@ if (is_readable('/var/local/emhttp/var.ini')) {
   $var_ini = @parse_ini_file('/var/local/emhttp/var.ini');
   $csrf_expected = is_array($var_ini) ? (string)($var_ini['csrf_token'] ?? '') : '';
 }
-if ($csrf_expected !== '' && !hash_equals($csrf_expected, (string)($_POST['csrf_token'] ?? ''))) {
+// Fail closed: no readable token means no request goes through.
+if ($csrf_expected === '' || !hash_equals($csrf_expected, (string)($_POST['csrf_token'] ?? ''))) {
   http_response_code(403);
   header('Content-Type: text/plain; charset=UTF-8');
   echo "Invalid csrf_token\n";
