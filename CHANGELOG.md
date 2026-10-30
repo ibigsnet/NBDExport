@@ -6,6 +6,69 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.10.30ab
+
+- **Tailscale binds are not public.** Addresses in the shared range `100.64.0.0/10` (carrier-grade NAT,
+  Tailscale) are no longer flagged public on the Host tab, so hosting on a tailnet does not need
+  **Allow public bind IPs**.
+- **Discovery beacon accepts no request bodies.** The beacon (`php -S`) starts with POST parsing, file
+  uploads and session upload progress turned off; it only answers GET. This also closes the PHP session
+  upload-progress bug on Unraid builds that still ship an unpatched PHP.
+
+## 2026.10.30aa
+
+- **Security — Host bind:** a Host binds only to an address listed on this server's own
+  interfaces. Every all-interfaces form (`0.0.0.0`, `::`, `::ffff:0.0.0.0`) needs
+  **Allow bind 0.0.0.0 = Yes**; before, `::` slipped past that switch. Public
+  (non-private) addresses are shown greyed out with a warning and need the new
+  **Allow public bind IPs = Yes** plus a confirm.
+- **Security — writable Host:** one bind IP and one client (`--shared=1`), and the device
+  cannot be hosted anywhere else while it is up, so two peers can never write it at once.
+- **Security — in-use disks:** a partition of an array, parity, cache or pool disk
+  (e.g. `/dev/sdb1`) now counts as array storage. A disk with a mounted partition, or one
+  claimed by dm/md/bcache, counts as in use. All of these need Destructive mode.
+- **Pull output safety:**
+  - An existing output file is refused unless **Overwrite = Yes**.
+  - The convert writes `name.partial` and renames it to `name` only on success. A failed
+    or stopped Pull deletes the partial, so an overwrite never destroys the old file early.
+  - The folder must already exist on a mounted disk or pool (the plugin no longer creates
+    folders, so a typo or a stopped array cannot fill RAM). `/tmp`, symlinks, non-regular
+    files and the source file itself are refused, including `/mnt/user/…` vs `/mnt/cache/…`
+    of the same share path. Two jobs cannot write the same file.
+- **Fix — Stop all / Enable = No / uninstall:** these only remove Host and beacon runtime
+  files. Before, they also deleted Pull job state, so running converts kept going
+  untracked and queued Pulls vanished. Uninstall now cancels queued Pulls, stops running
+  Pulls, then Hosts, then the beacon. Enable = No says what it stopped.
+- **Fix — notifications:** Pull finished / Pull failed / Host stopped unexpectedly settings
+  are now saved (they were dropped on every Apply) and are included in config import.
+- **Process handling:**
+  - Stop, Pause and Resume signal only PIDs the plugin recorded, after checking
+    `/proc/<pid>/cmdline`. `pkill` patterns are gone (they could hit another `qemu-nbd`
+    whose port or address started with the same digits).
+  - External `ext-<pid>` actions work only on a real `qemu-img convert`.
+- **State handling:**
+  - One lock around every Host/Pull state change, and state files are written via
+    temp + rename.
+  - Status polls, the Dashboard tile and UD badges only read state. Queued Pulls are
+    started by actions and by the finishing job itself.
+  - Host and Pull processes run under a small wrapper that records their exit, so
+    "Host stopped unexpectedly" no longer depends on an open browser tab.
+- **Scan:**
+  - Peer beacon replies are treated as untrusted. Export URLs are rebuilt from the scanned
+    IP and an integer port, and at most 64 KB and 16 exports are read per peer.
+  - Size probes use `qemu-img --image-opts driver=raw,file.driver=nbd`, and peer text is
+    capped.
+- **Beacon:** listens only on private Host bind IPs (one listener each), never `0.0.0.0`,
+  and refuses Docker bridge subnets.
+- **Unassigned Devices badges:** load from the plugin's own `NBDUDOverlay.page`
+  (`Menu="Buttons"`) instead of a line added to Unraid's `HeadInlineJS.php`. Install
+  removes that old line and the unused stock-file backup on flash.
+- **Flash writes:** `NBDExport.cfg`, `memory.json`, `companion.json` and the remembered scan
+  peers are rewritten only when their content changes. The empty array-start hook is gone.
+- **Removed:** `rehydrate_on_start` (it never did anything). Hosts never start on their own.
+- **Docs:** security, bind, discovery, destructive mode, settings, troubleshooting and UD
+  integration pages match the behaviour above.
+
 ## 2026.09.28ab
 
 - **Security:** `nbd-update.php` (Host, Pull, Settings, History and Logs actions) is POST

@@ -64,7 +64,10 @@ If a client can **modify** sectors on a Host you believe is read-only:
 
 - Host not running or wrong URL  
 - Destination disk full  
-- Path not under `/mnt/` (or `/tmp/`)  
+- Output refused: must be a file in an **existing** folder on a mounted disk/pool under `/mnt/` (the plugin no longer creates folders, and refuses RAM, symlinks and `/tmp`)  
+- Output already exists: pick another name or set **Overwrite = Yes**  
+- While running, the image is `name.partial`; it becomes `name` only when the Pull succeeds. A failed or stopped Pull deletes the partial  
+- After a reboot mid-Pull, job history is gone (it lives in RAM) and a leftover `name.partial` is incomplete — delete it and Pull again  
 - Check job log on **Status** or `/var/log/nbdexport/job-*.log`
 
 ## Slow throughput or failed mid-pull
@@ -90,6 +93,8 @@ Unraid agents via `webGui/scripts/notify` (same as Storage Guard):
 | Host stopped unexpectedly | Off / Warning / Alert |
 
 User **Stop** / **Cancel** do not fire failure or host-down alerts.
+
+These settings are saved to `NBDExport.cfg` (older releases dropped them on the first Apply — set them again once after updating). A Pull result is recorded when its job ends; an unexpected Host exit is recorded by the Host's own wrapper, so neither depends on a browser being open.
 
 ## Logs tab vs Status History
 

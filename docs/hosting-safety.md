@@ -15,7 +15,7 @@ Deep background: [security-and-bind.md](security-and-bind.md) · [destructive-mo
 | Is the disk **unassigned** and **unmounted**? | Yes when possible |
 | Is **Destructive mode** still **No**? | Yes for everyday RO unassigned host |
 | Is **Read-only** **Yes**? | Yes unless you truly need remote writes |
-| Bind IP | Specific **private** IP (Thunderbolt first if present) — not `0.0.0.0` |
+| Bind IP | Specific **private** IP of this server (Thunderbolt first if present) — not `0.0.0.0` / `::`, not a public IP |
 | Who can reach that IP:port? | Only machines you trust for full disk read (or write if RW) |
 | How long will Host stay up? | Only for the job — then **Stop** |
 
@@ -62,7 +62,7 @@ This is the path Community Applications reviewers and cautious operators should 
 
 ## After the job
 
-1. **Stop** all hosted exports (per disk or **Stop all**).  
+1. **Stop** all hosted exports (per disk or **Stop all hosted disks** — Pulls are not affected).  
 2. Confirm the top-of-page table shows none hosted.  
 3. **Destructive mode = No** → Apply (if you turned it On).  
 4. Optional: remove temporary peer firewall rules / cable if that was a one-off lab link.

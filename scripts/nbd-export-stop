@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2016  # PHP source inside single quotes is intentional
 # Usage: nbd-export-stop <export-id>|all
 set -euo pipefail
 ID="${1:-}"
@@ -7,7 +8,7 @@ if [ -z "$ID" ]; then
   exit 2
 fi
 if [ "$ID" = "all" ]; then
-  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_stop_all_exports(); echo "stopped all\n";'
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; $r = nbd_stop_all_exports(); echo "stopped " . (int)($r["count"] ?? 0) . " host(s); Pull jobs untouched\n";'
   exit 0
 fi
 php -r '
@@ -15,4 +16,4 @@ require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php";
 $r = nbd_export_stop($argv[1]);
 fwrite(STDOUT, json_encode($r) . "\n");
 exit(empty($r["ok"]) ? 1 : 0);
-' "$ID"
+' -- "$ID"

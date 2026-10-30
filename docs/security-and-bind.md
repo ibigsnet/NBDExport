@@ -24,13 +24,13 @@ NBD is effectively **raw disk over TCP**. Treat Host like temporarily plugging a
 
 | Destructive mode | What Host may do |
 |------------------|------------------|
-| **No** (default) | **Read-only** host of disks that are **not** Unraid array/parity/cache/pool inventory, **not** mounted, **not** the boot device (`/boot`) |
+| **No** (default) | **Read-only** host of disks (and partitions) that are **not** Unraid array/parity/cache/pool inventory or a partition of such a disk, **not** mounted, **not** held by dm/md/bcache, **not** the boot device (`/boot`) |
 | **Yes** | Only if you need **writable** host, or to host **array/cache/pool**, **mounted**, or **boot** media (Host tab still confirms the device) |
 
 You need Destructive mode **only** for those Host cases. Everyday **read-only** NBD host of an unassigned, unmounted disk does **not** need it.
 
 Server-side enforcement refuses blocked combinations even if the UI is bypassed.  
-Pull jobs **never** write to `/dev/…` block devices (file under `/mnt/` only).
+Pull jobs **never** write to `/dev/…` block devices: the output must be a regular file (or absent) in an existing folder on a mounted disk/pool under `/mnt/`; symlinks and the RAM root filesystem are refused.
 
 When Destructive mode is ON, every NBD tab shows an **orange banner**. You may turn it **back to No** after starting a special Host — that only blocks *new* elevated Hosts; **live writable exports keep listening** until you Stop them (or use **Stop all writable hosts**). See [destructive-mode.md](destructive-mode.md).
 
@@ -40,15 +40,17 @@ When Destructive mode is ON, every NBD tab shows an **orange banner**. You may t
 |------|-------------------------|
 | Read-only host | **Yes** (`qemu-nbd --read-only`) |
 | Destructive mode | **No** |
-| Bind address | Specific host IP — **Thunderbolt first** when present |
-| Bind `0.0.0.0` | **Disabled** unless Allow bind 0.0.0.0 = Yes |
-| Bind value | Must be an IPv4 or IPv6 address (not a hostname) |
+| Bind address | One of **this server's own** IPs — **Thunderbolt first** when present |
+| Bind all interfaces (`0.0.0.0`, `::`, `::ffff:0.0.0.0`) | **Disabled** unless Allow bind 0.0.0.0 = Yes (+ confirm) |
+| Public (non-private) bind IP | **Disabled** unless Allow public bind IPs = Yes (+ confirm); shown greyed out with a warning. RFC1918, link-local and the shared range `100.64.0.0/10` (carrier-grade NAT, Tailscale) are not public |
+| Bind value | Must be an IP listed on an interface of this server (not a hostname, not another host's IP) |
 | Array / mounted / flash | Blocked unless Destructive mode = Yes (+ UI confirm) |
-| Writable host | Blocked unless Destructive mode = Yes (+ double UI confirm) |
+| Writable host | Blocked unless Destructive mode = Yes (+ double UI confirm); one bind IP, one client (`--shared=1`), and the device may not be hosted elsewhere at the same time |
 | Writable **boot** device | **Always refused** (even with Destructive On) |
-| Pull output to `/dev/…` | **Always refused** |
+| Pull output to `/dev/…`, a symlink, or RAM | **Always refused** |
+| Pull output that already exists | Refused unless Overwrite = Yes; replaced only when the new Pull succeeds |
 | Authentication | **None** in basic qemu-nbd — rely on network isolation |
-| Auto re-export on array start | **No** (`rehydrate_on_start` default off) |
+| Auto re-export on array start / reboot | **Never** — Hosts are started by hand only |
 
 ## Bind address (the real access control)
 
@@ -58,9 +60,11 @@ Basic **qemu-nbd has no password**. Whoever can open a TCP connection to the bin
 |-------------|---------|
 | Thunderbolt / dedicated copper IP | Best — small, trusted fabric |
 | Specific private LAN IP | Good if that VLAN/LAN is trusted |
+| Tailscale / `100.64.0.0/10` IP | Reachable by every device on that tailnet or carrier NAT — treat like a LAN |
 | **Multiple checkboxes** | Host the same disk on several networks (one `qemu-nbd` per IP, same port) — only check networks that should reach this disk |
 | Wi‑Fi IP on a mixed home LAN | Higher exposure — prefer short Host windows |
-| `0.0.0.0` (all interfaces) | **Dangerous** on multi-homed hosts — disabled by default |
+| `0.0.0.0` / `::` (all interfaces) | **Dangerous** on multi-homed hosts — disabled by default |
+| Public IP of this server | **Internet-reachable** unless a firewall blocks it — disabled by default |
 
 The Host tab lists candidate IPs as **checkboxes** (Thunderbolt private first). Check only the networks where clients should connect; each selected IP gets its own listener (`nbd://that-ip:port`).
 
@@ -130,7 +134,8 @@ On builds that include network discovery:
 | Piece | Security note |
 |-------|----------------|
 | **Scan** | Button on Pull; POST + csrf; only the private LAN(s) you tick; default is beacons on 10808 |
-| **Beacon** | Metadata only (hostname, version, export list); **private clients only**; no disk contents |
+| **Beacon** | Metadata only (hostname, version, export list); listens only on private Host bind IPs (never `0.0.0.0`); **private clients only**, Docker bridge subnets refused; no disk contents |
+| **Peer replies** | Untrusted: URLs rebuilt from the scanned IP + integer port, max 16 exports and 64 KB per peer, text capped and escaped |
 | **While idle** | No beacon if no managed Host export is up |
 
 See [discovery.md](discovery.md). Discovery never replaces bind hygiene for the NBD data port.
@@ -142,5 +147,6 @@ See [discovery.md](discovery.md). Discovery never replaces bind hygiene for the 
 | Telemetry / phone-home | No |
 | Edit `network.cfg` / br0 management | No |
 | Reformat disks or change array membership | No |
-| Kill unrelated `qemu-nbd` on uninstall | No — managed pid files only |
+| Kill a process it did not start | No — only recorded PIDs, after checking `/proc/<pid>/cmdline` (no `pkill` patterns) |
+| Patch Unraid's own WebUI files | No (the opt-in UD badges load from the plugin's own page hook) |
 | Require payment / license server | No (optional donate links in CA template only) |

@@ -159,11 +159,12 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
 <?php endif; ?>
 <?php if ($clearable && !$external): ?>
               <form method="POST" action="/update.php" target="progressFrame" style="display:inline-flex" class="nbd-job-retry-form"
-                onsubmit="return confirm('Retry this Pull?\n\n<?= htmlspecialchars(addslashes($src), ENT_QUOTES) ?>\n→ <?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?>\n\nSame output path: incomplete file is removed automatically.\nThis History entry is cleared; the new job appears under Active/Queued.');">
+                onsubmit="return confirm('Retry this Pull?\n\n<?= htmlspecialchars(addslashes($src), ENT_QUOTES) ?>\n→ <?= htmlspecialchars(addslashes($out), ENT_QUOTES) ?><?= $out_exists ? '\\n\\nThe existing output is replaced when the new Pull succeeds.' : '' ?>\nThis History entry is cleared; the new job appears under Active/Queued.');">
                 <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
                 <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
                 <input type="hidden" name="nbd_action" value="image_retry">
                 <input type="hidden" name="job_id" value="<?= $jid ?>">
+                <input type="hidden" name="overwrite" value="<?= $out_exists ? 'yes' : 'no' ?>">
                 <input type="submit" name="#apply" value="Retry">
               </form>
               <button type="button" class="nbd-job-edit-toggle" data-nbd-edit="<?= $jid ?>">Edit &amp; retry…</button>
@@ -216,7 +217,7 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
 <?php if ($clearable && !$external): ?>
           <div class="nbd-job-edit" id="nbd-edit-<?= $jid ?>" style="display:none">
             <form method="POST" action="/update.php" target="progressFrame" class="nbd-job-edit-form"
-              onsubmit="return confirm('Start retry with these values?\n\nIf Output is unchanged, the old file is removed automatically.\nThis History entry is cleared.');">
+              onsubmit="return confirm('Start retry with these values?\nThis History entry is cleared.');">
               <input type="hidden" name="#file" value="NBDExport/NBDExport.cfg">
               <input type="hidden" name="#include" value="/plugins/NBDExport/include/nbd-update.php">
               <input type="hidden" name="nbd_action" value="image_retry">
@@ -229,7 +230,12 @@ $diag_text = ($show_bug && function_exists('nbd_job_diagnostics_text'))
                   <option value="raw" <?= $fmt === 'raw' ? 'selected' : '' ?>>raw</option>
                 </select>
               </label>
-              <p class="nbd-muted" style="margin:0.35em 0">Same output path → old file deleted. Different path → old file left alone.</p>
+              <label>Overwrite existing file
+                <select name="overwrite">
+                  <option value="no" selected>No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </label>
               <input type="submit" name="#apply" value="Start retry">
             </form>
           </div>
