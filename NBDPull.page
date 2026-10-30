@@ -185,7 +185,8 @@ if ($nbd_scan_lans) {
         Click the field for the same Unraid folder tree as VM templates (opens in-page under the
         field; type a path anytime). Pick a folder then append a filename (e.g. <code>disk.qcow2</code>),
         or click an existing image.
-        File under <code>/mnt/</code> or <code>/tmp/</code> only — never <code>/dev/…</code>.
+        File in an existing folder on a mounted disk/pool under <code>/mnt/</code> — never <code>/dev/…</code> or RAM.
+        Written as <code>name.partial</code>, renamed when the Pull succeeds.
         Prefer cache/disk/pool for multi-TB pulls. <code>/mnt/user</code> soft-warns: one file does not
         spill cache→array mid-write (ENOSPC if that disk fills).
         Match the extension to the format: <strong>.qcow2</strong> for qcow2, <strong>.img</strong> or <strong>.raw</strong> for raw.
@@ -207,6 +208,19 @@ if ($nbd_scan_lans) {
         Job survives closing the browser. A mismatched extension is only a naming warning — qemu still writes the format you pick.
       </blockquote>
       <p id="nbd_ext_hint" class="nbd-ext-hint" style="display:none;margin:0.35em 0 0.6em;padding:0.45em 0.65em;border-radius:4px;font-size:0.92em;line-height:1.35"></p>
+
+      <dl>
+        <dt>Overwrite existing file:</dt>
+        <dd>
+          <select name="overwrite" id="nbd_overwrite">
+            <option value="no" selected>No</option>
+            <option value="yes">Yes — replace it when the Pull succeeds</option>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        <strong>No</strong> refuses an output path that already exists.
+      </blockquote>
 
       <div class="nbd-actions">
         <input type="submit" name="#apply" id="nbd_pull_submit" value="Convert → file on Unraid"

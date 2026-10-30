@@ -44,7 +44,7 @@ qemu-img convert -p -f raw -O qcow2 -t writeback -W \
 qemu-img check /mnt/user/domains/example.qcow2
 ```
 
-Or on Unraid: **Pull** tab → NBD URL + output path under `/mnt/…` (background job; survives closing the browser). See **Status** for job list.
+Or on Unraid: **Pull** tab → NBD URL + output path under `/mnt/…` (background job; survives closing the browser). See **Status** for job list. The plugin writes `name.partial` and renames it to `name` only when the convert succeeds.
 
 ### Why convert beats a raw TCP pipe
 

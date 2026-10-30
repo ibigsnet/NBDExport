@@ -32,70 +32,30 @@ function nbd_flash($msg) {
 }
 
 try {
+  // Persist finished Pulls and start queued ones (POST only; GET pollers never change state)
+  nbd_jobs_reconcile();
+
   switch ($action) {
     case 'save_cfg':
       $cfg = nbd_load_cfg();
-      foreach ([
-        'enabled', 'default_read_only', 'default_port', 'allow_bind_all', 'destructive_mode',
-        'rehydrate_on_start', 'ud_status_overlay',
-        'max_concurrent_pulls', 'pull_io_class', 'pull_nice', 'allow_upgrade_while_busy',
-        'notify_pull_done', 'notify_pull_failed', 'notify_host_down',
-      ] as $k) {
-        if (isset($_POST[$k])) {
-          $cfg[$k] = trim((string)$_POST[$k]);
+      foreach (nbd_cfg_keys() as $k) {
+        if ($k !== 'scan_extra_subnets' && isset($_POST[$k]) && is_string($_POST[$k])) {
+          $cfg[$k] = trim($_POST[$k]);
         }
       }
-      // Normalize yes/no
-      foreach ([
-        'enabled', 'default_read_only', 'allow_bind_all', 'destructive_mode',
-        'rehydrate_on_start', 'ud_status_overlay', 'allow_upgrade_while_busy',
-      ] as $k) {
-        if (isset($cfg[$k])) {
-          $cfg[$k] = ($cfg[$k] === 'yes') ? 'yes' : 'no';
-        }
-      }
-      // Empty Default port → protocol default 10809
-      $dp = (int)($cfg['default_port'] ?? 0);
-      if ($dp < 1024 || $dp > 65535) {
-        $cfg['default_port'] = '10809';
-      } else {
-        $cfg['default_port'] = (string)$dp;
-      }
-      $mcp = (int)($cfg['max_concurrent_pulls'] ?? 1);
-      if ($mcp < 1) {
-        $mcp = 1;
-      }
-      if ($mcp > 4) {
-        $mcp = 4;
-      }
-      $cfg['max_concurrent_pulls'] = (string)$mcp;
-      $pic = strtolower((string)($cfg['pull_io_class'] ?? 'idle'));
-      $cfg['pull_io_class'] = ($pic === 'best-effort') ? 'best-effort' : 'idle';
-      $pn = (int)($cfg['pull_nice'] ?? 10);
-      if ($pn < 0) {
-        $pn = 0;
-      }
-      if ($pn > 19) {
-        $pn = 19;
-      }
-      $cfg['pull_nice'] = (string)$pn;
-      // Notifications
-      $npd = strtolower((string)($cfg['notify_pull_done'] ?? 'off'));
-      $cfg['notify_pull_done'] = ($npd === 'normal') ? 'normal' : 'off';
-      $npf = strtolower((string)($cfg['notify_pull_failed'] ?? 'warning'));
-      $cfg['notify_pull_failed'] = in_array($npf, ['warning', 'alert'], true) ? $npf : 'off';
-      $nhd = strtolower((string)($cfg['notify_host_down'] ?? 'off'));
-      $cfg['notify_host_down'] = in_array($nhd, ['warning', 'alert'], true) ? $nhd : 'off';
-      if (($cfg['enabled'] ?? 'yes') !== 'yes') {
-        nbd_stop_all_exports();
-      }
-      nbd_write_cfg($cfg);
-      nbd_write_companion_marker();
-      // Soft head hook so opt-in badges can load on Main → Unassigned Devices
-      if (($cfg['ud_status_overlay'] ?? 'no') === 'yes') {
-        nbd_ud_overlay_inject();
-      }
+      $cfg = nbd_cfg_normalize($cfg);
       $msg = 'NBD Export: settings saved.';
+      if (($cfg['enabled'] ?? 'yes') !== 'yes') {
+        $sr = nbd_stop_all_exports();
+        $msg .= ' Plugin disabled: stopped ' . (int)($sr['count'] ?? 0)
+          . ' Host(s). Pull jobs keep running; queued Pulls wait until it is enabled again.';
+      }
+      if (!nbd_write_cfg($cfg)) {
+        nbd_flash('NBD Export: ERROR — could not write ' . nbd_cfg_path());
+        break;
+      }
+      nbd_write_companion_marker();
+      nbd_jobs_reconcile();
       // Destructive Off only blocks *new* Hosts — live writable/risky exports keep
       // running until Stop / Stop all writable / Stop all / Enable=No.
       if (($cfg['destructive_mode'] ?? 'no') === 'yes') {
@@ -106,6 +66,9 @@ try {
           $msg .= ' Note: Destructive is Off, but ' . $nw
             . ' writable host(s) still listening — use Stop all writable hosts if unintended.';
         }
+      }
+      if (($cfg['allow_public_bind'] ?? 'no') === 'yes') {
+        $msg .= ' WARNING: public bind IPs are allowed (NBD has no authentication).';
       }
       if (($cfg['ud_status_overlay'] ?? 'no') === 'yes') {
         $msg .= ' Unassigned Devices status badges: ON (best-effort overlay).';
@@ -141,6 +104,10 @@ try {
         nbd_flash('NBD Export: ERROR — select at least one bind IP (network to host on).');
         break;
       }
+      if (!$ro && count($binds) > 1) {
+        nbd_flash('NBD Export: ERROR — a writable host listens on exactly one bind IP (one writer). Untick the others.');
+        break;
+      }
       $urls = [];
       $errs = [];
       foreach ($binds as $bind) {
@@ -168,8 +135,8 @@ try {
       break;
 
     case 'export_stop_all':
-      nbd_stop_all_exports();
-      nbd_flash('NBD Export: all exports stopped.');
+      $r = nbd_stop_all_exports();
+      nbd_flash('NBD Export: stopped ' . (int)($r['count'] ?? 0) . ' Host(s). Pull jobs are not affected.');
       break;
 
     case 'export_stop_writables':
@@ -184,7 +151,8 @@ try {
       $url = trim((string)($_POST['nbd_url'] ?? ''));
       $out = trim((string)($_POST['output'] ?? ''));
       $fmt = trim((string)($_POST['format'] ?? 'qcow2'));
-      $r = nbd_image_start($url, $out, $fmt);
+      $overwrite = (($_POST['overwrite'] ?? 'no') === 'yes');
+      $r = nbd_image_start($url, $out, $fmt, $overwrite);
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'start failed'));
       } else {
@@ -287,7 +255,7 @@ try {
         $overrides['format'] = trim((string)$_POST['format']);
       }
       $old = nbd_job_load($id);
-      $r = nbd_image_retry($id, $overrides);
+      $r = nbd_image_retry($id, $overrides, (($_POST['overwrite'] ?? 'no') === 'yes'));
       if (empty($r['ok'])) {
         nbd_flash('NBD Image: ERROR — ' . ($r['error'] ?? 'retry failed'));
       } else {

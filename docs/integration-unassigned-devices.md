@@ -33,7 +33,11 @@ Below **SMB Shares | NFS Shares | ISO File Shares** (Shares area):
 3. **Unassigned Devices badges** → **Yes** → **Apply**  
 4. Refresh the browser, Host a disk, open **Main → Unassigned Devices**.
 
-Set back to **No** anytime. Plugin uninstall removes the page hook.
+Set back to **No** anytime.
+
+## How it loads
+
+The badges come from the plugin's own `NBDUDOverlay.page` (`Menu="Buttons"`), the hook Unraid provides for plugins to add script to every WebUI page. It prints nothing unless this setting is **Yes** and Unassigned Devices is installed. The plugin does not edit Unraid's own files; installing this release removes the line older releases added to `HeadInlineJS.php` and the old stock-file backup under `/boot/config/plugins/NBDExport/stock-backup/`.
 
 ## Limitations
 

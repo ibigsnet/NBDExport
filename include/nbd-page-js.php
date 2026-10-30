@@ -295,7 +295,12 @@ if (!isset($presets) || !is_array($presets)) {
     var warn = opt && opt.getAttribute('data-warn') === '1';
     var flags = (opt && opt.getAttribute('data-flags')) || '';
     var ro = !roSel || roSel.value === 'yes';
-    var needConfirm = !ro || warn;
+    var pubBoxes = form.querySelectorAll('input.nbd-bind-cb:checked');
+    var pubIps = [];
+    for (var pi = 0; pi < pubBoxes.length; pi++) {
+      if (pubBoxes[pi].getAttribute('data-public') === '1' || pubBoxes[pi].value === '0.0.0.0') pubIps.push(pubBoxes[pi].value);
+    }
+    var needConfirm = !ro || warn || pubIps.length > 0;
 
     var devPath = devSel.value;
     var devLabel = (opt && opt.textContent) ? String(opt.textContent).replace(/\s+/g, ' ').trim() : devPath;
@@ -307,6 +312,10 @@ if (!isset($presets) || !is_array($presets)) {
         'Either set Read-only to Yes, or enable Destructive mode under Settings ' +
         '(allows a peer to write to the Unraid disk you select).'
       );
+      return false;
+    }
+    if (!ro && bindIps.length > 1) {
+      window.alert('A writable host listens on one bind IP only (one writer). Untick the others.');
       return false;
     }
     if (warn && !destructiveOn) {
@@ -329,6 +338,9 @@ if (!isset($presets) || !is_array($presets)) {
         msg += 'WARNING: WRITABLE — the peer can write to this Unraid disk and can destroy data.\n\n';
       } else {
         msg += 'Read-only — peer can read blocks but cannot write this disk through NBD.\n\n';
+      }
+      if (pubIps.length) {
+        msg += 'PUBLIC / ALL-INTERFACES BIND: ' + pubIps.join(', ') + ' — NBD has no authentication; anyone who can reach it can read' + (ro ? '' : ' and write') + ' this disk.\n\n';
       }
       if (warn) {
         msg += 'Note: this disk is marked in-use/critical (' + (flags || 'array/mounted/flash') + ').\n\n';
@@ -495,8 +507,8 @@ if (!isset($presets) || !is_array($presets)) {
       window.alert('Enter an output path under /mnt/…');
       return false;
     }
-    if (path.indexOf('/dev/') === 0) {
-      window.alert('Output cannot be a block device (/dev/…). Use a file under /mnt/.');
+    if (path.indexOf('/mnt/') !== 0) {
+      window.alert('Output must be a file under /mnt/ (cache, pool, disk or share).');
       return false;
     }
     // Folder-only pick from fileTree — need a file name
@@ -542,6 +554,10 @@ if (!isset($presets) || !is_array($presets)) {
     var stEl = document.getElementById('nbd_source_type');
     var st = stEl ? stEl.value : 'nbd';
     var msg = 'Convert into a file on this Unraid?\n  source: ' + src + '\n  → ' + path + '\n  format: ' + format;
+    var owEl = form.querySelector('#nbd_overwrite');
+    if (owEl && owEl.value === 'yes') {
+      msg += '\n\nOverwrite = Yes: an existing file at this path is replaced when the Pull succeeds.';
+    }
     if (st === 'local_device') {
       msg += '\n\nReading a whole local /dev device. Prefer unassigned/unmounted disks.';
     }

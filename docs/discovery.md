@@ -28,11 +28,12 @@ Scan never runs on page load. **Pull → Scan network** is a button. Tick which 
 
 1. **POST + csrf_token** only. The server accepts only CIDRs that are on this box (local private /24) or in optional `scan_extra_subnets`. It does not sweep every route.
 2. **Default probe:** plugin **beacons on TCP 10808**. Optional checkbox also probes NBD ports **10809–10812**.
-3. Beacon JSON (hostname, version, labels, URLs) is **HTML-escaped** before it is shown.
-4. Remembered peer IPs are re-probed only if they sit on a LAN you ticked.
-5. UI: pick a row → **Use** fills the Pull **NBD URL** field.
+3. Peer replies are **untrusted**. The plugin ignores the peer's own `url`/`bind` strings and rebuilds each export URL as `nbd://<scanned IP>:<integer port>`. At most **64 KB** of a reply and **16 exports per peer** are read; hostname/label text is length-capped and **HTML-escaped** before it is shown.
+4. Optional size probes (at most 32 per scan) run `qemu-img info --image-opts driver=raw,file.driver=nbd,…` against that rebuilt address only — no format probing, no other qemu protocol.
+5. Remembered peer IPs are re-probed only if they sit on a LAN you ticked (the list on flash is rewritten only when it changes).
+6. UI: pick a row → **Use** fills the Pull **NBD URL** field.
 
-Scan is **best-effort** and bounded (timeouts, max hosts per subnet) so the WebUI does not hang.
+Scan is **best-effort** and bounded (selected /24s only, short connect timeouts, the per-peer caps above) so the WebUI does not hang.
 
 ### Cross-LAN tip
 
@@ -51,9 +52,9 @@ While at least one **managed** Host export is listening:
 | | |
 |--|--|
 | **Port** | **10808/tcp** (default NBD port − 1) |
-| **Bind** | Export bind IPs (private); not a WAN service by design |
+| **Bind** | One listener per **private** Host bind IP; never `0.0.0.0`. Hosts bound to all interfaces or a public IP are not advertised |
 | **Payload** | `plugin`, `version`, `hostname`, `exports[{url,port,bind,read_only,label,device_name}]` |
-| **Auth** | No Unraid login (so peers can scan without each other’s root password). **Private remotes only** in the beacon process. |
+| **Auth** | No Unraid login (so peers can scan without each other’s root password). **Private remotes only**; Docker bridge subnets (`docker0`, `br-<id>`) are refused so containers cannot list Hosts. |
 | **Lifecycle** | Started with first export; stopped when last managed export stops |
 
 Payload does **not** include array data, passwords, or full disk contents — only how to connect.
@@ -66,7 +67,8 @@ Payload does **not** include array data, passwords, or full disk contents — on
 |---------|----------------|
 | Scan targets | Private IPv4 /24s you tick (local ifaces; optional cfg extra) |
 | Scan start | Button + POST + csrf_token (GET does not scan) |
-| Beacon answers | Private client IPs only; listener prefers the Host bind IP |
+| Beacon answers | Private client IPs only (not Docker bridges); listens only on private Host bind IPs |
+| Peer replies | Untrusted — URL rebuilt from scanned IP + port; size/count capped |
 | NBD itself | Still **no** protocol auth — isolation is **bind IP** + RO default |
 | Token (optional later) | Shared secret on beacon/scan — not required for basic LAN use |
 | Cloud | None |

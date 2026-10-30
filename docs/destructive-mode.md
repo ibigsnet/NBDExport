@@ -40,13 +40,14 @@ Turn Destructive mode **On** only for one of these four Host situations:
 ### 2. Unraid storage disk (array, parity, cache, or pool)
 
 - Array data disks, parity, **cache**, and **named pools** (Unraid disk inventory — not only “the array”)  
-- Also `md*` devices  
+- Also `md*` devices, and **any partition** of those disks (e.g. `/dev/sdb1` of array disk1 — writes there would bypass parity)  
+- Also devices claimed by another kernel device (dm / md / bcache holders)  
 - Even **read-only** Host is blocked without Destructive mode  
 - Prefer an unassigned disk; live storage under load can be inconsistent or hard on the array/pool  
 
 ### 3. Mounted disk
 
-- Any filesystem from that device still mounted (e.g. under `/mnt/…`)  
+- Any filesystem from that device, or one of its partitions, still mounted (e.g. under `/mnt/…`)  
 - Host (read-only or writable) is blocked without Destructive mode  
 - Unmount first when you can — Unraid and a remote NBD client both touching the same live filesystem is a consistency risk  
 - If the peer only needs **files**, use **SMB/NFS** on the mount; use NBD when they need the **block device** itself  
@@ -56,7 +57,7 @@ Turn Destructive mode **On** only for one of these four Host situations:
 - Whatever device currently holds **`/boot`** (Unraid’s OS/config drive)  
 - Almost always the **USB flash**; if Unraid boots from a disk/partition instead, **that** media is treated the same  
 - Host is blocked without Destructive mode  
-- Writable host of the boot device is **refused** entirely (even with Destructive mode On)  
+- Writable host of the boot device (or another partition on the same disk) is **refused** entirely (even with Destructive mode On)  
 - Almost never needed for routine work  
 
 ---
@@ -77,8 +78,8 @@ Destructive mode is a **gate for starting** Hosts, not a kill switch for ones al
 | Destructive **On** again | Still listening (no change) |
 | **Stop** on that row | Stops that host |
 | **Stop all writable hosts** | Stops every RW host; RO stays up |
-| **Stop all hosted disks** | Stops every host |
-| **Enable NBD Export = No** → Apply | Stops **all** hosts |
+| **Stop all hosted disks** | Stops every host (Pull jobs are not touched) |
+| **Enable NBD Export = No** → Apply | Stops **all** hosts (Pull jobs keep running) |
 
 So you can: turn Destructive **On** → Host writable → turn Destructive **Off** (UI locked down again) → leave the writable export running until you intentionally stop it. That is intentional.
 
@@ -93,7 +94,9 @@ On every NBD tab, while hosts are up:
 | **Stop all writable hosts** (red) | Only **writable** exports — security kill-switch for RW |
 | **Stop all hosted disks** | **All** Hosts (RO and RW) |
 
-Nuclear: **Enable NBD Export = No** → Apply (same as stop all, plus blocks new Hosts until re-enabled).
+Nuclear: **Enable NBD Export = No** → Apply (same as stop all, plus blocks new Hosts and queued Pulls until re-enabled; running Pulls finish or can be stopped on Status).
+
+A writable host always has **one** listener (one bind IP) and accepts **one** client at a time (`--shared=1`), and the same device cannot be hosted again while it is up — so two peers can never write the disk at once through this plugin.
 
 ---
 

@@ -1,7 +1,7 @@
 <?php
 /**
- * Soft head hook for Unassigned Devices (Main → Unassigned Devices) NBD badges + panel.
- * Injected into Unraid HeadInlineJS.php (install). Emits nothing unless opt-in.
+ * Unassigned Devices (Main → Unassigned Devices) NBD badges + panel.
+ * Loaded on every page by NBDUDOverlay.page (Menu="Buttons"). Emits nothing unless opt-in.
  *
  * JS decides whether the UD tables are present (works for /Main/UnassignedDevices and
  * similar Main paths). Best-effort DOM overlay — UD owns that page.

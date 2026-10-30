@@ -44,7 +44,8 @@ function nbd_busy_snapshot() {
 }
 
 /**
- * Scan process list for qemu-img convert jobs.
+ * qemu-img convert jobs from /proc (argv, not a ps|grep text match).
+ * src/out are the last two argv entries; managed if out is a job's output or partial.
  * @return array<int,array{pid:int,cmd:string,src:string,out:string,managed:bool,job_id:?string}>
  */
 function nbd_discover_qemu_img_converts() {
@@ -54,30 +55,25 @@ function nbd_discover_qemu_img_converts() {
     if (!is_array($j) || empty($j['id'])) {
       continue;
     }
-    $out = (string)($j['output'] ?? '');
-    if ($out !== '') {
-      $managed_outs[$out] = (string)$j['id'];
+    foreach (['output', 'partial'] as $k) {
+      $o = (string)($j[$k] ?? '');
+      if ($o !== '') {
+        $managed_outs[$o] = (string)$j['id'];
+      }
     }
   }
-  $raw = (string)@shell_exec("ps -eo pid=,cmd= 2>/dev/null | grep '[q]emu-img convert' || true");
   $list = [];
-  foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
-    $line = trim($line);
-    if ($line === '' || !preg_match('/^(\d+)\s+(.*)$/', $line, $m)) {
-      continue;
-    }
-    $pid = (int)$m[1];
-    $cmd = $m[2];
-    $src = '';
-    $out = '';
-    if (preg_match('#(nbd://\S+|/dev/\S+|/mnt/\S+|/tmp/\S+)\s+(/mnt/\S+|/tmp/\S+)\s*$#', $cmd, $mm)) {
-      $src = $mm[1];
-      $out = $mm[2];
+  foreach (nbd_qemu_img_converts() as $pid => $argv) {
+    $n = count($argv);
+    $src = $n >= 3 ? (string)$argv[$n - 2] : '';
+    $out = $n >= 2 ? (string)$argv[$n - 1] : '';
+    if ($out !== '' && strpos($out, '/') !== 0) {
+      $out = '';
     }
     $jid = ($out !== '' && isset($managed_outs[$out])) ? $managed_outs[$out] : null;
     $list[] = [
-      'pid' => $pid,
-      'cmd' => $cmd,
+      'pid' => (int)$pid,
+      'cmd' => implode(' ', $argv),
       'src' => $src,
       'out' => $out,
       'managed' => $jid !== null,
@@ -157,8 +153,11 @@ function nbd_reconcile_live() {
       $hosts++;
     }
   }
-  $beacon = nbd_beacon_ensure();
-  $kicked = nbd_pull_queue_kick();
+  $r = nbd_locked(function () {
+    return ['beacon' => nbd_beacon_ensure(), 'jobs' => nbd_jobs_reconcile()];
+  });
+  $beacon = $r['beacon'];
+  $kicked = $r['jobs'];
   return [
     'ok' => true,
     'hosts' => $hosts,

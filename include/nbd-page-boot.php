@@ -21,6 +21,7 @@ $enabled = (($cfg['enabled'] ?? 'yes') === 'yes') ? 'yes' : 'no';
 $def_ro = (($cfg['default_read_only'] ?? 'yes') === 'yes') ? 'yes' : 'no';
 $def_port = htmlspecialchars($cfg['default_port'] ?? '10809');
 $allow_all = (($cfg['allow_bind_all'] ?? 'no') === 'yes') ? 'yes' : 'no';
+$allow_public = (($cfg['allow_public_bind'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $destructive = (($cfg['destructive_mode'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $ud_overlay = (($cfg['ud_status_overlay'] ?? 'no') === 'yes') ? 'yes' : 'no';
 $pull_io_class = (($cfg['pull_io_class'] ?? 'idle') === 'best-effort') ? 'best-effort' : 'idle';

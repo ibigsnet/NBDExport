@@ -56,13 +56,13 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | Area | Behavior |
 |------|----------|
 | **Host** | Start/stop `qemu-nbd` on a device, bind IP, and port (default **read-only**) |
-| **Bind picker** | Host IPv4 addresses; **Thunderbolt** first when present |
-| **Pull** | Background `qemu-img convert` from `nbd://host:port` to a path under `/mnt/` |
+| **Bind picker** | This server's IPv4 addresses; **Thunderbolt** first; public ones greyed out unless Settings allows them |
+| **Pull** | Background `qemu-img convert` from `nbd://host:port` to `name.partial` in an existing folder under `/mnt/`, renamed to `name` on success; never overwrites without Overwrite = Yes |
 | **Scan** | Pull tab — private LAN discovery of NBD ports + peer beacons ([discovery.md](docs/discovery.md)) |
 | **Attach / Client** | Live use of `nbd://` (VM disk / nbd-client) — docs today ([client-attach.md](docs/client-attach.md)) |
 | **UI chrome** | Every tab: live hosted disks + orange Destructive banner when ON |
 | **Multi-disk host** | Yes — multiple listeners; each needs its own port |
-| **Safety** | No default `0.0.0.0`; array/mounted/flash flagged; Enable=No stops hosts |
+| **Safety** | No default all-interfaces or public bind; array (incl. partitions)/mounted/flash flagged; writable = one listener, one client; Enable=No stops hosts (Pulls keep running) |
 | **UD badges (opt-in)** | Optional small **NBD RO/RW** lettering on Main → Unassigned Devices — off by default |
 
 ### Product defaults
@@ -72,7 +72,8 @@ Deep scenarios: [docs/when-to-use-nbd.md](docs/when-to-use-nbd.md) · Decision t
 | Enable | **Yes** | Ready after install |
 | Read-only | **Yes** | Imaging must not scribble on source disks |
 | Default port | **10809** | Common qemu-nbd default |
-| Allow bind 0.0.0.0 | **No** | Basic NBD has no auth |
+| Allow bind 0.0.0.0 | **No** | Basic NBD has no auth (also covers `::`) |
+| Allow public bind IPs | **No** | Public address = Internet-reachable disk |
 | Destructive mode | **No** | Only for writable host or array/cache/pool/mounted/boot — [destructive-mode.md](docs/destructive-mode.md) |
 
 ### What it does *not* do

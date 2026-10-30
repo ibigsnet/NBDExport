@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.09.28ab">
+<!ENTITY version "2026.10.30aa">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -25,10 +25,11 @@
 
 <CHANGES>
 ###&version;
-- Host, Pull and Settings actions are POST only and check the CSRF token (fail closed). Scan and settings export work again: Unraid removes csrf_token from $_POST after its own check, so the plugin also reads it from the form body.
+- Security: Host binds only to this server's own addresses (public IPs and all-interfaces need a Settings opt-in; writable = one IP, one client); Pull never overwrites an existing file without Overwrite = Yes, writes name.partial and renames on success, and refuses RAM, symlink and same-file paths; array/pool partitions count as in-use.
+- Fixes: Stop all and uninstall no longer drop running Pulls; notification settings persist; kills target only verified PIDs; Scan rebuilds peer URLs; state changes are locked and GET is read-only; UD badges load via a page hook instead of patching Unraid files.
 
-###2026.09.28aa
-- Scan and settings export refuse the request when the CSRF token cannot be read. Generic example addresses in defaults and docs.
+###2026.09.28aa–ab
+- Host, Pull and Settings actions are POST only and check the CSRF token (fail closed). Scan and settings export read the token from the form body.
 
 ###2026.09.27aa
 - Plugin payload is a flash .txz from the GitHub Release (not re-fetched from main at boot).
@@ -100,8 +101,8 @@ echo "NBD Export: ready for file install."
 <!-- raw-files begin -->
 <FILE Name="&configdir;/NBDExport-&version;-x86_64-1.txz" Run="upgradepkg --install-new --reinstall">
 <URL>https://github.com/ibigsnet/NBDExport/releases/download/v&version;/NBDExport-&version;-x86_64-1.txz</URL>
-<SHA256>3688f72733d166f93208b3cfc40edce0a95de5b12881a3c9535845bc91760e16</SHA256>
-<MD5>b38f36dea20a14690e47bf1c6d426a78</MD5>
+<SHA256>831fabc03f86d93f2f097d0fef25a6f923bad1675399d54fd7e8a4fb4b9d453c</SHA256>
+<MD5>0c6c3f22185ab33d3e023b56df6bfeb8</MD5>
 </FILE>
 <!-- raw-files end -->
 
@@ -113,14 +114,14 @@ if [ ! -f /usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php ]; then
   exit 1
 fi
 chmod 755 /usr/local/emhttp/plugins/NBDExport/scripts/* 2>/dev/null || true
-chmod 755 /usr/local/emhttp/plugins/NBDExport/event/started 2>/dev/null || true
 if [ ! -f /boot/config/plugins/NBDExport/NBDExport.cfg ] \
    && [ -f /usr/local/emhttp/plugins/NBDExport/default.cfg ]; then
   cp -a /usr/local/emhttp/plugins/NBDExport/default.cfg /boot/config/plugins/NBDExport/NBDExport.cfg
   echo "NBD Export: created default NBDExport.cfg"
 fi
-# Companion marker only. UD HeadInline inject only when user enables overlay (Settings).
-php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); $c=nbd_load_cfg(); if (($c["ud_status_overlay"]??"no")==="yes") { nbd_ud_overlay_inject(); } else { nbd_ud_overlay_uninject(); }' 2>/dev/null || true
+# Companion marker (written only if changed). Remove the old UD overlay line from Unraid layout
+# files and the old stock-file backup on flash: badges now load from NBDUDOverlay.page.
+php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; nbd_write_companion_marker(); nbd_ud_overlay_uninject();' 2>/dev/null || true
 # Reattach live Hosts/Pulls after upgrade (qemu left running when busy-upgrade allowed)
 php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_reconcile_live")) { $r=nbd_reconcile_live(); echo "NBD Export: reconcile hosts=".($r["hosts"]??0)." pulls=".($r["pulls"]??0)." external=".($r["external"]??0)."\n"; }' 2>/dev/null || true
 VER=$(sed -n 's/.*ENTITY version "\([^"]*\)".*/\1/p' /tmp/plugins/nbd.plg 2>/dev/null | head -1)
@@ -146,10 +147,10 @@ LIB="/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"
 if [ -f "$LIB" ]; then
   # One-liners only — multiline php -r is fragile under /bin/bash + plugin popen
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_ud_overlay_uninject")) nbd_ud_overlay_uninject();' >/dev/null 2>&1
-  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_beacon_stop")) nbd_beacon_stop();' >/dev/null 2>&1
-  echo "NBD Export: stopping managed Hosts and Pulls before wipe..."
+  echo "NBD Export: stopping managed Pulls, then Hosts, before wipe..."
+  NBD_NO_QUEUE_KICK=1 php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (!function_exists("nbd_jobs_state")||!function_exists("nbd_image_stop")) exit(0); $all = nbd_jobs_state(); usort($all, function ($a, $b) { return (($b["status"]??"")==="queued") <=> (($a["status"]??"")==="queued"); }); foreach ($all as $j) { if (!empty($j["id"]) && empty($j["finished"])) { echo "NBD Export: stop ".$j["id"]."\n"; nbd_image_stop($j["id"]); } }' 2>/dev/null || true
   php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_stop_all_exports")) nbd_stop_all_exports();' >/dev/null 2>&1
-  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (!function_exists("nbd_jobs_state")||!function_exists("nbd_image_stop")) exit(0); foreach (nbd_jobs_state() as $j) { if (!empty($j["id"])) { echo "NBD Export: stop ".$j["id"]."\n"; nbd_image_stop($j["id"]); } }' 2>/dev/null || true
+  php -r 'require_once "/usr/local/emhttp/plugins/NBDExport/include/nbd-lib.php"; if (function_exists("nbd_beacon_stop")) nbd_beacon_stop();' >/dev/null 2>&1
 fi
 
 # Strip UD overlay inject from known layout files (StorageGuard pattern)
@@ -167,24 +168,23 @@ do
     "$f" >/dev/null 2>&1
 done
 
-# Kill anything we tracked under the run dir (hosts, jobs, beacon)
+# Leftover recorded PIDs under the run dir: only if the process is ours (cmdline check)
 if [ -d /var/run/nbdexport ]; then
   for pf in /var/run/nbdexport/*.pid; do
     [ -f "$pf" ] || continue
     pid=$(tr -cd '0-9' <"$pf" 2>/dev/null)
-    [ -n "$pid" ] || continue
-    if [ -d "/proc/$pid" ]; then
-      kill -TERM -$pid >/dev/null 2>&1
-      kill -TERM "$pid" >/dev/null 2>&1
-      sleep 0.2
-      kill -KILL -$pid >/dev/null 2>&1
-      kill -KILL "$pid" >/dev/null 2>&1
-    fi
+    [ -n "$pid" ] && [ "$pid" -gt 1 ] && [ -r "/proc/$pid/cmdline" ] || continue
+    cmd=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null)
+    case "$cmd" in
+      *qemu-nbd*|*"qemu-img convert"*|*/nbd-beacon-server.php*|*/var/run/nbdexport/*.sh*)
+        kill -TERM "$pid" >/dev/null 2>&1
+        kill -CONT "$pid" >/dev/null 2>&1
+        sleep 0.2
+        [ -d "/proc/$pid" ] && kill -KILL "$pid" >/dev/null 2>&1
+        ;;
+    esac
   done
 fi
-# Beacon php -S can outlive a missing pidfile
-pkill -f 'nbd-beacon-server.php' >/dev/null 2>&1
-pkill -f 'php -S .*10808' >/dev/null 2>&1
 
 rm -rf /var/run/nbdexport /var/log/nbdexport >/dev/null 2>&1
 

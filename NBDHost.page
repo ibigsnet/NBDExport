@@ -90,12 +90,15 @@ nbd_page_styles();
           <span class="nbd-muted">No addresses found</span>
 <?php else: foreach ($binds as $b):
   $bip = (string)$b['ip'];
-  $is_chk = !empty($checked_binds[$bip]);
+  $is_pub = !empty($b['public']);
+  $pub_off = $is_pub && $allow_public !== 'yes';
+  $is_chk = !empty($checked_binds[$bip]) && !$pub_off;
 ?>
-          <label class="nbd-bind-opt" style="display:block;margin:0.15em 0">
+          <label class="nbd-bind-opt" style="display:block;margin:0.15em 0"<?= $pub_off ? ' title="Public address — Settings → Allow public bind IPs"' : '' ?>>
             <input type="checkbox" name="bind[]" class="nbd-bind-cb" value="<?= htmlspecialchars($bip) ?>"
-              <?= $is_chk ? 'checked' : '' ?>>
-            <?= htmlspecialchars($b['label']) ?>
+              data-public="<?= $is_pub ? '1' : '0' ?>"
+              <?= $is_chk ? 'checked' : '' ?><?= $pub_off ? ' disabled' : '' ?>>
+            <?= htmlspecialchars($b['label']) ?><?php if ($is_pub): ?> <span class="nbd-bad">public — no authentication</span><?php endif; ?>
           </label>
 <?php endforeach; endif; ?>
 <?php if ($allow_all === 'yes'): ?>
@@ -110,7 +113,7 @@ nbd_page_styles();
       <blockquote class="inline_help">
         Check every network where this disk should accept NBD clients. Each selected IP starts its own
         <code>qemu-nbd</code> on the same port (same disk). Thunderbolt / private first.
-        Clients use <code>nbd://ip:port</code> for the IP they can reach.
+        Public addresses stay disabled unless Settings allows them. A writable host uses one IP only.
       </blockquote>
 
       <dl>

@@ -1,9 +1,9 @@
 <?php
 /**
  * Lightweight discovery beacon for php -S (no Unraid session).
- * Private clients only. See docs/discovery.md.
+ * Private clients only (Docker bridge subnets refused). See docs/discovery.md.
  *
- * Usage: php -S <bind-ip-or-0.0.0.0>:10808 /path/to/nbd-beacon-server.php
+ * Started by the plugin as: NBD_BEACON_DENY=<cidrs> php -S <private-bind-ip>:10808 /path/to/nbd-beacon-server.php
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -23,7 +23,8 @@ if (!is_file($lib)) {
 }
 require_once $lib;
 
-if (!function_exists('nbd_is_private_ipv4') || !nbd_is_private_ipv4($remote)) {
+$deny = array_filter(explode(',', (string)getenv('NBD_BEACON_DENY')));
+if (!function_exists('nbd_beacon_client_allowed') || !nbd_beacon_client_allowed($remote, $deny)) {
   http_response_code(403);
   echo json_encode(['error' => 'private clients only']);
   exit;

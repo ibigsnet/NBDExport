@@ -1,0 +1,9 @@
+Menu="Buttons:199"
+Link="nav-user"
+---
+<?php
+/* Opt-in Unassigned Devices badges (Settings → NBD → Unassigned Devices badges).
+ * Unraid includes Menu="Buttons" pages on every WebUI page; nbd-ud-head.php prints
+ * nothing unless the overlay is enabled and Unassigned Devices is installed. */
+@include '/usr/local/emhttp/plugins/NBDExport/include/nbd-ud-head.php';
+?>

@@ -36,8 +36,7 @@ if (is_readable('/var/local/emhttp/var.ini')) {
         </dd>
       </dl>
       <blockquote class="inline_help">
-        Master switch. Setting <strong>No</strong> and applying stops all <strong>NBD Export–managed</strong> hosts
-        (not a hand-started <code>qemu-nbd</code> outside this plugin). Turning <strong>Yes</strong> again does not auto-restart them.
+        <strong>No</strong> stops every plugin Host. Running Pulls continue; queued Pulls wait. <strong>Yes</strong> does not restart Hosts.
       </blockquote>
 
       <dl>
@@ -76,6 +75,20 @@ if (is_readable('/var/local/emhttp/var.ini')) {
       </dl>
       <blockquote class="inline_help">
         Basic NBD has <strong>no authentication</strong>. Keep <strong>No</strong> and bind a private IP.
+        Also covers <code>::</code> (all IPv6/IPv4 interfaces).
+      </blockquote>
+
+      <dl>
+        <dt>Allow public bind IPs:</dt>
+        <dd>
+          <select name="allow_public_bind">
+            <?= mk_option($allow_public, 'no', 'No (recommended)') ?>
+            <?= mk_option($allow_public, 'yes', 'Yes (dangerous)') ?>
+          </select>
+        </dd>
+      </dl>
+      <blockquote class="inline_help">
+        Lets Host use a non-private address of this server. Anyone who can reach it can read (or write) the disk.
       </blockquote>
 
       <dl>
