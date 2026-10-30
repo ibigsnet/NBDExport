@@ -1891,6 +1891,18 @@ function nbd_is_private_ipv4($ip) {
 }
 
 /**
+ * Shared address space 100.64.0.0/10 (carrier-grade NAT, Tailscale). Not
+ * reachable from the internet, so a bind there is not flagged public.
+ */
+function nbd_is_shared_ipv4($ip) {
+  if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+    return false;
+  }
+  $long = ip2long($ip);
+  return $long !== false && ($long & 0xFFC00000) === ip2long('100.64.0.0');
+}
+
+/**
  * List bind candidates: thunderbolt* first, then other private IPv4s.
  *
  * @return array[] each: ip, iface, label, preferred (bool)
@@ -1919,7 +1931,7 @@ function nbd_list_bind_ips() {
     $is_tb = (bool)preg_match('/^thunderbolt\d+$/', $if);
     $is_virt = (bool)preg_match('/^(docker|br-|veth|virbr|wg|tun|tap|vnet)/', $if)
       || $if === 'docker0';
-    $priv = nbd_is_private_ipv4($ip);
+    $priv = nbd_is_private_ipv4($ip) || nbd_is_shared_ipv4($ip);
     // Rank: Thunderbolt private (0), other non-virt private (1), virt private (2), public (3)
     $rank = 3;
     if ($is_tb && $priv) {
@@ -4289,7 +4301,9 @@ function nbd_beacon_ensure() {
     }
     $pidfile = NBDEXPORT_RUN . '/beacon-http-' . $addr . '.pid';
     nbd_spawn('NBD_BEACON_DENY=' . escapeshellarg($deny) . ' setsid nohup ' . escapeshellarg($php)
-      . ' -S ' . escapeshellarg($addr . ':' . (int)$port) . ' ' . escapeshellarg($router)
+      // GET only: no request bodies, uploads or upload progress (also closes the
+      // session upload-progress PHP bug on unpatched Unraid builds).
+      . ' -d enable_post_data_reading=0 -d file_uploads=0 -d session.upload_progress.enabled=0 -S ' . escapeshellarg($addr . ':' . (int)$port) . ' ' . escapeshellarg($router)
       . ' >>' . escapeshellarg($log) . ' 2>&1 & echo $! >' . escapeshellarg($pidfile));
   }
   usleep(200000);

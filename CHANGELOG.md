@@ -6,6 +6,15 @@ User-facing history for this plugin. The `.plg` file (Community Applications / P
 
 ---
 
+## 2026.10.30ab
+
+- **Tailscale binds are not public.** Addresses in the shared range `100.64.0.0/10` (carrier-grade NAT,
+  Tailscale) are no longer flagged public on the Host tab, so hosting on a tailnet does not need
+  **Allow public bind IPs**.
+- **Discovery beacon accepts no request bodies.** The beacon (`php -S`) starts with POST parsing, file
+  uploads and session upload progress turned off; it only answers GET. This also closes the PHP session
+  upload-progress bug on Unraid builds that still ship an unpatched PHP.
+
 ## 2026.10.30aa
 
 - **Security — Host bind:** a Host binds only to an address listed on this server's own

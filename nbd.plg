@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name "NBDExport">
 <!ENTITY author "RifleJock">
-<!ENTITY version "2026.10.30aa">
+<!ENTITY version "2026.10.30ab">
 <!ENTITY launch "Settings/NBDExport">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ibigsnet/NBDExport/testing/nbd.plg">
 <!ENTITY github "ibigsnet/NBDExport">
@@ -26,7 +26,7 @@
 <CHANGES>
 ###&version;
 - Security: Host binds only to this server's own addresses (public IPs and all-interfaces need a Settings opt-in; writable = one IP, one client); Pull never overwrites an existing file without Overwrite = Yes, writes name.partial and renames on success, and refuses RAM, symlink and same-file paths; array/pool partitions count as in-use.
-- Fixes: Stop all and uninstall no longer drop running Pulls; notification settings persist; kills target only verified PIDs; Scan rebuilds peer URLs; state changes are locked and GET is read-only; UD badges load via a page hook instead of patching Unraid files.
+- Fixes: Stop all and uninstall no longer drop running Pulls; notification settings persist; kills target only verified PIDs; Scan rebuilds peer URLs; state changes are locked and GET is read-only; UD badges load via a page hook instead of patching Unraid files. Tailscale binds are not flagged public; the beacon accepts no request bodies.
 
 ###2026.09.28aa–ab
 - Host, Pull and Settings actions are POST only and check the CSRF token (fail closed). Scan and settings export read the token from the form body.
@@ -101,8 +101,8 @@ echo "NBD Export: ready for file install."
 <!-- raw-files begin -->
 <FILE Name="&configdir;/NBDExport-&version;-x86_64-1.txz" Run="upgradepkg --install-new --reinstall">
 <URL>https://github.com/ibigsnet/NBDExport/releases/download/v&version;/NBDExport-&version;-x86_64-1.txz</URL>
-<SHA256>831fabc03f86d93f2f097d0fef25a6f923bad1675399d54fd7e8a4fb4b9d453c</SHA256>
-<MD5>0c6c3f22185ab33d3e023b56df6bfeb8</MD5>
+<SHA256>43979268925d06fe3de022ae79f588aa433bc9996bc3ef79b03a9f736b041ab0</SHA256>
+<MD5>813fb490fc9a3341cfe26e22db49ed00</MD5>
 </FILE>
 <!-- raw-files end -->
 

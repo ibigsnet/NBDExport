@@ -42,7 +42,7 @@ When Destructive mode is ON, every NBD tab shows an **orange banner**. You may t
 | Destructive mode | **No** |
 | Bind address | One of **this server's own** IPs — **Thunderbolt first** when present |
 | Bind all interfaces (`0.0.0.0`, `::`, `::ffff:0.0.0.0`) | **Disabled** unless Allow bind 0.0.0.0 = Yes (+ confirm) |
-| Public (non-private) bind IP | **Disabled** unless Allow public bind IPs = Yes (+ confirm); shown greyed out with a warning |
+| Public (non-private) bind IP | **Disabled** unless Allow public bind IPs = Yes (+ confirm); shown greyed out with a warning. RFC1918, link-local and the shared range `100.64.0.0/10` (carrier-grade NAT, Tailscale) are not public |
 | Bind value | Must be an IP listed on an interface of this server (not a hostname, not another host's IP) |
 | Array / mounted / flash | Blocked unless Destructive mode = Yes (+ UI confirm) |
 | Writable host | Blocked unless Destructive mode = Yes (+ double UI confirm); one bind IP, one client (`--shared=1`), and the device may not be hosted elsewhere at the same time |
@@ -60,6 +60,7 @@ Basic **qemu-nbd has no password**. Whoever can open a TCP connection to the bin
 |-------------|---------|
 | Thunderbolt / dedicated copper IP | Best — small, trusted fabric |
 | Specific private LAN IP | Good if that VLAN/LAN is trusted |
+| Tailscale / `100.64.0.0/10` IP | Reachable by every device on that tailnet or carrier NAT — treat like a LAN |
 | **Multiple checkboxes** | Host the same disk on several networks (one `qemu-nbd` per IP, same port) — only check networks that should reach this disk |
 | Wi‑Fi IP on a mixed home LAN | Higher exposure — prefer short Host windows |
 | `0.0.0.0` / `::` (all interfaces) | **Dangerous** on multi-homed hosts — disabled by default |
